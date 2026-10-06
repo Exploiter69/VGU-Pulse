@@ -151,10 +151,15 @@ function renderStudentPosts(posts){
   const deletePost=document.createElement("button");deletePost.className="report";deletePost.type="button";deletePost.textContent="Delete";
   deletePost.hidden=!post.owned;
   deletePost.addEventListener("click",async()=>{
-    if(!confirm("Delete this post and all its replies?"))return;
-    deletePost.disabled=true;
+    if(deletePost.dataset.confirming!=="1"){
+      deletePost.dataset.confirming="1";
+      deletePost.textContent="Confirm delete";
+      status.textContent="Tap Confirm delete again to remove this post and its replies.";
+      return;
+    }
+    deletePost.disabled=true;deletePost.textContent="Deleting…";
     const response=await fetch("/api/student-posts?post_id="+encodeURIComponent(post.id),{method:"DELETE",headers:{"x-telegram-init-data":initData}});
-    if(response.ok){await loadStudentPosts()}else{status.textContent="Post could not be deleted.";deletePost.disabled=false}
+    if(response.ok){await loadStudentPosts();status.textContent="Post deleted."}else{status.textContent="Post could not be deleted.";deletePost.disabled=false;deletePost.dataset.confirming="";deletePost.textContent="Delete"}
   });
   article.append(meta,title,body,report,deletePost,replies,replyForm);studentPosts.append(article);
   loadReplies(post.id,replies).catch(()=>{repliesStatus.textContent="Replies unavailable.";});
@@ -179,7 +184,7 @@ async function loadReplies(postId,target){
     if(response.ok) await loadReplies(postId,target); else report.disabled=false;
   });
   const deleteReply=document.createElement("button");deleteReply.className="report";deleteReply.type="button";deleteReply.textContent="Delete";deleteReply.hidden=!reply.owned;
-  deleteReply.onclick=async()=>{if(!confirm("Delete this reply?"))return;deleteReply.disabled=true;const response=await fetch("/api/student-posts/replies?reply_id="+encodeURIComponent(reply.id),{method:"DELETE",headers:{"x-telegram-init-data":initData}});if(response.ok)await loadReplies(postId,target);else{status.textContent="Reply could not be deleted.";deleteReply.disabled=false}};
+  deleteReply.onclick=async()=>{if(deleteReply.dataset.confirming!=="1"){deleteReply.dataset.confirming="1";deleteReply.textContent="Confirm delete";status.textContent="Tap Confirm delete again to remove this reply.";return}deleteReply.disabled=true;deleteReply.textContent="Deleting…";const response=await fetch("/api/student-posts/replies?reply_id="+encodeURIComponent(reply.id),{method:"DELETE",headers:{"x-telegram-init-data":initData}});if(response.ok){await loadReplies(postId,target);status.textContent="Reply deleted."}else{status.textContent="Reply could not be deleted.";deleteReply.disabled=false;deleteReply.dataset.confirming="";deleteReply.textContent="Delete"}};
   item.append(meta,text,report,deleteReply);target.append(item);
  }
 }
@@ -216,10 +221,11 @@ async function submitProfile(e){
 }
 profileForm.addEventListener("submit",submitProfile);
 profileDelete.addEventListener("click",async()=>{
- if(!initData||!confirm("Delete your profile? Your student posts and replies will remain."))return;
+ if(!initData)return;
+ if(profileDelete.dataset.confirming!=="1"){profileDelete.dataset.confirming="1";profileDelete.textContent="Confirm delete profile";profileStatus.textContent="Tap Confirm delete profile again to remove your profile.";return}
  profileDelete.disabled=true;profileStatus.textContent="Deleting…";
  const response=await fetch("/api/student-profile",{method:"DELETE",headers:{"x-telegram-init-data":initData}});
- if(response.ok){profileForm.reset();profileDelete.hidden=true;profileStatus.textContent="Profile deleted.";await loadProfiles()}else{profileStatus.textContent="Profile could not be deleted.";profileDelete.disabled=false}
+ if(response.ok){profileForm.reset();profileDelete.hidden=true;profileDelete.dataset.confirming="";profileDelete.textContent="Delete my profile";profileStatus.textContent="Profile deleted.";await loadProfiles()}else{profileStatus.textContent="Profile could not be deleted.";profileDelete.disabled=false;profileDelete.dataset.confirming="";profileDelete.textContent="Delete my profile"}
 });
 async function loadStudentPosts(){
  const category=postFilter.value;
