@@ -242,7 +242,12 @@ export async function listStudentReplies(
        ORDER BY r.created_at ASC, r.id ASC
        LIMIT ?`,
     )
-    .bind(postId, userId === undefined ? null : String(userId), userId === undefined ? null : String(userId), Math.min(Math.max(limit, 1), 50))
+    .bind(
+      userId === undefined ? null : String(userId),
+      userId === undefined ? null : String(userId),
+      postId,
+      Math.min(Math.max(limit, 1), 50),
+    )
     .all<StudentReply>();
   return rows.results.map((reply) => ({
     ...reply,
