@@ -133,7 +133,14 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/api/students") {
       try {
-        return json({ ok: true, trust: "student-reported", profiles: await listStudentProfiles(env.DB) });
+        const profiles = await listStudentProfiles(env.DB);
+        return json({
+          ok: true,
+          trust: "student-reported",
+          profiles: profiles.map(({ public_id, display_name, program, branch, year, bio, looking_for, updated_at }) => ({
+            public_id, display_name, program, branch, year, bio, looking_for, updated_at,
+          })),
+        });
       } catch { return json({ ok: false, error: "student_profiles_unavailable" }, 500); }
     }
 
