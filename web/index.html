@@ -69,7 +69,9 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <input id="profile-year" type="number" min="1" max="6" placeholder="Year" required>
 <textarea id="profile-bio" maxlength="300" rows="2" placeholder="Short intro (optional)"></textarea>
 <input id="profile-looking" maxlength="160" placeholder="Looking for (e.g. DSA study group)" required>
-<button class="submit" type="submit">Publish my profile</button><p id="profile-status" class="muted"></p>
+<button class="submit" type="submit">Publish my profile</button>
+<button id="profile-delete" class="report" type="button" hidden>Delete my profile</button>
+<p id="profile-status" class="muted"></p>
 </form><div id="profiles"><p class="muted">Loading student profiles…</p></div>
 </section>
 <section class="card">
@@ -87,7 +89,7 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <script>
 const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
 let initData="",poll=null;
-const profileForm=document.querySelector("#profile-form"),profileStatus=document.querySelector("#profile-status"),profiles=document.querySelector("#profiles");const identity=document.querySelector("#identity"),status=document.querySelector("#status"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status"),postFilter=document.querySelector("#post-filter");
+const profileForm=document.querySelector("#profile-form"),profileStatus=document.querySelector("#profile-status"),profiles=document.querySelector("#profiles"),profileDelete=document.querySelector("#profile-delete");const identity=document.querySelector("#identity"),status=document.querySelector("#status"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status"),postFilter=document.querySelector("#post-filter");
 
 function renderPoll(next){
  poll=next;
@@ -146,7 +148,15 @@ function renderStudentPosts(posts){
     if(response.ok){replyInput.value="";await loadReplies(post.id,replies)}else{status.textContent="Reply could not be posted."}
     replySubmit.disabled=false;
   });
-  article.append(meta,title,body,report,replies,replyForm);studentPosts.append(article);
+  const deletePost=document.createElement("button");deletePost.className="report";deletePost.type="button";deletePost.textContent="Delete";
+  deletePost.hidden=!post.owned;
+  deletePost.addEventListener("click",async()=>{
+    if(!confirm("Delete this post and all its replies?"))return;
+    deletePost.disabled=true;
+    const response=await fetch("/api/student-posts?post_id="+encodeURIComponent(post.id),{method:"DELETE",headers:{"x-telegram-init-data":initData}});
+    if(response.ok){await loadStudentPosts()}else{status.textContent="Post could not be deleted.";deletePost.disabled=false}
+  });
+  article.append(meta,title,body,report,deletePost,replies,replyForm);studentPosts.append(article);
   loadReplies(post.id,replies).catch(()=>{repliesStatus.textContent="Replies unavailable.";});
  }
 }
@@ -168,7 +178,9 @@ async function loadReplies(postId,target){
     status.textContent=response.ok?"Reply report recorded.":"Unable to record reply report.";
     if(response.ok) await loadReplies(postId,target); else report.disabled=false;
   });
-  item.append(meta,text,report);target.append(item);
+  const deleteReply=document.createElement("button");deleteReply.className="report";deleteReply.type="button";deleteReply.textContent="Delete";deleteReply.hidden=!reply.owned;
+  deleteReply.onclick=async()=>{if(!confirm("Delete this reply?"))return;deleteReply.disabled=true;const response=await fetch("/api/student-posts/replies?reply_id="+encodeURIComponent(reply.id),{method:"DELETE",headers:{"x-telegram-init-data":initData}});if(response.ok)await loadReplies(postId,target);else{status.textContent="Reply could not be deleted.";deleteReply.disabled=false}};
+  item.append(meta,text,report,deleteReply);target.append(item);
  }
 }
 async function loadProfile(){
@@ -176,6 +188,7 @@ async function loadProfile(){
  const r=await fetch("/api/student-profile",{headers:{"x-telegram-init-data":initData}});if(!r.ok)return;
  const p=(await r.json()).profile;if(!p)return;
  for(const [id,value] of [["profile-name",p.display_name],["profile-program",p.program],["profile-branch",p.branch],["profile-year",p.year],["profile-bio",p.bio],["profile-looking",p.looking_for]])document.querySelector("#"+id).value=value;
+ profileDelete.hidden=false;
 }
 async function loadProfiles(){
  const r=await fetch("/api/students");if(!r.ok)throw Error("profiles_failed");
@@ -202,6 +215,12 @@ async function submitProfile(e){
  profileStatus.textContent=r.ok?"Profile published.":"Profile could not be published. Check the fields.";button.disabled=false;if(r.ok)await loadProfiles();
 }
 profileForm.addEventListener("submit",submitProfile);
+profileDelete.addEventListener("click",async()=>{
+ if(!initData||!confirm("Delete your profile? Your student posts and replies will remain."))return;
+ profileDelete.disabled=true;profileStatus.textContent="Deleting…";
+ const response=await fetch("/api/student-profile",{method:"DELETE",headers:{"x-telegram-init-data":initData}});
+ if(response.ok){profileForm.reset();profileDelete.hidden=true;profileStatus.textContent="Profile deleted.";await loadProfiles()}else{profileStatus.textContent="Profile could not be deleted.";profileDelete.disabled=false}
+});
 async function loadStudentPosts(){
  const category=postFilter.value;
  const response=await fetch("/api/student-posts"+(category?"?category="+encodeURIComponent(category):""));
