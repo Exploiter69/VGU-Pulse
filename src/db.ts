@@ -193,7 +193,8 @@ export async function listStudentPosts(
     .prepare(
       `SELECT p.id, p.category, p.title, p.body,
               COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
-              p.created_at, p.report_count
+              p.created_at, p.report_count,
+              CASE WHEN ? IS NOT NULL AND p.telegram_user_id = ? THEN 1 ELSE 0 END AS owned
        FROM student_posts p
        JOIN users u ON u.telegram_user_id = p.telegram_user_id
        WHERE p.status = 'published' AND p.report_count < 3
@@ -201,7 +202,13 @@ export async function listStudentPosts(
        ORDER BY p.created_at DESC, p.id DESC
        LIMIT ?`,
     )
-    .bind(category ?? null, category ?? null, Math.min(Math.max(limit, 1), 50))
+    .bind(
+      userId === undefined ? null : String(userId),
+      userId === undefined ? null : String(userId),
+      category ?? null,
+      category ?? null,
+      Math.min(Math.max(limit, 1), 50),
+    )
     .all<StudentPost>();
   return rows.results.map((post) => ({
     ...post,
