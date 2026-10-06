@@ -82,9 +82,9 @@ export async function getStudentProfile(db: D1Database, userId: number): Promise
 
 export async function listStudentProfiles(db: D1Database, limit = 30): Promise<StudentProfile[]> {
   const rows = await db.prepare(
-    `SELECT public_id, telegram_user_id, display_name, program, branch, year, bio, looking_for, updated_at
+    `SELECT public_id, display_name, program, branch, year, bio, looking_for, updated_at
      FROM student_profiles WHERE status = 'published' AND report_count < 3
-     ORDER BY updated_at DESC, telegram_user_id LIMIT ?`,
+     ORDER BY updated_at DESC, public_id LIMIT ?`,
   ).bind(Math.min(Math.max(limit, 1), 50)).all<StudentProfile>();
   return rows.results;
 }
