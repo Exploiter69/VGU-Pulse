@@ -110,6 +110,21 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/api/home") {
       const poll = await getOpenPoll(env.DB);
+      let signalItems: unknown[] = [];
+      if (env.SIGNAL_API_URL) {
+        try {
+          const upstream = await fetch(new URL("/public/information?limit=5", env.SIGNAL_API_URL), {
+            headers: { accept: "application/json" },
+          });
+          if (upstream.ok) {
+            const payload = (await upstream.json()) as { items?: unknown[] };
+            signalItems = Array.isArray(payload.items) ? payload.items : [];
+          }
+        } catch {
+          signalItems = [];
+        }
+      }
+
       return json({
         ok: true,
         title: "VGU Pulse",
@@ -118,8 +133,11 @@ export default {
           {
             type: "notice",
             title: "Official VGU information",
-            body: "Important notices and verified campus information will appear here as the Signal feed is connected.",
+            body: signalItems.length
+              ? "Verified VGU information from VGU Signal."
+              : "No verified VGU information is available right now.",
             trust: "official",
+            items: signalItems,
           },
           {
             type: "today",
