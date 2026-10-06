@@ -160,12 +160,12 @@ export default {
       if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
       const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", env.BOT_TOKEN);
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
-      let body: { profile_user_id?: unknown };
+      let body: { profile_public_id?: unknown };
       try { body = (await request.json()) as { profile_user_id?: unknown }; }
       catch { return json({ ok: false, error: "invalid_json" }, 400); }
-      if (typeof body.profile_user_id !== "string" || !body.profile_user_id.trim()) return json({ ok: false, error: "invalid_profile" }, 400);
+      if (typeof body.profile_public_id !== "string" || !body.profile_public_id.trim()) return json({ ok: false, error: "invalid_profile" }, 400);
       try {
-        await reportStudentProfile(env.DB, body.profile_user_id, validated.user.id);
+        await reportStudentProfile(env.DB, body.profile_public_id, validated.user.id);
         return json({ ok: true });
       } catch { return json({ ok: false, error: "profile_report_failed" }, 500); }
     }
