@@ -17,11 +17,11 @@ CREATE INDEX IF NOT EXISTS idx_student_profiles_feed
 
 CREATE TABLE IF NOT EXISTS student_profile_reports (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  profile_user_id TEXT NOT NULL REFERENCES student_profiles(telegram_user_id) ON DELETE CASCADE,
+  profile_public_id TEXT NOT NULL REFERENCES student_profiles(public_id) ON DELETE CASCADE,
   reporter_telegram_user_id TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(profile_user_id, reporter_telegram_user_id)
+  UNIQUE(profile_public_id, reporter_telegram_user_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_student_profile_reports_profile
-  ON student_profile_reports(profile_user_id);
+  ON student_profile_reports(profile_public_id);
