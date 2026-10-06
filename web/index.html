@@ -15,6 +15,15 @@ main{max-width:720px;margin:auto;padding:28px 18px 48px}
 .option.selected{border-color:#6ea8fe}.option:disabled{opacity:.72;cursor:default}
 .bar{margin-top:8px;background:#252b36;border-radius:999px;overflow:hidden;height:8px}.fill{height:100%;background:#6ea8fe;width:0;transition:width .25s ease}
 .row{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.nav{display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;margin:8px 0 14px;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav-item{flex:0 0 auto;background:#181b22;color:#9aa3b2;border:1px solid #2b303b;border-radius:999px;padding:9px 13px;font:inherit;cursor:pointer}
+.nav-item.active{background:#6ea8fe;color:#08101d;border-color:#6ea8fe;font-weight:700}
+.view{display:none}.view.active{display:block}
+.quick-card{margin-top:0}.quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.quick{background:#222733;color:#f5f7fa;border:1px solid #343b49;border-radius:12px;padding:14px;text-align:left;cursor:pointer;font:inherit}
+.quick strong,.quick span{display:block}.quick span{color:#9aa3b2;font-size:13px;margin-top:4px}
+@media(max-width:520px){.quick-grid{grid-template-columns:1fr}}
 textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:#f5f7fa;border:1px solid #343b49;border-radius:12px;padding:12px;margin:6px 0 10px;font:inherit}
 .submit{width:100%;background:#6ea8fe;color:#08101d;border:0;border-radius:12px;padding:13px;font-weight:700;cursor:pointer}
 .post{padding:14px 0;border-top:1px solid #2b303b}.post:first-child{border-top:0}
@@ -29,7 +38,51 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <main>
 <div class="eyebrow">VGU • TODAY</div>
 <h1>VGU Pulse</h1>
-<p class="muted">What's happening at VGU, and who can I do it with?</p>\n<section class="card" id="student-intelligence"><div class="eyebrow">Student intelligence</div><h2>Ask Pulse</h2><p class="muted">Search official VGU information, campus facilities and student-reported knowledge in one place. Official and student-reported results are always labelled.</p><form id="search-form"><input id="search-query" type="search" maxlength="160" placeholder="Try: exam form, medical, transport, hostel…" aria-label="Search Pulse"><button class="submit" type="submit">Search Pulse</button></form><div id="search-quick" style="display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px"></div><div id="search-results"><p class="muted">Search for something you need on campus.</p></div></section>
+<p class="muted">What's happening at VGU, and who can I do it with?</p>
+<nav class="nav" aria-label="Pulse sections">
+<button type="button" class="nav-item active" data-view="home">Home</button>
+<button type="button" class="nav-item" data-view="ask">Ask</button>
+<button type="button" class="nav-item" data-view="academics">Academics</button>
+<button type="button" class="nav-item" data-view="community">Community</button>
+<button type="button" class="nav-item" data-view="people">People</button>
+<button type="button" class="nav-item" data-view="campus">Campus</button>
+<button type="button" class="nav-item" data-view="pulse">Pulse</button>
+</nav>
+
+<div class="view active" data-view-panel="home">
+<section class="card">
+<p id="identity">Connecting to Telegram…</p>
+<p id="status" class="muted"></p>
+</section>
+<section class="card">
+<div class="eyebrow">Official VGU information</div><h2>Important information</h2>
+<div id="notices"><p class="muted">Loading verified information…</p></div>
+</section>
+<section class="card">
+<div class="eyebrow">What's happening</div><h2>Events & opportunities</h2>
+<div id="events"><p class="muted">Loading verified events…</p></div>
+</section>
+<section class="card quick-card">
+<div class="eyebrow">Quick access</div><h2>What do you need?</h2>
+<div class="quick-grid">
+<button type="button" class="quick" data-view="ask"><strong>Ask Pulse</strong><span>Find official info and campus answers</span></button>
+<button type="button" class="quick" data-view="academics"><strong>Academics</strong><span>Assignments, exams and deadlines</span></button>
+<button type="button" class="quick" data-view="community"><strong>Community</strong><span>Questions, info and opportunities</span></button>
+<button type="button" class="quick" data-view="people"><strong>People</strong><span>Find students for study and projects</span></button>
+</div></section>
+</div>
+
+<div class="view" data-view-panel="ask">
+<section class="card" id="student-intelligence"><div class="eyebrow">Student intelligence</div><h2>Ask Pulse</h2><p class="muted">Search official VGU information, campus facilities and student-reported knowledge in one place. Official and student-reported results are always labelled.</p><form id="search-form"><input id="search-query" type="search" maxlength="160" placeholder="Try: exam form, medical, transport, hostel…" aria-label="Search Pulse"><button class="submit" type="submit">Search Pulse</button></form><div id="search-quick" style="display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px"></div><div id="search-results"><p class="muted">Search for something you need on campus.</p></div></section>
+<section class="card">
+<div class="eyebrow">Trust</div>
+<p><strong>Official</strong> = VGU information from trusted sources.</p>
+<p><strong>Student-reported</strong> = community information that has not been treated as official.</p>
+<p class="muted">Pulse adds the student layer; VGU-Signal remains the source of truth for official information.</p>
+</section>
+</div>
+
+<div class="view" data-view-panel="academics">
 <section class="card" id="academic-companion">
 <div class="eyebrow">Academic companion</div><h2>Plan your semester</h2>
 <p class="muted">Track your own subjects, assignments, exams and deadlines in Pulse. Personal planner data stays in this browser; it is not pulled from private ERP/Digicampus systems.</p>
@@ -47,10 +100,47 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <p id="academic-status" class="muted" aria-live="polite"></p>
 <div id="academic-list"></div>
 </section>
+</div>
+
+<div class="view" data-view-panel="community">
 <section class="card">
-<p id="identity">Connecting to Telegram…</p>
-<p id="status" class="muted"></p>
+<div class="eyebrow">Student-reported</div><h2>Campus community</h2>
+<p class="muted">Ask a question, share useful campus information, or find people for an opportunity. These posts are student-reported, not official VGU announcements.</p>
+<select id="post-filter" aria-label="Filter student posts">
+<option value="">All student posts</option><option value="question">Questions</option><option value="info">Campus information</option><option value="opportunity">Opportunities</option><option value="request">Requests</option>
+</select>
+<form id="post-form">
+<select id="post-category" aria-label="Post type">
+<option value="question">Question</option><option value="info">Campus information</option><option value="opportunity">Opportunity</option><option value="request">Request</option>
+</select>
+<input id="post-title" maxlength="120" placeholder="Short title" required>
+<textarea id="post-body" maxlength="2000" rows="4" placeholder="What should other students know?" required></textarea>
+<button class="submit" type="submit">Share with students</button>
+<p id="post-status" class="muted"></p>
+</form>
+<div id="student-posts"><p class="muted">Loading student posts…</p></div>
 </section>
+</div>
+
+<div class="view" data-view-panel="people">
+<section class="card">
+<div class="eyebrow">Student network</div><h2>Find people</h2>
+<p class="muted">Opt in with a small profile for study groups, projects, teams and opportunities. Only published student profiles appear here.</p>
+<form id="profile-form">
+<input id="profile-name" maxlength="80" placeholder="Display name" required>
+<input id="profile-program" maxlength="80" placeholder="Program (e.g. B.Tech CSE)" required>
+<input id="profile-branch" maxlength="80" placeholder="Branch / specialization" required>
+<input id="profile-year" type="number" min="1" max="6" placeholder="Year" required>
+<textarea id="profile-bio" maxlength="300" rows="2" placeholder="Short intro (optional)"></textarea>
+<input id="profile-looking" maxlength="160" placeholder="Looking for (e.g. DSA study group)" required>
+<button class="submit" type="submit">Publish my profile</button>
+<button id="profile-delete" class="report" type="button" hidden>Delete my profile</button>
+<p id="profile-status" class="muted"></p>
+</form><div id="profiles"><p class="muted">Loading student profiles…</p></div>
+</section>
+</div>
+
+<div class="view" data-view-panel="campus">
 <section class="card">
 <div class="eyebrow">Student toolkit</div><h2>Useful VGU links</h2>
 <p class="muted">Direct links to services VGU publishes for students. Pulse does not replace the official portals.</p>
@@ -73,60 +163,29 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <input id="campus-search" type="search" placeholder="Search library, exam, medical, hostel, transport…" aria-label="Search campus facilities">
 <div id="campus-results" class="tool-grid" style="margin-top:12px"></div>
 </section>
-<section class="card">
-<div class="eyebrow">Official VGU information</div><h2>Important information</h2>
-<div id="notices"><p class="muted">Loading verified information…</p></div>
-</section>
-<section class="card">
-<div class="eyebrow">What's happening</div><h2>Events & opportunities</h2>
-<div id="events"><p class="muted">Loading verified events…</p></div>
-</section>
-<section class="card">
-<div class="eyebrow">Student-reported</div><h2>Campus community</h2>
-<p class="muted">Ask a question, share useful campus information, or find people for an opportunity. These posts are student-reported, not official VGU announcements.</p>
-<select id="post-filter" aria-label="Filter student posts">
-<option value="">All student posts</option><option value="question">Questions</option><option value="info">Campus information</option><option value="opportunity">Opportunities</option><option value="request">Requests</option>
-</select>
-<form id="post-form">
-<select id="post-category" aria-label="Post type">
-<option value="question">Question</option><option value="info">Campus information</option><option value="opportunity">Opportunity</option><option value="request">Request</option>
-</select>
-<input id="post-title" maxlength="120" placeholder="Short title" required>
-<textarea id="post-body" maxlength="2000" rows="4" placeholder="What should other students know?" required></textarea>
-<button class="submit" type="submit">Share with students</button>
-<p id="post-status" class="muted"></p>
-</form>
-<div id="student-posts"><p class="muted">Loading student posts…</p></div>
-</section>
-<section class="card">
-<div class="eyebrow">Student network</div><h2>Find people</h2>
-<p class="muted">Opt in with a small profile for study groups, projects, teams and opportunities. Only published student profiles appear here.</p>
-<form id="profile-form">
-<input id="profile-name" maxlength="80" placeholder="Display name" required>
-<input id="profile-program" maxlength="80" placeholder="Program (e.g. B.Tech CSE)" required>
-<input id="profile-branch" maxlength="80" placeholder="Branch / specialization" required>
-<input id="profile-year" type="number" min="1" max="6" placeholder="Year" required>
-<textarea id="profile-bio" maxlength="300" rows="2" placeholder="Short intro (optional)"></textarea>
-<input id="profile-looking" maxlength="160" placeholder="Looking for (e.g. DSA study group)" required>
-<button class="submit" type="submit">Publish my profile</button>
-<button id="profile-delete" class="report" type="button" hidden>Delete my profile</button>
-<p id="profile-status" class="muted"></p>
-</form><div id="profiles"><p class="muted">Loading student profiles…</p></div>
-</section>
+</div>
+
+<div class="view" data-view-panel="pulse">
 <section class="card">
 <div class="row"><div><div class="eyebrow">Participate</div><h2>Campus pulse</h2></div><span id="vote-total" class="muted"></span></div>
 <p id="question" class="muted">Loading today's question…</p>
 <div id="options"></div>
 </section>
-<section class="card">
-<div class="eyebrow">Trust</div>
-<p><strong>Official</strong> = VGU information from trusted sources.</p>
-<p><strong>Student-reported</strong> = community information that has not been treated as official.</p>
-<p class="muted">Pulse adds the student layer; VGU-Signal remains the source of truth for official information.</p>
-</section>
+</div>
 </main>
 <script>
 const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
+const navItems=[...document.querySelectorAll("[data-view]")];
+const viewPanels=[...document.querySelectorAll("[data-view-panel]")];
+function showView(name){
+  const target=viewPanels.some(panel=>panel.dataset.viewPanel===name)?name:"home";
+  for(const panel of viewPanels)panel.classList.toggle("active",panel.dataset.viewPanel===target);
+  for(const item of navItems)item.classList.toggle("active",item.dataset.view===target);
+  if(tg?.BackButton){if(target==="home")tg.BackButton.hide();else tg.BackButton.show()}
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+for(const item of navItems)item.addEventListener("click",()=>showView(item.dataset.view));
+tg?.BackButton?.onClick?.(()=>showView("home"));
 let initData="",poll=null;
 const profileForm=document.querySelector("#profile-form"),profileStatus=document.querySelector("#profile-status"),profiles=document.querySelector("#profiles"),profileDelete=document.querySelector("#profile-delete");const identity=document.querySelector("#identity"),status=document.querySelector("#status"),searchForm=document.querySelector("#search-form"),searchQuery=document.querySelector("#search-query"),searchQuick=document.querySelector("#search-quick"),searchResults=document.querySelector("#search-results"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status"),postFilter=document.querySelector("#post-filter");
 
