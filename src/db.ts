@@ -170,7 +170,7 @@ export async function createStudentPost(
        JOIN users u ON u.telegram_user_id = p.telegram_user_id
        WHERE p.id = ?`,
     )
-    .bind(result.meta.last_row_id)
+    .bind(String(userId), String(userId), result.meta.last_row_id)
     .first<StudentPost>();
   if (!post) throw new Error("post_create_failed");
   return { ...post, report_count: Number(post.report_count) };
