@@ -188,7 +188,7 @@ async function loadProfiles(){
   const bio=document.createElement("p");bio.className="muted";bio.textContent=p.bio;
   const looking=document.createElement("p");const strong=document.createElement("strong");strong.textContent="Looking for: ";looking.append(strong,document.createTextNode(p.looking_for));
   const report=document.createElement("button");report.className="report";report.type="button";report.textContent="Report profile";
-  report.onclick=async()=>{if(!initData){status.textContent="Open Pulse from Telegram to report a profile.";return}report.disabled=true;const x=await fetch("/api/student-profile/report",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({profile_user_id:p.telegram_user_id})});status.textContent=x.ok?"Profile report recorded.":"Unable to record report.";if(x.ok)await loadProfiles();else report.disabled=false};
+  report.onclick=async()=>{if(!initData){status.textContent="Open Pulse from Telegram to report a profile.";return}report.disabled=true;const x=await fetch("/api/student-profile/report",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({profile_public_id:p.public_id})});status.textContent=x.ok?"Profile report recorded.":"Unable to record report.";if(x.ok)await loadProfiles();else report.disabled=false};
   item.append(name,meta,bio,looking,report);profiles.append(item);
  }
 }
