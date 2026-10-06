@@ -113,6 +113,14 @@ const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
 let initData="",poll=null;
 const profileForm=document.querySelector("#profile-form"),profileStatus=document.querySelector("#profile-status"),profiles=document.querySelector("#profiles"),profileDelete=document.querySelector("#profile-delete");const identity=document.querySelector("#identity"),status=document.querySelector("#status"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status"),postFilter=document.querySelector("#post-filter");
 
+document.addEventListener("click",(event)=>{
+ const link=event.target.closest("a[href]");
+ if(!link)return;
+ const href=link.href;
+ if(!/^https?:\\/\\//i.test(href)||href.startsWith(location.origin))return;
+ event.preventDefault();
+ if(tg?.openLink)tg.openLink(href);else window.open(href,"_blank","noopener,noreferrer");
+});
 function renderPoll(next){
  poll=next;
  if(!poll){question.textContent="No open poll right now.";options.replaceChildren();voteTotal.textContent="";return}
@@ -296,6 +304,7 @@ const campusFacilities=[
  {title:"Academic Block",category:"Academics",body:"Lecture theatres, tutorial rooms, Knowledge Resource Centre, specialised labs and faculty offices.",link:"https://vgu.ac.in/campus-facilities/academic-facilities"},
  {title:"Technology Block",category:"Academics",body:"Computer labs, engineering workshops, auditorium, Knowledge Resource Centre and research laboratories. The mailroom is here.",link:"https://vgu.ac.in/campus-facilities/academic-facilities"},
  {title:"Administrative Block",category:"Administration",body:"Administrative offices, examination cell, seminar halls and student support services. Lost & Found reception is on the ground floor.",link:"https://vgu.ac.in/campus-facilities/academic-facilities"},
+ {title:"Central Library",category:"Study",body:"VGU's current admission information describes a central library with 2 lakh+ books, 10,000+ e-journals and a 24-hour reading room. VGU also lists Knowledge Resource Centres in the Academic and Technology Blocks.",link:"https://vgu.ac.in/admission"},
  {title:"Knowledge Resource Centres",category:"Study",body:"Two resource centres serve the Academic and Technology Blocks with books, journals and digital resources.",link:"https://vgu.ac.in/campus-facilities/academic-facilities"},
  {title:"Medical Aid Centre",category:"Health",body:"Located in the Students' Mess Complex. VGU says free consultation and medical assistance are available to students, faculty and staff.",link:"https://vgu.ac.in/campus-facilities/medical-facilities-and-services"},
  {title:"Transport",category:"Travel",body:"VGU operates daily buses across nine Jaipur routes. Students use the bus requisition process through the Accounts Office.",link:"https://vgu.ac.in/campus-facilities/transport-facilities"},
