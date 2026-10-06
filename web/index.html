@@ -223,7 +223,7 @@ profileDelete.addEventListener("click",async()=>{
 });
 async function loadStudentPosts(){
  const category=postFilter.value;
- const response=await fetch("/api/student-posts"+(category?"?category="+encodeURIComponent(category):""));
+ const response=await fetch("/api/student-posts"+(category?"?category="+encodeURIComponent(category):""),{headers:initData?{"x-telegram-init-data":initData}:{}});
  if(!response.ok)throw Error("student_posts_failed");
  const data=await response.json();renderStudentPosts(data.posts||[]);
 }
@@ -267,7 +267,7 @@ async function boot(){
  const response=await fetch("/api/auth/telegram",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({initData})});
  const data=await response.json();if(!response.ok){identity.textContent="Telegram authentication failed.";return}
  identity.textContent="Welcome, "+(data.user.first_name||data.user.username||"student")+".";
- status.textContent="Telegram identity verified.";await loadProfile();await loadHome();await loadProfiles();
+ status.textContent="Telegram identity verified.";await loadProfile();await loadHome();await loadStudentPosts();await loadProfiles();
 }
 boot().catch(()=>{status.textContent="Unable to connect to Pulse."});
 </script>
