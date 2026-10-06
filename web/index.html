@@ -213,7 +213,7 @@ function renderStudentPosts(posts){
  }
 }
 async function loadReplies(postId,target){
- const response=await fetch("/api/student-posts/replies?post_id="+encodeURIComponent(postId));
+ const response=await fetch("/api/student-posts/replies?post_id="+encodeURIComponent(postId),{headers:initData?{"x-telegram-init-data":initData}:{}});
  if(!response.ok)throw Error("replies_failed");
  const data=await response.json();target.replaceChildren();
  const replies=data.replies||[];
