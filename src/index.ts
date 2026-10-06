@@ -140,8 +140,11 @@ export default {
         return json({ ok: false, error: "invalid_vote" }, 400);
       }
 
+      const pollId = body.poll_id as number;
+      const optionId = body.option_id as number;
+
       try {
-        await voteInPoll(env.DB, body.poll_id, body.option_id, validated.user.id);
+        await voteInPoll(env.DB, pollId, optionId, validated.user.id);
       } catch (error) {
         if (error instanceof Error && error.message === "invalid_option") {
           return json({ ok: false, error: "invalid_option" }, 400);
