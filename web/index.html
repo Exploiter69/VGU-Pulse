@@ -15,6 +15,10 @@ main{max-width:720px;margin:auto;padding:28px 18px 48px}
 .option.selected{border-color:#6ea8fe}.option:disabled{opacity:.72;cursor:default}
 .bar{margin-top:8px;background:#252b36;border-radius:999px;overflow:hidden;height:8px}.fill{height:100%;background:#6ea8fe;width:0;transition:width .25s ease}
 .row{display:flex;justify-content:space-between;gap:12px;align-items:center}
+textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:#f5f7fa;border:1px solid #343b49;border-radius:12px;padding:12px;margin:6px 0 10px;font:inherit}
+.submit{width:100%;background:#6ea8fe;color:#08101d;border:0;border-radius:12px;padding:13px;font-weight:700;cursor:pointer}
+.post{padding:14px 0;border-top:1px solid #2b303b}.post:first-child{border-top:0}
+.report{background:none;border:0;color:#9aa3b2;padding:4px 0;cursor:pointer}
 </style>
 </head>
 <body>
@@ -35,6 +39,20 @@ main{max-width:720px;margin:auto;padding:28px 18px 48px}
 <div id="events"><p class="muted">Loading verified events…</p></div>
 </section>
 <section class="card">
+<div class="eyebrow">Student-reported</div><h2>Campus community</h2>
+<p class="muted">Ask a question, share useful campus information, or find people for an opportunity. These posts are student-reported, not official VGU announcements.</p>
+<form id="post-form">
+<select id="post-category" aria-label="Post type">
+<option value="question">Question</option><option value="info">Campus information</option><option value="opportunity">Opportunity</option><option value="request">Request</option>
+</select>
+<input id="post-title" maxlength="120" placeholder="Short title" required>
+<textarea id="post-body" maxlength="2000" rows="4" placeholder="What should other students know?" required></textarea>
+<button class="submit" type="submit">Share with students</button>
+<p id="post-status" class="muted"></p>
+</form>
+<div id="student-posts"><p class="muted">Loading student posts…</p></div>
+</section>
+<section class="card">
 <div class="row"><div><div class="eyebrow">Participate</div><h2>Campus pulse</h2></div><span id="vote-total" class="muted"></span></div>
 <p id="question" class="muted">Loading today's question…</p>
 <div id="options"></div>
@@ -49,7 +67,7 @@ main{max-width:720px;margin:auto;padding:28px 18px 48px}
 <script>
 const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
 let initData="",poll=null;
-const identity=document.querySelector("#identity"),status=document.querySelector("#status"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events");
+const identity=document.querySelector("#identity"),status=document.querySelector("#status"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status");
 
 function renderPoll(next){
  poll=next;
@@ -83,12 +101,48 @@ function renderItems(target,items,emptyText){
   target.append(article);
  }
 }
+function renderStudentPosts(posts){
+ studentPosts.replaceChildren();
+ if(!posts.length){const p=document.createElement("p");p.className="muted";p.textContent="No student posts yet. Be the first to share something useful.";studentPosts.append(p);return}
+ for(const post of posts){
+  const article=document.createElement("article");article.className="post";
+  const meta=document.createElement("small");meta.className="muted";meta.textContent=post.category+" • student-reported • "+post.author_name;
+  const title=document.createElement("h3");title.textContent=post.title;
+  const body=document.createElement("p");body.className="muted";body.textContent=post.body;
+  const report=document.createElement("button");report.className="report";report.type="button";report.textContent="Report";
+  report.addEventListener("click",()=>reportPost(post.id,report));
+  article.append(meta,title,body,report);studentPosts.append(article);
+ }
+}
+async function loadStudentPosts(){
+ const response=await fetch("/api/student-posts");if(!response.ok)throw Error("student_posts_failed");
+ const data=await response.json();renderStudentPosts(data.posts||[]);
+}
+async function reportPost(postId,button){
+ if(!initData){status.textContent="Open Pulse from Telegram to report a post.";return}
+ button.disabled=true;
+ const response=await fetch("/api/student-posts/report",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({post_id:postId})});
+ status.textContent=response.ok?"Report recorded.":"Unable to record report.";
+ if(response.ok) await loadStudentPosts(); else button.disabled=false;
+}
+async function submitPost(event){
+ event.preventDefault();
+ if(!initData){postStatus.textContent="Open Pulse from Telegram to share a post.";return}
+ const button=postForm.querySelector("button[type=submit]");button.disabled=true;postStatus.textContent="Sharing…";
+ const response=await fetch("/api/student-posts",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({category:document.querySelector("#post-category").value,title:document.querySelector("#post-title").value,body:document.querySelector("#post-body").value})});
+ const data=await response.json();
+ if(!response.ok){postStatus.textContent="Post could not be shared. Check the title and body.";button.disabled=false;return}
+ postForm.reset();postStatus.textContent="Shared with students. It is labelled student-reported.";
+ button.disabled=false;renderStudentPosts([data.post,...await fetch("/api/student-posts").then(r=>r.json()).then(d=>d.posts||[])].filter((post,index,self)=>index===self.findIndex(p=>p.id===post.id)).slice(0,20));
+}
+postForm.addEventListener("submit",submitPost);
 async function loadHome(){
  const response=await fetch("/api/home");if(!response.ok)throw Error("home_failed");
  const data=await response.json();
  renderItems(notices,data.sections?.find(s=>s.type==="notice")?.items||[],"No verified VGU information is available right now.");
  renderItems(events,data.sections?.find(s=>s.type==="events")?.items||[],"No verified events or opportunities are available right now.");
  renderPoll(data.poll);
+ renderStudentPosts(data.sections?.find(s=>s.type==="student-posts")?.items||[]);
 }
 async function vote(optionId){
  if(!initData||!poll)return;
