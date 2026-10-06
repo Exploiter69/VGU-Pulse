@@ -120,10 +120,19 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/api/student-posts") {
       try {
-        const posts = await listStudentPosts(env.DB);
+        const requestedCategory = url.searchParams.get("category");
+        const category =
+          requestedCategory === "question" ||
+          requestedCategory === "info" ||
+          requestedCategory === "opportunity" ||
+          requestedCategory === "request"
+            ? requestedCategory
+            : undefined;
+        const posts = await listStudentPosts(env.DB, 20, category);
         return json({
           ok: true,
           trust: "student-reported",
+          category: category ?? "all",
           posts,
         });
       } catch {
