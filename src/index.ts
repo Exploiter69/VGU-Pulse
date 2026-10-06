@@ -1,4 +1,12 @@
-import { getOpenPoll, upsertTelegramUser, voteInPoll } from "./db";
+import {
+  createStudentPost,
+  getOpenPoll,
+  listStudentPosts,
+  reportStudentPost,
+  upsertTelegramUser,
+  validateStudentPostInput,
+  voteInPoll,
+} from "./db";
 import { sendMessage } from "./telegram-bot";
 import { validateInitData } from "./telegram";
 
@@ -110,6 +118,69 @@ export default {
       }
     }
 
+    if (request.method === "GET" && url.pathname === "/api/student-posts") {
+      try {
+        const posts = await listStudentPosts(env.DB);
+        return json({
+          ok: true,
+          trust: "student-reported",
+          posts,
+        });
+      } catch {
+        return json({ ok: false, error: "student_posts_unavailable" }, 500);
+      }
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/student-posts") {
+      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const initData = request.headers.get("x-telegram-init-data") ?? "";
+      const validated = await validateInitData(initData, env.BOT_TOKEN);
+      if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+      await upsertTelegramUser(env.DB, validated.user);
+
+      let body: { category?: unknown; title?: unknown; body?: unknown };
+      try {
+        body = (await request.json()) as { category?: unknown; title?: unknown; body?: unknown };
+      } catch {
+        return json({ ok: false, error: "invalid_json" }, 400);
+      }
+
+      const input = validateStudentPostInput(body);
+      if (!input) return json({ ok: false, error: "invalid_post" }, 400);
+
+      try {
+        const post = await createStudentPost(env.DB, validated.user.id, input);
+        return json({ ok: true, trust: "student-reported", post }, 201);
+      } catch {
+        return json({ ok: false, error: "post_create_failed" }, 500);
+      }
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/student-posts/report") {
+      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const initData = request.headers.get("x-telegram-init-data") ?? "";
+      const validated = await validateInitData(initData, env.BOT_TOKEN);
+      if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+      await upsertTelegramUser(env.DB, validated.user);
+
+      let body: { post_id?: unknown };
+      try {
+        body = (await request.json()) as { post_id?: unknown };
+      } catch {
+        return json({ ok: false, error: "invalid_json" }, 400);
+      }
+      if (!Number.isSafeInteger(body.post_id)) {
+        return json({ ok: false, error: "invalid_post" }, 400);
+      }
+
+      try {
+        await reportStudentPost(env.DB, body.post_id as number, validated.user.id);
+        return json({ ok: true });
+      } catch {
+        return json({ ok: false, error: "report_failed" }, 500);
+      }
+    }
+
     if (request.method === "GET" && url.pathname === "/api/home") {
       const poll = await getOpenPoll(env.DB);
       let signalItems: Array<Record<string, unknown>> = [];
@@ -144,6 +215,13 @@ export default {
         title: "VGU Pulse",
         tagline: "What's happening at VGU, and who can I do it with?",
         sections: [
+          {
+            type: "student-posts",
+            title: "Student community",
+            body: "Questions, useful campus information and opportunities shared by students.",
+            trust: "student-reported",
+            items: await listStudentPosts(env.DB),
+          },
           {
             type: "notice",
             title: "Official VGU information",
