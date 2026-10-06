@@ -12,11 +12,11 @@
 - [x] Telegram identity upsert into D1
 - [x] Health endpoint with D1 check
 - [x] Local test/check scripts
-- [ ] Production D1 created
-- [ ] Production secrets configured
-- [ ] Worker deployed
-- [ ] Telegram webhook registered
-- [ ] End-to-end Telegram device test
+- [x] Production D1 created
+- [x] Production secrets configured
+- [x] Worker deployed
+- [x] Telegram webhook registered
+- [x] End-to-end Telegram device test
 
 The unchecked items are deployment actions requiring the owner's Cloudflare/Telegram credentials and cannot be safely committed as repository code.
 
