@@ -19,6 +19,7 @@ export interface StudentReply {
 
 
 export interface StudentProfile {
+  public_id: string;
   telegram_user_id: string;
   display_name: string;
   program: string;
@@ -55,16 +56,16 @@ export async function upsertStudentProfile(
 ): Promise<StudentProfile> {
   await db.prepare(
     `INSERT INTO student_profiles
-      (telegram_user_id, display_name, program, branch, year, bio, looking_for)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
+      (public_id, telegram_user_id, display_name, program, branch, year, bio, looking_for)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(telegram_user_id) DO UPDATE SET
        display_name=excluded.display_name, program=excluded.program,
        branch=excluded.branch, year=excluded.year, bio=excluded.bio,
        looking_for=excluded.looking_for, updated_at=CURRENT_TIMESTAMP`,
-  ).bind(String(userId), input.display_name, input.program, input.branch,
+  ).bind(crypto.randomUUID(), String(userId), input.display_name, input.program, input.branch,
     input.year, input.bio, input.looking_for).run();
   const profile = await db.prepare(
-    `SELECT telegram_user_id, display_name, program, branch, year, bio, looking_for, updated_at
+    `SELECT public_id, telegram_user_id, display_name, program, branch, year, bio, looking_for, updated_at
      FROM student_profiles WHERE telegram_user_id = ?`,
   ).bind(String(userId)).first<StudentProfile>();
   if (!profile) throw new Error("profile_save_failed");
@@ -87,17 +88,17 @@ export async function listStudentProfiles(db: D1Database, limit = 30): Promise<S
   return rows.results;
 }
 
-export async function reportStudentProfile(db: D1Database, profileUserId: string, reporterUserId: number): Promise<void> {
+export async function reportStudentProfile(db: D1Database, profilePublicId: string, reporterUserId: number): Promise<void> {
   const result = await db.prepare(
     `INSERT OR IGNORE INTO student_profile_reports (profile_user_id, reporter_telegram_user_id)
      VALUES (?, ?)`,
-  ).bind(profileUserId, String(reporterUserId)).run();
+  ).bind(profilePublicId, String(reporterUserId)).run();
   if (result.meta.changes > 0) {
     await db.prepare(
       `UPDATE student_profiles SET report_count=report_count+1,
        status=CASE WHEN report_count+1 >= 3 THEN 'hidden' ELSE status END
-       WHERE telegram_user_id=?`,
-    ).bind(profileUserId).run();
+       WHERE public_id=?`,
+    ).bind(profilePublicId).run();
   }
 }
 
