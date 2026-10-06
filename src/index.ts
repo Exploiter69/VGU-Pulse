@@ -112,20 +112,32 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/api/home") {
       const poll = await getOpenPoll(env.DB);
-      let signalItems: unknown[] = [];
+      let signalItems: Array<Record<string, unknown>> = [];
       try {
         const upstream = await env.SIGNAL_SERVICE.fetch(
-          new Request("https://vgu-signal-worker/public/information?limit=5", {
+          new Request("https://vgu-signal-worker/public/information?limit=10", {
             headers: { accept: "application/json" },
           }),
         );
         if (upstream.ok) {
           const payload = (await upstream.json()) as { items?: unknown[] };
-          signalItems = Array.isArray(payload.items) ? payload.items : [];
+          signalItems = Array.isArray(payload.items)
+            ? payload.items.filter(
+                (item): item is Record<string, unknown> =>
+                  typeof item === "object" && item !== null,
+              )
+            : [];
         }
       } catch {
         signalItems = [];
       }
+
+      const events = signalItems.filter(
+        (item) =>
+          item.category === "EVENT" ||
+          item.category === "OPPORTUNITY" ||
+          item.category === "ACTIVITY",
+      );
 
       return json({
         ok: true,
@@ -142,15 +154,18 @@ export default {
             items: signalItems,
           },
           {
-            type: "today",
-            title: "Today at VGU",
-            body: "Events, activities and opportunities will become discoverable here.",
-            trust: "verified",
+            type: "events",
+            title: "What's happening",
+            body: events.length
+              ? "Verified events and opportunities from VGU sources."
+              : "No verified events or opportunities are available right now.",
+            trust: "official",
+            items: events,
           },
           {
             type: "participate",
-            title: "Participate",
-            body: "Your first campus signal is the daily poll below.",
+            title: "Campus Pulse",
+            body: "Share your view through the campus poll.",
           },
         ],
         poll,
