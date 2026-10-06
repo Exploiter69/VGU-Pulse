@@ -117,7 +117,7 @@ document.addEventListener("click",(event)=>{
  const link=event.target.closest("a[href]");
  if(!link)return;
  const href=link.href;
- if(!/^https?:\\/\\//i.test(href)||href.startsWith(location.origin))return;
+ if(!/^https?:\/\//i.test(href)||href.startsWith(location.origin))return;
  event.preventDefault();
  if(tg?.openLink)tg.openLink(href);else window.open(href,"_blank","noopener,noreferrer");
 });
