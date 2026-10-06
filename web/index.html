@@ -29,7 +29,7 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <main>
 <div class="eyebrow">VGU • TODAY</div>
 <h1>VGU Pulse</h1>
-<p class="muted">What's happening at VGU, and who can I do it with?</p>
+<p class="muted">What's happening at VGU, and who can I do it with?</p>\n<section class="card" id="student-intelligence"><div class="eyebrow">Student intelligence</div><h2>Ask Pulse</h2><p class="muted">Search official VGU information, campus facilities and student-reported knowledge in one place. Official and student-reported results are always labelled.</p><form id="search-form"><input id="search-query" type="search" maxlength="160" placeholder="Try: exam form, medical, transport, hostel…" aria-label="Search Pulse"><button class="submit" type="submit">Search Pulse</button></form><div id="search-quick" style="display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px"></div><div id="search-results"><p class="muted">Search for something you need on campus.</p></div></section>
 <section class="card">
 <p id="identity">Connecting to Telegram…</p>
 <p id="status" class="muted"></p>
@@ -376,7 +376,7 @@ async function vote(optionId){
  const data=await response.json();if(!response.ok){status.textContent="Your vote could not be recorded. Try again.";renderPoll(poll);return}
  renderPoll(data.poll);status.textContent="Vote recorded. Your campus signal is now counted.";
 }
-async function boot(){
+async function boot(){\n initSearch();\n try{await loadSearch("")}catch{}
  renderCampusGuide();
 
  let authPromise=null;
