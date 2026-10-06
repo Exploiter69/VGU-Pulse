@@ -84,7 +84,7 @@ function score(item: IntelligenceItem, query: string): number {
 export function searchKnowledge(
   query: string,
   official: RawItem[] = [],
-  student: RawItem[] = [],
+  student: Array<RawItem | { title: string; body: string }> = [],
   limit = 20,
 ): IntelligenceItem[] {
   const normalized = query.trim().slice(0, 160);
