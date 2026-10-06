@@ -376,7 +376,9 @@ async function vote(optionId){
  const data=await response.json();if(!response.ok){status.textContent="Your vote could not be recorded. Try again.";renderPoll(poll);return}
  renderPoll(data.poll);status.textContent="Vote recorded. Your campus signal is now counted.";
 }
-async function boot(){\n initSearch();\n try{await loadSearch("")}catch{}
+async function boot(){
+ initSearch();
+ try{await loadSearch("")}catch{}
  renderCampusGuide();
 
  let authPromise=null;
