@@ -1,5 +1,8 @@
 import {
   createStudentPost,
+  deleteStudentPost,
+  deleteStudentProfile,
+  deleteStudentReply,
   getStudentProfile,
   listStudentProfiles,
   reportStudentProfile,
@@ -156,6 +159,18 @@ export default {
       } catch { return json({ ok: false, error: "profile_save_failed" }, 500); }
     }
 
+    if (request.method === "DELETE" && url.pathname === "/api/student-profile") {
+      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", env.BOT_TOKEN);
+      if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+      try {
+        const deleted = await deleteStudentProfile(env.DB, validated.user.id);
+        return json({ ok: true, deleted });
+      } catch {
+        return json({ ok: false, error: "profile_delete_failed" }, 500);
+      }
+    }
+
     if (request.method === "POST" && url.pathname === "/api/student-profile/report") {
       if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
       const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", env.BOT_TOKEN);
@@ -230,6 +245,22 @@ export default {
       }
     }
 
+    if (request.method === "DELETE" && url.pathname === "/api/student-posts") {
+      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", env.BOT_TOKEN);
+      if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+      const postId = Number(url.searchParams.get("post_id"));
+      if (!Number.isSafeInteger(postId) || postId < 1) {
+        return json({ ok: false, error: "invalid_post" }, 400);
+      }
+      try {
+        const deleted = await deleteStudentPost(env.DB, postId, validated.user.id);
+        return json({ ok: true, deleted });
+      } catch {
+        return json({ ok: false, error: "post_delete_failed" }, 500);
+      }
+    }
+
     if (request.method === "POST" && url.pathname === "/api/student-posts/replies") {
       if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
       const initData = request.headers.get("x-telegram-init-data") ?? "";
@@ -262,6 +293,22 @@ export default {
           return json({ ok: false, error: "post_not_found" }, 404);
         }
         return json({ ok: false, error: "reply_create_failed" }, 500);
+      }
+    }
+
+    if (request.method === "DELETE" && url.pathname === "/api/student-posts/replies") {
+      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", env.BOT_TOKEN);
+      if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+      const replyId = Number(url.searchParams.get("reply_id"));
+      if (!Number.isSafeInteger(replyId) || replyId < 1) {
+        return json({ ok: false, error: "invalid_reply" }, 400);
+      }
+      try {
+        const deleted = await deleteStudentReply(env.DB, replyId, validated.user.id);
+        return json({ ok: true, deleted });
+      } catch {
+        return json({ ok: false, error: "reply_delete_failed" }, 500);
       }
     }
 
