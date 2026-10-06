@@ -195,7 +195,13 @@ export default {
           requestedCategory === "request"
             ? requestedCategory
             : undefined;
-        const posts = await listStudentPosts(env.DB, 20, category);
+        let viewerId: number | undefined;
+        const initData = request.headers.get("x-telegram-init-data") ?? "";
+        if (initData && env.BOT_TOKEN) {
+          const validated = await validateInitData(initData, env.BOT_TOKEN);
+          viewerId = validated?.user.id;
+        }
+        const posts = await listStudentPosts(env.DB, 20, category, viewerId);
         return json({
           ok: true,
           trust: "student-reported",
@@ -238,7 +244,13 @@ export default {
         return json({ ok: false, error: "invalid_post" }, 400);
       }
       try {
-        const replies = await listStudentReplies(env.DB, postId);
+        let viewerId: number | undefined;
+        const initData = request.headers.get("x-telegram-init-data") ?? "";
+        if (initData && env.BOT_TOKEN) {
+          const validated = await validateInitData(initData, env.BOT_TOKEN);
+          viewerId = validated?.user.id;
+        }
+        const replies = await listStudentReplies(env.DB, postId, 50, viewerId);
         return json({ ok: true, trust: "student-reported", post_id: postId, replies });
       } catch {
         return json({ ok: false, error: "replies_unavailable" }, 500);
