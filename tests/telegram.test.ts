@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateStudentPostInput, validateStudentReplyInput } from "../src/db";
+import { validateStudentPostInput, validateStudentReplyInput, validateStudentProfileInput } from "../src/db";
 import { validateInitData } from "../src/telegram";
 
 describe("validateInitData", () => {
@@ -11,6 +11,21 @@ describe("validateInitData", () => {
     await expect(
       validateInitData("auth_date=123&user=%7B%7D&hash=bad", "token"),
     ).resolves.toBeNull();
+  });
+});
+
+describe("validateStudentProfileInput", () => {
+  it("accepts a bounded opt-in profile", () => {
+    expect(validateStudentProfileInput({
+      display_name: "Alok", program: "B.Tech CSE", branch: "CSE",
+      year: 2, bio: "Building with friends.", looking_for: "DSA study group",
+    })?.looking_for).toBe("DSA study group");
+  });
+  it("rejects invalid year", () => {
+    expect(validateStudentProfileInput({
+      display_name: "Alok", program: "B.Tech CSE", branch: "CSE",
+      year: 9, bio: "", looking_for: "study group",
+    })).toBeNull();
   });
 });
 
