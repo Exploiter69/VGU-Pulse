@@ -33,7 +33,7 @@ export interface StudentProfile {
 export function validateStudentProfileInput(input: {
   display_name?: unknown; program?: unknown; branch?: unknown; year?: unknown;
   bio?: unknown; looking_for?: unknown;
-}): Omit<StudentProfile, "telegram_user_id" | "updated_at"> | null {
+}): Omit<StudentProfile, "public_id" | "telegram_user_id" | "updated_at"> | null {
   if (typeof input.display_name !== "string" || typeof input.program !== "string" ||
       typeof input.branch !== "string" || typeof input.year !== "number" ||
       typeof input.bio !== "string" || typeof input.looking_for !== "string") return null;
