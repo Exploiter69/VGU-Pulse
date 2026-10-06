@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateStudentPostInput } from "../src/db";
+import { validateStudentPostInput, validateStudentReplyInput } from "../src/db";
 import { validateInitData } from "../src/telegram";
 
 describe("validateInitData", () => {
@@ -11,6 +11,19 @@ describe("validateInitData", () => {
     await expect(
       validateInitData("auth_date=123&user=%7B%7D&hash=bad", "token"),
     ).resolves.toBeNull();
+  });
+});
+
+describe("validateStudentReplyInput", () => {
+  it("accepts bounded replies", () => {
+    expect(validateStudentReplyInput({ body: "The library closes at 9 PM." })).toEqual({
+      body: "The library closes at 9 PM.",
+    });
+  });
+
+  it("rejects empty and oversized replies", () => {
+    expect(validateStudentReplyInput({ body: " " })).toBeNull();
+    expect(validateStudentReplyInput({ body: "x".repeat(1001) })).toBeNull();
   });
 });
 
