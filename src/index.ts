@@ -161,7 +161,7 @@ export default {
       const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", env.BOT_TOKEN);
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       let body: { profile_public_id?: unknown };
-      try { body = (await request.json()) as { profile_user_id?: unknown }; }
+      try { body = (await request.json()) as { profile_public_id?: unknown }; }
       catch { return json({ ok: false, error: "invalid_json" }, 400); }
       if (typeof body.profile_public_id !== "string" || !body.profile_public_id.trim()) return json({ ok: false, error: "invalid_profile" }, 400);
       try {
