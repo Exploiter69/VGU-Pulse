@@ -89,8 +89,13 @@ export async function listStudentProfiles(db: D1Database, limit = 30): Promise<S
 }
 
 export async function reportStudentProfile(db: D1Database, profilePublicId: string, reporterUserId: number): Promise<void> {
+  const profile = await db.prepare(
+    `SELECT telegram_user_id FROM student_profiles WHERE public_id=?`,
+  ).bind(profilePublicId).first<{ telegram_user_id: string }>();
+  if (!profile || profile.telegram_user_id === String(reporterUserId)) return;
+
   const result = await db.prepare(
-    `INSERT OR IGNORE INTO student_profile_reports (profile_user_id, reporter_telegram_user_id)
+    `INSERT OR IGNORE INTO student_profile_reports (profile_public_id, reporter_telegram_user_id)
      VALUES (?, ?)`,
   ).bind(profilePublicId, String(reporterUserId)).run();
   if (result.meta.changes > 0) {
