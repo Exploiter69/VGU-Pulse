@@ -351,12 +351,32 @@ async function vote(optionId){
 }
 async function boot(){
  renderCampusGuide();
- if(!tg?.initData){identity.textContent="Open this page from the VGU Pulse Telegram Mini App.";await loadHome();return}
- initData=tg.initData;
- const response=await fetch("/api/auth/telegram",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({initData})});
- const data=await response.json();if(!response.ok){identity.textContent="Telegram authentication failed.";return}
- identity.textContent="Welcome, "+(data.user.first_name||data.user.username||"student")+".";
- status.textContent="Telegram identity verified.";await loadProfile();await loadHome();await loadStudentPosts();await loadProfiles();
+ if(tg?.initData){
+  initData=tg.initData;
+  try{
+   const response=await fetch("/api/auth/telegram",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({initData})});
+   const data=await response.json();
+   if(response.ok){
+    identity.textContent="Welcome, "+(data.user.first_name||data.user.username||"student")+".";
+    status.textContent="Telegram identity verified.";
+   }else{
+    identity.textContent="Telegram authentication unavailable. Public Pulse information is still available.";
+    status.textContent="Some participation features need a valid Telegram session.";
+   }
+  }catch{
+   identity.textContent="Telegram authentication unavailable. Public Pulse information is still available.";
+   status.textContent="Some participation features need a valid Telegram session.";
+  }
+ }else{
+  identity.textContent="Open Pulse from Telegram to enable student participation.";
+ }
+ try{await loadHome()}catch{status.textContent="Pulse information is temporarily unavailable."}
+ if(initData){
+  try{await loadProfile()}catch{}
+  try{await loadStudentPosts()}catch{}
+  try{await loadProfiles()}catch{}
+ }
+ if(tg?.ready)tg.ready();
 }
 boot().catch(()=>{status.textContent="Unable to connect to Pulse."});
 </script>
