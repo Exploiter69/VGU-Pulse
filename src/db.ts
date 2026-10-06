@@ -6,6 +6,7 @@ export interface StudentPost {
   author_name: string;
   created_at: string;
   report_count: number;
+  owned?: boolean;
 }
 
 export interface StudentReply {
@@ -15,6 +16,7 @@ export interface StudentReply {
   author_name: string;
   created_at: string;
   report_count: number;
+  owned?: boolean;
 }
 
 
@@ -163,7 +165,8 @@ export async function createStudentPost(
     .prepare(
       `SELECT p.id, p.category, p.title, p.body,
               COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
-              p.created_at, p.report_count
+              p.created_at, p.report_count,
+              p.telegram_user_id AS owner_telegram_user_id
        FROM student_posts p
        JOIN users u ON u.telegram_user_id = p.telegram_user_id
        WHERE p.id = ?`,
@@ -185,6 +188,7 @@ export async function listStudentPosts(
   db: D1Database,
   limit = 20,
   category?: StudentPost["category"],
+  userId?: number,
 ): Promise<StudentPost[]> {
   const rows = await db
     .prepare(
@@ -200,10 +204,15 @@ export async function listStudentPosts(
     )
     .bind(category ?? null, category ?? null, Math.min(Math.max(limit, 1), 50))
     .all<StudentPost>();
-  return rows.results.map((post) => ({
-    ...post,
-    report_count: Number(post.report_count),
-  }));
+  return rows.results.map((post) => {
+    const row = post as StudentPost & { owner_telegram_user_id?: string };
+    return {
+      ...post,
+      report_count: Number(post.report_count),
+      ...(userId !== undefined ? { owned: row.owner_telegram_user_id === String(userId) } : {}),
+      owner_telegram_user_id: undefined,
+    };
+  });
 }
 
 export async function deleteStudentPost(db: D1Database, postId: number, userId: number): Promise<boolean> {
@@ -217,12 +226,14 @@ export async function listStudentReplies(
   db: D1Database,
   postId: number,
   limit = 50,
+  userId?: number,
 ): Promise<StudentReply[]> {
   const rows = await db
     .prepare(
       `SELECT r.id, r.post_id, r.body,
               COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
-              r.created_at, r.report_count
+              r.created_at, r.report_count,
+              r.telegram_user_id AS owner_telegram_user_id
        FROM student_post_replies r
        JOIN users u ON u.telegram_user_id = r.telegram_user_id
        WHERE r.post_id = ? AND r.status = 'published' AND r.report_count < 3
@@ -231,10 +242,15 @@ export async function listStudentReplies(
     )
     .bind(postId, Math.min(Math.max(limit, 1), 50))
     .all<StudentReply>();
-  return rows.results.map((reply) => ({
-    ...reply,
-    report_count: Number(reply.report_count),
-  }));
+  return rows.results.map((reply) => {
+    const row = reply as StudentReply & { owner_telegram_user_id?: string };
+    return {
+      ...reply,
+      report_count: Number(reply.report_count),
+      ...(userId !== undefined ? { owned: row.owner_telegram_user_id === String(userId) } : {}),
+      owner_telegram_user_id: undefined,
+    };
+  });
 }
 
 export async function createStudentReply(
