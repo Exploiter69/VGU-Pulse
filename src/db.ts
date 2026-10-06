@@ -8,6 +8,15 @@ export interface StudentPost {
   report_count: number;
 }
 
+export interface StudentReply {
+  id: number;
+  post_id: number;
+  body: string;
+  author_name: string;
+  created_at: string;
+  report_count: number;
+}
+
 export interface PulsePoll {
   id: number;
   question: string;
@@ -15,6 +24,13 @@ export interface PulsePoll {
   options: Array<{ id: number; label: string; votes: number }>;
   total_votes: number;
   selected_option_id: number | null;
+}
+
+export function validateStudentReplyInput(input: { body?: unknown }): { body: string } | null {
+  if (typeof input.body !== "string") return null;
+  const body = input.body.trim();
+  if (body.length < 1 || body.length > 1000) return null;
+  return { body };
 }
 
 export function validateStudentPostInput(input: {
@@ -91,6 +107,91 @@ export async function listStudentPosts(
     ...post,
     report_count: Number(post.report_count),
   }));
+}
+
+export async function listStudentReplies(
+  db: D1Database,
+  postId: number,
+  limit = 50,
+): Promise<StudentReply[]> {
+  const rows = await db
+    .prepare(
+      `SELECT r.id, r.post_id, r.body,
+              COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
+              r.created_at, r.report_count
+       FROM student_post_replies r
+       JOIN users u ON u.telegram_user_id = r.telegram_user_id
+       WHERE r.post_id = ? AND r.status = 'published' AND r.report_count < 3
+       ORDER BY r.created_at ASC, r.id ASC
+       LIMIT ?`,
+    )
+    .bind(postId, Math.min(Math.max(limit, 1), 50))
+    .all<StudentReply>();
+  return rows.results.map((reply) => ({
+    ...reply,
+    report_count: Number(reply.report_count),
+  }));
+}
+
+export async function createStudentReply(
+  db: D1Database,
+  postId: number,
+  userId: number,
+  body: string,
+): Promise<StudentReply> {
+  const post = await db
+    .prepare(`SELECT id FROM student_posts WHERE id = ? AND status = 'published'`)
+    .bind(postId)
+    .first<{ id: number }>();
+  if (!post) throw new Error("post_not_found");
+
+  const result = await db
+    .prepare(
+      `INSERT INTO student_post_replies (post_id, telegram_user_id, body)
+       VALUES (?, ?, ?)`,
+    )
+    .bind(postId, String(userId), body)
+    .run();
+
+  const reply = await db
+    .prepare(
+      `SELECT r.id, r.post_id, r.body,
+              COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
+              r.created_at, r.report_count
+       FROM student_post_replies r
+       JOIN users u ON u.telegram_user_id = r.telegram_user_id
+       WHERE r.id = ?`,
+    )
+    .bind(result.meta.last_row_id)
+    .first<StudentReply>();
+  if (!reply) throw new Error("reply_create_failed");
+  return { ...reply, report_count: Number(reply.report_count) };
+}
+
+export async function reportStudentReply(
+  db: D1Database,
+  replyId: number,
+  userId: number,
+): Promise<void> {
+  const result = await db
+    .prepare(
+      `INSERT OR IGNORE INTO student_post_reply_reports (reply_id, telegram_user_id)
+       VALUES (?, ?)`,
+    )
+    .bind(replyId, String(userId))
+    .run();
+
+  if (result.meta.changes > 0) {
+    await db
+      .prepare(
+        `UPDATE student_post_replies
+         SET report_count = report_count + 1,
+             status = CASE WHEN report_count + 1 >= 3 THEN 'hidden' ELSE status END
+         WHERE id = ?`,
+      )
+      .bind(replyId)
+      .run();
+  }
 }
 
 export async function reportStudentPost(
