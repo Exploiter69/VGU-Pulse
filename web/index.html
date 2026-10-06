@@ -18,6 +18,10 @@ main{max-width:720px;margin:auto;padding:28px 18px 48px}
 textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:#f5f7fa;border:1px solid #343b49;border-radius:12px;padding:12px;margin:6px 0 10px;font:inherit}
 .submit{width:100%;background:#6ea8fe;color:#08101d;border:0;border-radius:12px;padding:13px;font-weight:700;cursor:pointer}
 .post{padding:14px 0;border-top:1px solid #2b303b}.post:first-child{border-top:0}
+.reply{margin:10px 0 0 14px;padding:10px 0 0 12px;border-left:2px solid #2b303b}
+.reply-form{margin:10px 0 0 14px}
+.reply-form textarea{margin-bottom:6px}
+.reply-submit{background:#222733;color:#f5f7fa;border:1px solid #343b49;border-radius:10px;padding:8px 12px;cursor:pointer}
 .report{background:none;border:0;color:#9aa3b2;padding:4px 0;cursor:pointer}
 </style>
 </head>
@@ -114,7 +118,44 @@ function renderStudentPosts(posts){
   const body=document.createElement("p");body.className="muted";body.textContent=post.body;
   const report=document.createElement("button");report.className="report";report.type="button";report.textContent="Report";
   report.addEventListener("click",()=>reportPost(post.id,report));
-  article.append(meta,title,body,report);studentPosts.append(article);
+
+  const replies=document.createElement("div");replies.className="replies";
+  const repliesStatus=document.createElement("p");repliesStatus.className="muted";repliesStatus.textContent="Loading replies…";replies.append(repliesStatus);
+  const replyForm=document.createElement("form");replyForm.className="reply-form";
+  const replyInput=document.createElement("textarea");replyInput.rows=2;replyInput.maxLength=1000;replyInput.placeholder="Reply to this post…";replyInput.required=true;
+  const replySubmit=document.createElement("button");replySubmit.className="reply-submit";replySubmit.type="submit";replySubmit.textContent="Reply";
+  replyForm.append(replyInput,replySubmit);
+  replyForm.addEventListener("submit",async(event)=>{
+    event.preventDefault();
+    if(!initData){status.textContent="Open Pulse from Telegram to reply.";return}
+    replySubmit.disabled=true;
+    const response=await fetch("/api/student-posts/replies",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({post_id:post.id,body:replyInput.value})});
+    if(response.ok){replyInput.value="";await loadReplies(post.id,replies)}else{status.textContent="Reply could not be posted."}
+    replySubmit.disabled=false;
+  });
+  article.append(meta,title,body,report,replies,replyForm);studentPosts.append(article);
+  loadReplies(post.id,replies).catch(()=>{repliesStatus.textContent="Replies unavailable.";});
+ }
+}
+async function loadReplies(postId,target){
+ const response=await fetch("/api/student-posts/replies?post_id="+encodeURIComponent(postId));
+ if(!response.ok)throw Error("replies_failed");
+ const data=await response.json();target.replaceChildren();
+ const replies=data.replies||[];
+ if(!replies.length){const p=document.createElement("p");p.className="muted";p.textContent="No replies yet.";target.append(p);return}
+ for(const reply of replies){
+  const item=document.createElement("div");item.className="reply";
+  const meta=document.createElement("small");meta.className="muted";meta.textContent=reply.author_name+" • student-reported";
+  const text=document.createElement("p");text.className="muted";text.textContent=reply.body;
+  const report=document.createElement("button");report.className="report";report.type="button";report.textContent="Report";
+  report.addEventListener("click",async()=>{
+    if(!initData){status.textContent="Open Pulse from Telegram to report a reply.";return}
+    report.disabled=true;
+    const response=await fetch("/api/student-posts/replies/report",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({reply_id:reply.id})});
+    status.textContent=response.ok?"Reply report recorded.":"Unable to record reply report.";
+    if(response.ok) await loadReplies(postId,target); else report.disabled=false;
+  });
+  item.append(meta,text,report);target.append(item);
  }
 }
 async function loadStudentPosts(){
