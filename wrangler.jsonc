@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vgu-pulse",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./web"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "vgu-pulse",
+      "database_id": "REPLACE_WITH_PULSE_D1_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "APP_NAME": "VGU Pulse"
+  }
+}
