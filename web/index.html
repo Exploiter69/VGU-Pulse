@@ -111,7 +111,7 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <script>
 const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
 let initData="",poll=null;
-const profileForm=document.querySelector("#profile-form"),profileStatus=document.querySelector("#profile-status"),profiles=document.querySelector("#profiles"),profileDelete=document.querySelector("#profile-delete");const identity=document.querySelector("#identity"),status=document.querySelector("#status"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status"),postFilter=document.querySelector("#post-filter");
+const profileForm=document.querySelector("#profile-form"),profileStatus=document.querySelector("#profile-status"),profiles=document.querySelector("#profiles"),profileDelete=document.querySelector("#profile-delete");const identity=document.querySelector("#identity"),status=document.querySelector("#status"),searchForm=document.querySelector("#search-form"),searchQuery=document.querySelector("#search-query"),searchQuick=document.querySelector("#search-quick"),searchResults=document.querySelector("#search-results"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status"),postFilter=document.querySelector("#post-filter");
 
 document.addEventListener("click",(event)=>{
  const link=event.target.closest("a[href]");
@@ -121,6 +121,33 @@ document.addEventListener("click",(event)=>{
  event.preventDefault();
  if(tg?.openLink)tg.openLink(href);else window.open(href,"_blank","noopener,noreferrer");
 });
+function renderSearchResults(results){
+ searchResults.replaceChildren();
+ if(!results.length){const p=document.createElement("p");p.className="muted";p.textContent="No matching Pulse information found. Try a simpler phrase or use Student Posts for a question.";searchResults.append(p);return}
+ for(const item of results){
+  const article=document.createElement("article");article.className="post";
+  const meta=document.createElement("small");meta.className="muted";meta.textContent=(item.trust==="official"?"Official":"Student-reported")+" • "+String(item.source||"Pulse");
+  const title=document.createElement("h3");title.textContent=String(item.title||"Pulse result");
+  const summary=document.createElement("p");summary.className="muted";summary.textContent=String(item.summary||"");
+  article.append(meta,title,summary);
+  if(item.url){const link=document.createElement("a");link.href=String(item.url);link.target="_blank";link.rel="noopener noreferrer";link.textContent="Open source";link.style.display="inline-block";link.style.marginTop="4px";article.append(link)}
+  searchResults.append(article);
+ }
+}
+async function loadSearch(query=""){
+ const response=await fetch("/api/search?q="+encodeURIComponent(query));
+ if(!response.ok)throw Error("search_failed");
+ const data=await response.json();renderSearchResults(data.results||[]);
+}
+function initSearch(){
+ const quick=["Exam form","Medical","Transport","Hostel","Library"];
+ for(const label of quick){
+  const button=document.createElement("button");button.type="button";button.className="report";button.textContent=label;
+  button.addEventListener("click",()=>{searchQuery.value=label;loadSearch(label).catch(()=>{searchResults.textContent="Search is temporarily unavailable."})});
+  searchQuick.append(button);
+ }
+ searchForm.addEventListener("submit",(event)=>{event.preventDefault();loadSearch(searchQuery.value.trim()).catch(()=>{searchResults.textContent="Search is temporarily unavailable. Try again."})});
+}
 function renderPoll(next){
  poll=next;
  if(!poll){question.textContent="No open poll right now.";options.replaceChildren();voteTotal.textContent="";return}
