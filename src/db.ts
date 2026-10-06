@@ -71,6 +71,7 @@ export async function createStudentPost(
 export async function listStudentPosts(
   db: D1Database,
   limit = 20,
+  category?: StudentPost["category"],
 ): Promise<StudentPost[]> {
   const rows = await db
     .prepare(
@@ -80,10 +81,11 @@ export async function listStudentPosts(
        FROM student_posts p
        JOIN users u ON u.telegram_user_id = p.telegram_user_id
        WHERE p.status = 'published' AND p.report_count < 3
+         AND (? IS NULL OR p.category = ?)
        ORDER BY p.created_at DESC, p.id DESC
        LIMIT ?`,
     )
-    .bind(Math.min(Math.max(limit, 1), 50))
+    .bind(category ?? null, category ?? null, Math.min(Math.max(limit, 1), 50))
     .all<StudentPost>();
   return rows.results.map((post) => ({
     ...post,
