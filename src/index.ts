@@ -7,6 +7,7 @@ interface Env {
   BOT_TOKEN?: string;
   TELEGRAM_WEBAPP_URL?: string;
   TELEGRAM_WEBHOOK_SECRET?: string;
+  SIGNAL_API_URL?: string;
   APP_NAME: string;
 }
 
