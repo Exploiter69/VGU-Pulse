@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>VGU Pulse</title>
+  <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    body { margin:0; min-height:100vh; background:#0f1115; color:#f5f7fa; }
+    main { max-width:720px; margin:auto; padding:28px 18px 48px; }
+    .card { background:#181b22; border:1px solid #2b303b; border-radius:18px; padding:20px; margin:14px 0; }
+    .muted { color:#9aa3b2; }
+    button { border:0; border-radius:12px; padding:12px 16px; font-weight:700; cursor:pointer; }
+    #status { margin-top:12px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>VGU Pulse</h1>
+  <p class="muted">What's happening at VGU, and who can I do it with?</p>
+  <section class="card">
+    <h2>Pulse is ready.</h2>
+    <p id="identity">Connecting to Telegram…</p>
+    <div id="status" class="muted"></div>
+  </section>
+</main>
+<script>
+  const tg = window.Telegram?.WebApp;
+  tg?.ready();
+  tg?.expand();
+
+  async function boot() {
+    if (!tg?.initData) {
+      document.querySelector("#identity").textContent =
+        "Open this page from the VGU Pulse Telegram Mini App.";
+      return;
+    }
+
+    const response = await fetch("/api/auth/telegram", {
+      method: "POST",
+      headers: {"content-type":"application/json"},
+      body: JSON.stringify({initData: tg.initData})
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      document.querySelector("#identity").textContent = "Telegram authentication failed.";
+      return;
+    }
+
+    const name = data.user.first_name || data.user.username || "student";
+    document.querySelector("#identity").textContent = `Welcome, ${name}.`;
+    document.querySelector("#status").textContent = "Telegram identity verified. Gate 1 is alive.";
+  }
+
+  boot().catch(() => {
+    document.querySelector("#status").textContent = "Unable to connect to Pulse.";
+  });
+</script>
+</body>
+</html>
