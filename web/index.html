@@ -41,6 +41,9 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <section class="card">
 <div class="eyebrow">Student-reported</div><h2>Campus community</h2>
 <p class="muted">Ask a question, share useful campus information, or find people for an opportunity. These posts are student-reported, not official VGU announcements.</p>
+<select id="post-filter" aria-label="Filter student posts">
+<option value="">All student posts</option><option value="question">Questions</option><option value="info">Campus information</option><option value="opportunity">Opportunities</option><option value="request">Requests</option>
+</select>
 <form id="post-form">
 <select id="post-category" aria-label="Post type">
 <option value="question">Question</option><option value="info">Campus information</option><option value="opportunity">Opportunity</option><option value="request">Request</option>
@@ -67,7 +70,7 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <script>
 const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
 let initData="",poll=null;
-const identity=document.querySelector("#identity"),status=document.querySelector("#status"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status");
+const identity=document.querySelector("#identity"),status=document.querySelector("#status"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status"),postFilter=document.querySelector("#post-filter");
 
 function renderPoll(next){
  poll=next;
@@ -115,7 +118,9 @@ function renderStudentPosts(posts){
  }
 }
 async function loadStudentPosts(){
- const response=await fetch("/api/student-posts");if(!response.ok)throw Error("student_posts_failed");
+ const category=postFilter.value;
+ const response=await fetch("/api/student-posts"+(category?"?category="+encodeURIComponent(category):""));
+ if(!response.ok)throw Error("student_posts_failed");
  const data=await response.json();renderStudentPosts(data.posts||[]);
 }
 async function reportPost(postId,button){
@@ -133,9 +138,10 @@ async function submitPost(event){
  const data=await response.json();
  if(!response.ok){postStatus.textContent="Post could not be shared. Check the title and body.";button.disabled=false;return}
  postForm.reset();postStatus.textContent="Shared with students. It is labelled student-reported.";
- button.disabled=false;renderStudentPosts([data.post,...await fetch("/api/student-posts").then(r=>r.json()).then(d=>d.posts||[])].filter((post,index,self)=>index===self.findIndex(p=>p.id===post.id)).slice(0,20));
+ button.disabled=false;await loadStudentPosts();
 }
 postForm.addEventListener("submit",submitPost);
+postFilter.addEventListener("change",()=>loadStudentPosts().catch(()=>{status.textContent="Unable to load that student-post filter."}));
 async function loadHome(){
  const response=await fetch("/api/home");if(!response.ok)throw Error("home_failed");
  const data=await response.json();
