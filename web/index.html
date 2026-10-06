@@ -165,10 +165,27 @@ function renderStudentPosts(posts){
   replyForm.addEventListener("submit",async(event)=>{
     event.preventDefault();
     if(!initData){status.textContent="Open Pulse from Telegram to reply.";return}
+    const body=replyInput.value.trim();
+    if(!body){replyInput.focus();return}
     replySubmit.disabled=true;
-    const response=await fetch("/api/student-posts/replies",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({post_id:post.id,body:replyInput.value})});
-    if(response.ok){replyInput.value="";await loadReplies(post.id,replies)}else{status.textContent="Reply could not be posted."}
-    replySubmit.disabled=false;
+    replySubmit.textContent="Posting…";
+    try{
+      const response=await fetch("/api/student-posts/replies",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({post_id:post.id,body})});
+      let data={};
+      try{data=await response.json()}catch{}
+      if(!response.ok){
+        status.textContent=data.error==="unauthorized"?"Telegram session expired. Reopen Pulse from Telegram.":data.error==="invalid_reply"?"Reply must contain 1–1000 characters.":data.error==="post_not_found"?"That post is no longer available.":"Reply could not be posted. Try again.";
+        return;
+      }
+      replyInput.value="";
+      await loadReplies(post.id,replies);
+      status.textContent="Reply posted.";
+    }catch{
+      status.textContent="Network error while posting reply. Try again.";
+    }finally{
+      replySubmit.disabled=false;
+      replySubmit.textContent="Reply";
+    }
   });
   const deletePost=document.createElement("button");deletePost.className="report";deletePost.type="button";deletePost.textContent="Delete";
   deletePost.hidden=!post.owned;
