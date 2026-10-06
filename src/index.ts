@@ -93,6 +93,21 @@ export default {
       return handleTelegramUpdate(request, env);
     }
 
+    if (request.method === "GET" && url.pathname === "/api/signal") {
+      const signalUrl = env.SIGNAL_API_URL;
+      if (!signalUrl) return json({ ok: false, error: "signal_not_configured" }, 503);
+      try {
+        const upstream = await fetch(new URL("/public/information?limit=10", signalUrl), {
+          headers: { accept: "application/json" },
+        });
+        if (!upstream.ok) return json({ ok: false, error: "signal_unavailable" }, 502);
+        const payload = await upstream.json();
+        return json(payload);
+      } catch {
+        return json({ ok: false, error: "signal_unavailable" }, 502);
+      }
+    }
+
     if (request.method === "GET" && url.pathname === "/api/home") {
       const poll = await getOpenPoll(env.DB);
       return json({
