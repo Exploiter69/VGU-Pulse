@@ -52,7 +52,7 @@ export function validateStudentProfileInput(input: {
 
 export async function upsertStudentProfile(
   db: D1Database, userId: number,
-  input: Omit<StudentProfile, "telegram_user_id" | "updated_at">,
+  input: Omit<StudentProfile, "public_id" | "telegram_user_id" | "updated_at">,
 ): Promise<StudentProfile> {
   await db.prepare(
     `INSERT INTO student_profiles
@@ -74,14 +74,14 @@ export async function upsertStudentProfile(
 
 export async function getStudentProfile(db: D1Database, userId: number): Promise<StudentProfile | null> {
   return db.prepare(
-    `SELECT telegram_user_id, display_name, program, branch, year, bio, looking_for, updated_at
+    `SELECT public_id, telegram_user_id, display_name, program, branch, year, bio, looking_for, updated_at
      FROM student_profiles WHERE telegram_user_id = ?`,
   ).bind(String(userId)).first<StudentProfile>();
 }
 
 export async function listStudentProfiles(db: D1Database, limit = 30): Promise<StudentProfile[]> {
   const rows = await db.prepare(
-    `SELECT telegram_user_id, display_name, program, branch, year, bio, looking_for, updated_at
+    `SELECT public_id, telegram_user_id, display_name, program, branch, year, bio, looking_for, updated_at
      FROM student_profiles WHERE status = 'published' AND report_count < 3
      ORDER BY updated_at DESC, telegram_user_id LIMIT ?`,
   ).bind(Math.min(Math.max(limit, 1), 50)).all<StudentProfile>();
