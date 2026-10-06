@@ -21,6 +21,7 @@ import {
 } from "./db";
 import { sendMessage } from "./telegram-bot";
 import { validateInitData } from "./telegram";
+import { searchKnowledge } from "./intelligence";
 
 interface Env {
   DB: D1Database;
@@ -382,6 +383,36 @@ export default {
         return json({ ok: true });
       } catch {
         return json({ ok: false, error: "report_failed" }, 500);
+      }
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/search") {
+      const query = (url.searchParams.get("q") ?? "").trim().slice(0, 160);
+      try {
+        const official: Array<Record<string, unknown>> = [];
+        try {
+          const upstream = await env.SIGNAL_SERVICE.fetch(
+            new Request("https://vgu-signal-worker/public/information?limit=20", {
+              headers: { accept: "application/json" },
+            }),
+          );
+          if (upstream.ok) {
+            const payload = (await upstream.json()) as { items?: unknown[] };
+            if (Array.isArray(payload.items)) {
+              for (const item of payload.items) {
+                if (typeof item === "object" && item !== null) official.push(item as Record<string, unknown>);
+              }
+            }
+          }
+        } catch {}
+        const student = await listStudentPosts(env.DB, 20);
+        return json({
+          ok: true,
+          query,
+          results: searchKnowledge(query, official, student),
+        });
+      } catch {
+        return json({ ok: false, error: "search_unavailable" }, 500);
       }
     }
 
