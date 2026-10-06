@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS student_profiles (
+  public_id TEXT NOT NULL UNIQUE,
   telegram_user_id TEXT PRIMARY KEY REFERENCES users(telegram_user_id),
   display_name TEXT NOT NULL,
   program TEXT NOT NULL,
