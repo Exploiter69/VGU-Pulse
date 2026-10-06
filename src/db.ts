@@ -22,7 +22,6 @@ export interface StudentReply {
 
 export interface StudentProfile {
   public_id: string;
-  telegram_user_id: string;
   display_name: string;
   program: string;
   branch: string;
@@ -67,7 +66,7 @@ export async function upsertStudentProfile(
   ).bind(crypto.randomUUID(), String(userId), input.display_name, input.program, input.branch,
     input.year, input.bio, input.looking_for).run();
   const profile = await db.prepare(
-    `SELECT public_id, telegram_user_id, display_name, program, branch, year, bio, looking_for, updated_at
+    `SELECT public_id, display_name, program, branch, year, bio, looking_for, updated_at
      FROM student_profiles WHERE telegram_user_id = ?`,
   ).bind(String(userId)).first<StudentProfile>();
   if (!profile) throw new Error("profile_save_failed");
@@ -166,7 +165,7 @@ export async function createStudentPost(
       `SELECT p.id, p.category, p.title, p.body,
               COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
               p.created_at, p.report_count,
-              p.telegram_user_id AS owner_telegram_user_id
+              CASE WHEN ? IS NOT NULL AND p.telegram_user_id = ? THEN 1 ELSE 0 END AS owned
        FROM student_posts p
        JOIN users u ON u.telegram_user_id = p.telegram_user_id
        WHERE p.id = ?`,
@@ -202,17 +201,13 @@ export async function listStudentPosts(
        ORDER BY p.created_at DESC, p.id DESC
        LIMIT ?`,
     )
-    .bind(category ?? null, category ?? null, Math.min(Math.max(limit, 1), 50))
+    .bind(userId === undefined ? null : String(userId), userId === undefined ? null : String(userId), category ?? null, category ?? null, Math.min(Math.max(limit, 1), 50))
     .all<StudentPost>();
-  return rows.results.map((post) => {
-    const row = post as StudentPost & { owner_telegram_user_id?: string };
-    return {
-      ...post,
-      report_count: Number(post.report_count),
-      ...(userId !== undefined ? { owned: row.owner_telegram_user_id === String(userId) } : {}),
-      owner_telegram_user_id: undefined,
-    };
-  });
+  return rows.results.map((post) => ({
+    ...post,
+    report_count: Number(post.report_count),
+    ...(userId !== undefined ? { owned: Boolean(post.owned) } : {}),
+  }));
 }
 
 export async function deleteStudentPost(db: D1Database, postId: number, userId: number): Promise<boolean> {
@@ -233,24 +228,20 @@ export async function listStudentReplies(
       `SELECT r.id, r.post_id, r.body,
               COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
               r.created_at, r.report_count,
-              r.telegram_user_id AS owner_telegram_user_id
+              CASE WHEN ? IS NOT NULL AND r.telegram_user_id = ? THEN 1 ELSE 0 END AS owned
        FROM student_post_replies r
        JOIN users u ON u.telegram_user_id = r.telegram_user_id
        WHERE r.post_id = ? AND r.status = 'published' AND r.report_count < 3
        ORDER BY r.created_at ASC, r.id ASC
        LIMIT ?`,
     )
-    .bind(postId, Math.min(Math.max(limit, 1), 50))
+    .bind(postId, userId === undefined ? null : String(userId), userId === undefined ? null : String(userId), Math.min(Math.max(limit, 1), 50))
     .all<StudentReply>();
-  return rows.results.map((reply) => {
-    const row = reply as StudentReply & { owner_telegram_user_id?: string };
-    return {
-      ...reply,
-      report_count: Number(reply.report_count),
-      ...(userId !== undefined ? { owned: row.owner_telegram_user_id === String(userId) } : {}),
-      owner_telegram_user_id: undefined,
-    };
-  });
+  return rows.results.map((reply) => ({
+    ...reply,
+    report_count: Number(reply.report_count),
+    ...(userId !== undefined ? { owned: Boolean(reply.owned) } : {}),
+  }));
 }
 
 export async function createStudentReply(
