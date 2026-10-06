@@ -1,4 +1,4 @@
-import { upsertTelegramUser } from "./db";
+import { getOpenPoll, upsertTelegramUser, voteInPoll } from "./db";
 import { sendMessage } from "./telegram-bot";
 import { validateInitData } from "./telegram";
 
@@ -91,6 +91,65 @@ export default {
 
     if (request.method === "POST" && url.pathname === "/telegram/webhook") {
       return handleTelegramUpdate(request, env);
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/home") {
+      const poll = await getOpenPoll(env.DB);
+      return json({
+        ok: true,
+        title: "VGU Pulse",
+        tagline: "What's happening at VGU, and who can I do it with?",
+        sections: [
+          {
+            type: "notice",
+            title: "Official VGU information",
+            body: "Important notices and verified campus information will appear here as the Signal feed is connected.",
+            trust: "official",
+          },
+          {
+            type: "today",
+            title: "Today at VGU",
+            body: "Events, activities and opportunities will become discoverable here.",
+            trust: "verified",
+          },
+          {
+            type: "participate",
+            title: "Participate",
+            body: "Your first campus signal is the daily poll below.",
+          },
+        ],
+        poll,
+      });
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/polls/vote") {
+      const initData = request.headers.get("x-telegram-init-data") ?? "";
+      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(initData, env.BOT_TOKEN);
+      if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+      await upsertTelegramUser(env.DB, validated.user);
+
+      let body: { poll_id?: number; option_id?: number };
+      try {
+        body = (await request.json()) as { poll_id?: number; option_id?: number };
+      } catch {
+        return json({ ok: false, error: "invalid_json" }, 400);
+      }
+
+      if (!Number.isSafeInteger(body.poll_id) || !Number.isSafeInteger(body.option_id)) {
+        return json({ ok: false, error: "invalid_vote" }, 400);
+      }
+
+      try {
+        await voteInPoll(env.DB, body.poll_id, body.option_id, validated.user.id);
+      } catch (error) {
+        if (error instanceof Error && error.message === "invalid_option") {
+          return json({ ok: false, error: "invalid_option" }, 400);
+        }
+        return json({ ok: false, error: "vote_failed" }, 500);
+      }
+
+      return json({ ok: true, poll: await getOpenPoll(env.DB, validated.user.id) });
     }
 
     if (request.method === "POST" && url.pathname === "/api/auth/telegram") {
