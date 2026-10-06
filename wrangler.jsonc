@@ -10,7 +10,7 @@
     {
       "binding": "DB",
       "database_name": "vgu-pulse",
-      "database_id": "4945f4df-12a9-46cb-a2c4-9c587d8d264b",
+      "database_id": "b774ba2d-405d-40d2-95bd-6ca47e3347ef",
       "migrations_dir": "migrations"
     }
   ],
