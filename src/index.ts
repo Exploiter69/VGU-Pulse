@@ -1,8 +1,11 @@
 import {
   createStudentPost,
+  createStudentReply,
   getOpenPoll,
   listStudentPosts,
   reportStudentPost,
+  reportStudentReply,
+  listStudentReplies,
   upsertTelegramUser,
   validateStudentPostInput,
   voteInPoll,
@@ -162,6 +165,78 @@ export default {
         return json({ ok: true, trust: "student-reported", post }, 201);
       } catch {
         return json({ ok: false, error: "post_create_failed" }, 500);
+      }
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/student-posts/replies") {
+      const postId = Number(url.searchParams.get("post_id"));
+      if (!Number.isSafeInteger(postId) || postId < 1) {
+        return json({ ok: false, error: "invalid_post" }, 400);
+      }
+      try {
+        const replies = await listStudentReplies(env.DB, postId);
+        return json({ ok: true, trust: "student-reported", post_id: postId, replies });
+      } catch {
+        return json({ ok: false, error: "replies_unavailable" }, 500);
+      }
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/student-posts/replies") {
+      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const initData = request.headers.get("x-telegram-init-data") ?? "";
+      const validated = await validateInitData(initData, env.BOT_TOKEN);
+      if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+      await upsertTelegramUser(env.DB, validated.user);
+
+      let body: { post_id?: unknown; body?: unknown };
+      try {
+        body = (await request.json()) as { post_id?: unknown; body?: unknown };
+      } catch {
+        return json({ ok: false, error: "invalid_json" }, 400);
+      }
+      if (!Number.isSafeInteger(body.post_id) || (body.post_id as number) < 1) {
+        return json({ ok: false, error: "invalid_post" }, 400);
+      }
+      const replyInput = validateStudentReplyInput({ body: body.body });
+      if (!replyInput) return json({ ok: false, error: "invalid_reply" }, 400);
+
+      try {
+        const reply = await createStudentReply(
+          env.DB,
+          body.post_id as number,
+          validated.user.id,
+          replyInput.body,
+        );
+        return json({ ok: true, trust: "student-reported", reply }, 201);
+      } catch (error) {
+        if (error instanceof Error && error.message === "post_not_found") {
+          return json({ ok: false, error: "post_not_found" }, 404);
+        }
+        return json({ ok: false, error: "reply_create_failed" }, 500);
+      }
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/student-posts/replies/report") {
+      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const initData = request.headers.get("x-telegram-init-data") ?? "";
+      const validated = await validateInitData(initData, env.BOT_TOKEN);
+      if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+      await upsertTelegramUser(env.DB, validated.user);
+
+      let body: { reply_id?: unknown };
+      try {
+        body = (await request.json()) as { reply_id?: unknown };
+      } catch {
+        return json({ ok: false, error: "invalid_json" }, 400);
+      }
+      if (!Number.isSafeInteger(body.reply_id) || (body.reply_id as number) < 1) {
+        return json({ ok: false, error: "invalid_reply" }, 400);
+      }
+      try {
+        await reportStudentReply(env.DB, body.reply_id as number, validated.user.id);
+        return json({ ok: true });
+      } catch {
+        return json({ ok: false, error: "reply_report_failed" }, 500);
       }
     }
 
