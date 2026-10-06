@@ -8,6 +8,7 @@ interface Env {
   TELEGRAM_WEBAPP_URL?: string;
   TELEGRAM_WEBHOOK_SECRET?: string;
   SIGNAL_API_URL?: string;
+  SIGNAL_SERVICE: Fetcher;
   APP_NAME: string;
 }
 
@@ -95,12 +96,12 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/api/signal") {
-      const signalUrl = env.SIGNAL_API_URL;
-      if (!signalUrl) return json({ ok: false, error: "signal_not_configured" }, 503);
       try {
-        const upstream = await fetch(new URL("/public/information?limit=10", signalUrl), {
-          headers: { accept: "application/json" },
-        });
+        const upstream = await env.SIGNAL_SERVICE.fetch(
+          new Request("https://vgu-signal-worker/public/information?limit=10", {
+            headers: { accept: "application/json" },
+          }),
+        );
         if (!upstream.ok) return json({ ok: false, error: "signal_unavailable" }, 502);
         const payload = await upstream.json();
         return json(payload);
@@ -112,18 +113,18 @@ export default {
     if (request.method === "GET" && url.pathname === "/api/home") {
       const poll = await getOpenPoll(env.DB);
       let signalItems: unknown[] = [];
-      if (env.SIGNAL_API_URL) {
-        try {
-          const upstream = await fetch(new URL("/public/information?limit=5", env.SIGNAL_API_URL), {
+      try {
+        const upstream = await env.SIGNAL_SERVICE.fetch(
+          new Request("https://vgu-signal-worker/public/information?limit=5", {
             headers: { accept: "application/json" },
-          });
-          if (upstream.ok) {
-            const payload = (await upstream.json()) as { items?: unknown[] };
-            signalItems = Array.isArray(payload.items) ? payload.items : [];
-          }
-        } catch {
-          signalItems = [];
+          }),
+        );
+        if (upstream.ok) {
+          const payload = (await upstream.json()) as { items?: unknown[] };
+          signalItems = Array.isArray(payload.items) ? payload.items : [];
         }
+      } catch {
+        signalItems = [];
       }
 
       return json({
