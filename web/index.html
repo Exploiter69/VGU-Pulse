@@ -351,27 +351,39 @@ async function vote(optionId){
 }
 async function boot(){
  renderCampusGuide();
+
+ let authPromise=null;
  if(tg?.initData){
   initData=tg.initData;
-  try{
-   const response=await fetch("/api/auth/telegram",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({initData})});
-   const data=await response.json();
-   if(response.ok){
-    identity.textContent="Welcome, "+(data.user.first_name||data.user.username||"student")+".";
-    status.textContent="Telegram identity verified.";
-   }else{
+  authPromise=(async()=>{
+   try{
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),5000);
+    const response=await fetch("/api/auth/telegram",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({initData}),signal:controller.signal});
+    clearTimeout(timeout);
+    const data=await response.json();
+    if(response.ok){
+     identity.textContent="Welcome, "+(data.user.first_name||data.user.username||"student")+".";
+     status.textContent="Telegram identity verified.";
+     return true;
+    }
     identity.textContent="Telegram authentication unavailable. Public Pulse information is still available.";
     status.textContent="Some participation features need a valid Telegram session.";
+    return false;
+   }catch{
+    identity.textContent="Telegram authentication unavailable. Public Pulse information is still available.";
+    status.textContent="Some participation features need a valid Telegram session.";
+    return false;
    }
-  }catch{
-   identity.textContent="Telegram authentication unavailable. Public Pulse information is still available.";
-   status.textContent="Some participation features need a valid Telegram session.";
-  }
+  })();
  }else{
   identity.textContent="Open Pulse from Telegram to enable student participation.";
  }
+
  try{await loadHome()}catch{status.textContent="Pulse information is temporarily unavailable."}
+
  if(initData){
+  await authPromise;
   try{await loadProfile()}catch{}
   try{await loadStudentPosts()}catch{}
   try{await loadProfiles()}catch{}
