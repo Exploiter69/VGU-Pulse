@@ -27,6 +27,14 @@ main{max-width:720px;margin:auto;padding:28px 18px 48px}
 <p id="status" class="muted"></p>
 </section>
 <section class="card">
+<div class="eyebrow">Official VGU information</div><h2>Important information</h2>
+<div id="notices"><p class="muted">Loading verified information…</p></div>
+</section>
+<section class="card">
+<div class="eyebrow">What's happening</div><h2>Events & opportunities</h2>
+<div id="events"><p class="muted">Loading verified events…</p></div>
+</section>
+<section class="card">
 <div class="row"><div><div class="eyebrow">Participate</div><h2>Campus pulse</h2></div><span id="vote-total" class="muted"></span></div>
 <p id="question" class="muted">Loading today's question…</p>
 <div id="options"></div>
@@ -41,7 +49,7 @@ main{max-width:720px;margin:auto;padding:28px 18px 48px}
 <script>
 const tg=window.Telegram?.WebApp;tg?.ready();tg?.expand();
 let initData="",poll=null;
-const identity=document.querySelector("#identity"),status=document.querySelector("#status"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total");
+const identity=document.querySelector("#identity"),status=document.querySelector("#status"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events");
 
 function renderPoll(next){
  poll=next;
@@ -60,7 +68,28 @@ function renderPoll(next){
   button.append(row,bar);if(!button.disabled)button.addEventListener("click",()=>vote(option.id));options.append(button);
  }
 }
-async function loadHome(){const response=await fetch("/api/home");if(!response.ok)throw Error("home_failed");renderPoll((await response.json()).poll)}
+function renderItems(target,items,emptyText){
+ target.replaceChildren();
+ if(!items.length){const p=document.createElement("p");p.className="muted";p.textContent=emptyText;target.append(p);return}
+ for(const item of items){
+  const article=document.createElement("article");article.style.marginBottom="16px";
+  const title=document.createElement("h3");title.style.marginBottom="6px";title.textContent=String(item.title||"VGU update");
+  const summary=document.createElement("p");summary.className="muted";summary.textContent=String(item.summary||"");
+  article.append(title,summary);
+  if(item.published_at){const date=document.createElement("small");date.className="muted";date.textContent=String(item.published_at);article.append(date)}
+  if(item.primary_source_url){
+   const link=document.createElement("a");link.href=String(item.primary_source_url);link.target="_blank";link.rel="noopener noreferrer";link.textContent="Open source";link.style.display="inline-block";link.style.marginTop="8px";article.append(link)
+  }
+  target.append(article);
+ }
+}
+async function loadHome(){
+ const response=await fetch("/api/home");if(!response.ok)throw Error("home_failed");
+ const data=await response.json();
+ renderItems(notices,data.sections?.find(s=>s.type==="notice")?.items||[],"No verified VGU information is available right now.");
+ renderItems(events,data.sections?.find(s=>s.type==="events")?.items||[],"No verified events or opportunities are available right now.");
+ renderPoll(data.poll);
+}
 async function vote(optionId){
  if(!initData||!poll)return;
  options.querySelectorAll("button").forEach(b=>b.disabled=true);status.textContent="Recording your vote…";
