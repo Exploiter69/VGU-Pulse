@@ -174,6 +174,13 @@ export async function createStudentPost(
   return { ...post, report_count: Number(post.report_count) };
 }
 
+export async function deleteStudentProfile(db: D1Database, userId: number): Promise<boolean> {
+  const result = await db.prepare(
+    `DELETE FROM student_profiles WHERE telegram_user_id = ?`,
+  ).bind(String(userId)).run();
+  return result.meta.changes > 0;
+}
+
 export async function listStudentPosts(
   db: D1Database,
   limit = 20,
@@ -197,6 +204,13 @@ export async function listStudentPosts(
     ...post,
     report_count: Number(post.report_count),
   }));
+}
+
+export async function deleteStudentPost(db: D1Database, postId: number, userId: number): Promise<boolean> {
+  const result = await db.prepare(
+    `DELETE FROM student_posts WHERE id = ? AND telegram_user_id = ?`,
+  ).bind(postId, String(userId)).run();
+  return result.meta.changes > 0;
 }
 
 export async function listStudentReplies(
@@ -256,6 +270,13 @@ export async function createStudentReply(
     .first<StudentReply>();
   if (!reply) throw new Error("reply_create_failed");
   return { ...reply, report_count: Number(reply.report_count) };
+}
+
+export async function deleteStudentReply(db: D1Database, replyId: number, userId: number): Promise<boolean> {
+  const result = await db.prepare(
+    `DELETE FROM student_post_replies WHERE id = ? AND telegram_user_id = ?`,
+  ).bind(replyId, String(userId)).run();
+  return result.meta.changes > 0;
 }
 
 export async function reportStudentReply(
