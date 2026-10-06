@@ -237,7 +237,7 @@ export async function listStudentReplies(
               r.created_at, r.report_count,
               CASE WHEN ? IS NOT NULL AND r.telegram_user_id = ? THEN 1 ELSE 0 END AS owned
        FROM student_post_replies r
-       JOIN users u ON u.telegram_user_id = r.telegram_user_id
+       LEFT JOIN users u ON u.telegram_user_id = r.telegram_user_id
        WHERE r.post_id = ? AND r.status = 'published' AND r.report_count < 3
        ORDER BY r.created_at ASC, r.id ASC
        LIMIT ?`,
