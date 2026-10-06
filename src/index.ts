@@ -33,8 +33,8 @@ interface Env {
   APP_NAME: string;
 }
 
-function getBotToken(env: Env): string | undefined {
-  return env.BOT_TOKEN ?? env.TELEGRAM_BOT_TOKEN;
+function getBotToken(env: Env): string {
+  return env.BOT_TOKEN ?? env.TELEGRAM_BOT_TOKEN ?? "";
 }
 
 function json(data: unknown, status = 200): Response {
