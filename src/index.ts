@@ -1,5 +1,10 @@
 import {
   createStudentPost,
+  getStudentProfile,
+  listStudentProfiles,
+  reportStudentProfile,
+  upsertStudentProfile,
+  validateStudentProfileInput,
   createStudentReply,
   getOpenPoll,
   listStudentPosts,
@@ -120,6 +125,49 @@ export default {
       } catch {
         return json({ ok: false, error: "signal_unavailable" }, 502);
       }
+    }
+
+
+    if (request.method === "GET" && url.pathname === "/api/students") {
+      try {
+        return json({ ok: true, trust: "student-reported", profiles: await listStudentProfiles(env.DB) });
+      } catch { return json({ ok: false, error: "student_profiles_unavailable" }, 500); }
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/student-profile") {
+      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", env.BOT_TOKEN);
+      if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+      return json({ ok: true, trust: "student-reported", profile: await getStudentProfile(env.DB, validated.user.id) });
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/student-profile") {
+      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", env.BOT_TOKEN);
+      if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+      await upsertTelegramUser(env.DB, validated.user);
+      let body: Record<string, unknown>;
+      try { body = (await request.json()) as Record<string, unknown>; }
+      catch { return json({ ok: false, error: "invalid_json" }, 400); }
+      const input = validateStudentProfileInput(body);
+      if (!input) return json({ ok: false, error: "invalid_profile" }, 400);
+      try {
+        return json({ ok: true, trust: "student-reported", profile: await upsertStudentProfile(env.DB, validated.user.id, input) });
+      } catch { return json({ ok: false, error: "profile_save_failed" }, 500); }
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/student-profile/report") {
+      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", env.BOT_TOKEN);
+      if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+      let body: { profile_user_id?: unknown };
+      try { body = (await request.json()) as { profile_user_id?: unknown }; }
+      catch { return json({ ok: false, error: "invalid_json" }, 400); }
+      if (typeof body.profile_user_id !== "string" || !body.profile_user_id.trim()) return json({ ok: false, error: "invalid_profile" }, 400);
+      try {
+        await reportStudentProfile(env.DB, body.profile_user_id, validated.user.id);
+        return json({ ok: true });
+      } catch { return json({ ok: false, error: "profile_report_failed" }, 500); }
     }
 
     if (request.method === "GET" && url.pathname === "/api/student-posts") {
