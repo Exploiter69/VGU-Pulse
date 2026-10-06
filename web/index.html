@@ -50,6 +50,12 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <a class="tool" href="https://vgu.ac.in/contact" target="_blank" rel="noopener noreferrer"><strong>Contact VGU</strong><span>Official support contacts</span></a>
 </div>
 </section>
+<section class="card" id="campus-guide">
+<div class="eyebrow">Campus guide</div><h2>Where do I go?</h2>
+<p class="muted">Official VGU campus facilities, organized around common student needs. Information is labelled as official and links open the university source.</p>
+<input id="campus-search" type="search" placeholder="Search library, exam, medical, hostel, transport…" aria-label="Search campus facilities">
+<div id="campus-results" class="tool-grid" style="margin-top:12px"></div>
+</section>
 <section class="card">
 <div class="eyebrow">Official VGU information</div><h2>Important information</h2>
 <div id="notices"><p class="muted">Loading verified information…</p></div>
@@ -268,6 +274,40 @@ async function submitPost(event){
 }
 postForm.addEventListener("submit",submitPost);
 postFilter.addEventListener("change",()=>loadStudentPosts().catch(()=>{status.textContent="Unable to load that student-post filter."}));
+document.querySelector("#campus-search")?.addEventListener("input",renderCampusGuide);
+const campusFacilities=[
+ {title:"Academic Block",category:"Academics",body:"Lecture theatres, tutorial rooms, Knowledge Resource Centre, specialised labs and faculty offices.",link:"https://vgu.ac.in/campus-facilities/academic-facilities"},
+ {title:"Technology Block",category:"Academics",body:"Computer labs, engineering workshops, auditorium, Knowledge Resource Centre and research laboratories. The mailroom is here.",link:"https://vgu.ac.in/campus-facilities/academic-facilities"},
+ {title:"Administrative Block",category:"Administration",body:"Administrative offices, examination cell, seminar halls and student support services. Lost & Found reception is on the ground floor.",link:"https://vgu.ac.in/campus-facilities/academic-facilities"},
+ {title:"Knowledge Resource Centres",category:"Study",body:"Two resource centres serve the Academic and Technology Blocks with books, journals and digital resources.",link:"https://vgu.ac.in/campus-facilities/academic-facilities"},
+ {title:"Medical Aid Centre",category:"Health",body:"Located in the Students' Mess Complex. VGU says free consultation and medical assistance are available to students, faculty and staff.",link:"https://vgu.ac.in/campus-facilities/medical-facilities-and-services"},
+ {title:"Transport",category:"Travel",body:"VGU operates daily buses across nine Jaipur routes. Students use the bus requisition process through the Accounts Office.",link:"https://vgu.ac.in/campus-facilities/transport-facilities"},
+ {title:"Students' Mess",category:"Food",body:"Central mess with six dining spaces and published breakfast, lunch, snacks and dinner timings.",link:"https://vgu.ac.in/campus-facilities/general-facilities-and-services"},
+ {title:"Campus Canteen",category:"Food",body:"Campus canteen with food, bakery items and fast food. VGU publishes separate regular-day and exam-day timings.",link:"https://vgu.ac.in/campus-facilities/general-facilities-and-services"},
+ {title:"Lost & Found",category:"Support",body:"Lost & Found is available at reception on the ground floor of the Academic, Technology and Administrative Blocks and in hostels.",link:"https://vgu.ac.in/campus-facilities/general-facilities-and-services"},
+ {title:"Mailroom",category:"Support",body:"Located at the Technology Block reception. VGU lists service hours of 8:30 AM–5:00 PM on working days.",link:"https://vgu.ac.in/campus-facilities/general-facilities-and-services"},
+ {title:"Provision Store",category:"Shopping",body:"Campus provision store with printing and photocopying services; VGU lists it as open seven days a week.",link:"https://vgu.ac.in/campus-facilities/general-facities-and-services"},
+ {title:"Book & Stationery Shop",category:"Study",body:"On-campus shop for books, stationery and academic supplies.",link:"https://vgu.ac.in/campus-facilities/general-facilities-and-services"},
+ {title:"ATM",category:"Money",body:"VGU lists an ATM near Gate No. 2.",link:"https://vgu.ac.in/campus-facilities/general-facilities-and-services"},
+ {title:"Hostels",category:"Hostel",body:"VGU hostels provide accommodation, dining, security, Wi-Fi and student support services.",link:"https://vgu.ac.in/campus-life/hostels"},
+ {title:"Gymnasium",category:"Wellbeing",body:"VGU lists a 5,000 sq. ft. indoor gymnasium on campus.",link:"https://vgu.ac.in/campus-facilities/general-facilities-and-services"},
+ {title:"Student Handbook",category:"Rules",body:"Official student reference covering university rules, facilities and support information.",link:"https://www.vgu.ac.in/Student%20Handbook%202025%20.pdf"}
+];
+function renderCampusGuide(){
+ const target=document.querySelector("#campus-results");if(!target)return;
+ const q=(document.querySelector("#campus-search")?.value||"").trim().toLowerCase();
+ const items=campusFacilities.filter(x=>!q||[x.title,x.category,x.body].join(" ").toLowerCase().includes(q));
+ target.replaceChildren();
+ if(!items.length){const p=document.createElement("p");p.className="muted";p.textContent="No campus facility matched that search.";target.append(p);return}
+ for(const item of items){
+  const card=document.createElement("article");card.className="tool";
+  const cat=document.createElement("small");cat.className="muted";cat.textContent="Official • "+item.category;
+  const title=document.createElement("strong");title.textContent=item.title;
+  const body=document.createElement("span");body.textContent=item.body;
+  const link=document.createElement("a");link.href=item.link;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Open VGU source";link.style.display="inline-block";link.style.marginTop="8px";
+  card.append(cat,title,body,link);target.append(card);
+ }
+}
 async function loadHome(){
  const response=await fetch("/api/home");if(!response.ok)throw Error("home_failed");
  const data=await response.json();
@@ -284,6 +324,7 @@ async function vote(optionId){
  renderPoll(data.poll);status.textContent="Vote recorded. Your campus signal is now counted.";
 }
 async function boot(){
+ renderCampusGuide();
  if(!tg?.initData){identity.textContent="Open this page from the VGU Pulse Telegram Mini App.";await loadHome();return}
  initData=tg.initData;
  const response=await fetch("/api/auth/telegram",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({initData})});
