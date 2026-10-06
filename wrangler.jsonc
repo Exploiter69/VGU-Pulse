@@ -10,12 +10,17 @@
     {
       "binding": "DB",
       "database_name": "vgu-pulse",
-      "database_id": "4945f4df-12a9-46cb-a2c4-9c587d8d264f",
+      "database_id": "4945f4df-12a9-46cb-a2c4-9c587d8d264b",
       "migrations_dir": "migrations"
     }
   ],
+  "services": [
+    {
+      "binding": "SIGNAL_SERVICE",
+      "service": "vgu-signal-worker"
+    }
+  ],
   "vars": {
-    "APP_NAME": "VGU Pulse",
-    "SIGNAL_API_URL": "https://vgu-signal-worker.vgu-signal.workers.dev"
+    "APP_NAME": "VGU Pulse"
   }
 }
