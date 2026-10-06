@@ -55,8 +55,12 @@ export async function createStudentPost(
 
   const post = await db
     .prepare(
-      `SELECT id, category, title, body, author_name, created_at, report_count
-       FROM student_posts WHERE id = ?`,
+      `SELECT p.id, p.category, p.title, p.body,
+              COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
+              p.created_at, p.report_count
+       FROM student_posts p
+       JOIN users u ON u.telegram_user_id = p.telegram_user_id
+       WHERE p.id = ?`,
     )
     .bind(result.meta.last_row_id)
     .first<StudentPost>();
