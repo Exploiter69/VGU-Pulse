@@ -1,3 +1,13 @@
+export interface StudentPost {
+  id: number;
+  category: "question" | "info" | "opportunity" | "request";
+  title: string;
+  body: string;
+  author_name: string;
+  created_at: string;
+  report_count: number;
+}
+
 export interface PulsePoll {
   id: number;
   question: string;
@@ -5,6 +15,102 @@ export interface PulsePoll {
   options: Array<{ id: number; label: string; votes: number }>;
   total_votes: number;
   selected_option_id: number | null;
+}
+
+export function validateStudentPostInput(input: {
+  category?: unknown;
+  title?: unknown;
+  body?: unknown;
+}): { category: StudentPost["category"]; title: string; body: string } | null {
+  const categories = new Set<StudentPost["category"]>([
+    "question",
+    "info",
+    "opportunity",
+    "request",
+  ]);
+  if (typeof input.category !== "string" || !categories.has(input.category as StudentPost["category"])) {
+    return null;
+  }
+  if (typeof input.title !== "string" || typeof input.body !== "string") return null;
+  const title = input.title.trim();
+  const body = input.body.trim();
+  if (title.length < 3 || title.length > 120 || body.length < 3 || body.length > 2000) {
+    return null;
+  }
+  return { category: input.category as StudentPost["category"], title, body };
+}
+
+export async function createStudentPost(
+  db: D1Database,
+  userId: number,
+  input: { category: StudentPost["category"]; title: string; body: string },
+): Promise<StudentPost> {
+  const result = await db
+    .prepare(
+      `INSERT INTO student_posts (telegram_user_id, category, title, body)
+       VALUES (?, ?, ?, ?)`,
+    )
+    .bind(String(userId), input.category, input.title, input.body)
+    .run();
+
+  const post = await db
+    .prepare(
+      `SELECT id, category, title, body, author_name, created_at, report_count
+       FROM student_posts WHERE id = ?`,
+    )
+    .bind(result.meta.last_row_id)
+    .first<StudentPost>();
+  if (!post) throw new Error("post_create_failed");
+  return { ...post, report_count: Number(post.report_count) };
+}
+
+export async function listStudentPosts(
+  db: D1Database,
+  limit = 20,
+): Promise<StudentPost[]> {
+  const rows = await db
+    .prepare(
+      `SELECT p.id, p.category, p.title, p.body,
+              COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
+              p.created_at, p.report_count
+       FROM student_posts p
+       JOIN users u ON u.telegram_user_id = p.telegram_user_id
+       WHERE p.status = 'published' AND p.report_count < 3
+       ORDER BY p.created_at DESC, p.id DESC
+       LIMIT ?`,
+    )
+    .bind(Math.min(Math.max(limit, 1), 50))
+    .all<StudentPost>();
+  return rows.results.map((post) => ({
+    ...post,
+    report_count: Number(post.report_count),
+  }));
+}
+
+export async function reportStudentPost(
+  db: D1Database,
+  postId: number,
+  userId: number,
+): Promise<void> {
+  const result = await db
+    .prepare(
+      `INSERT OR IGNORE INTO student_post_reports (post_id, telegram_user_id)
+       VALUES (?, ?)`,
+    )
+    .bind(postId, String(userId))
+    .run();
+
+  if (result.meta.changes > 0) {
+    await db
+      .prepare(
+        `UPDATE student_posts
+         SET report_count = report_count + 1,
+             status = CASE WHEN report_count + 1 >= 3 THEN 'hidden' ELSE status END
+         WHERE id = ?`,
+      )
+      .bind(postId)
+      .run();
+  }
 }
 
 export async function upsertTelegramUser(
