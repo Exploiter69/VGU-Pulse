@@ -201,7 +201,7 @@ export async function listStudentPosts(
        ORDER BY p.created_at DESC, p.id DESC
        LIMIT ?`,
     )
-    .bind(userId === undefined ? null : String(userId), userId === undefined ? null : String(userId), category ?? null, category ?? null, Math.min(Math.max(limit, 1), 50))
+    .bind(category ?? null, category ?? null, Math.min(Math.max(limit, 1), 50))
     .all<StudentPost>();
   return rows.results.map((post) => ({
     ...post,
