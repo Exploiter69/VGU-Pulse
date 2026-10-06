@@ -30,6 +30,23 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <div class="eyebrow">VGU • TODAY</div>
 <h1>VGU Pulse</h1>
 <p class="muted">What's happening at VGU, and who can I do it with?</p>\n<section class="card" id="student-intelligence"><div class="eyebrow">Student intelligence</div><h2>Ask Pulse</h2><p class="muted">Search official VGU information, campus facilities and student-reported knowledge in one place. Official and student-reported results are always labelled.</p><form id="search-form"><input id="search-query" type="search" maxlength="160" placeholder="Try: exam form, medical, transport, hostel…" aria-label="Search Pulse"><button class="submit" type="submit">Search Pulse</button></form><div id="search-quick" style="display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px"></div><div id="search-results"><p class="muted">Search for something you need on campus.</p></div></section>
+<section class="card" id="academic-companion">
+<div class="eyebrow">Academic companion</div><h2>Plan your semester</h2>
+<p class="muted">Track your own subjects, assignments, exams and deadlines in Pulse. Personal planner data stays in this browser; it is not pulled from private ERP/Digicampus systems.</p>
+<div class="tool-grid">
+<a class="tool" href="https://www.vgu.ac.in/Student%20Handbook%202025%20.pdf" target="_blank" rel="noopener noreferrer"><strong>Student Handbook</strong><span>Official academic reference</span></a>
+<a class="tool" href="https://vgu.ac.in/campus-facilities/academic-facilities" target="_blank" rel="noopener noreferrer"><strong>Academic Facilities</strong><span>Official campus information</span></a>
+</div>
+<form id="academic-form" style="margin-top:12px">
+<input id="academic-title" maxlength="120" placeholder="Task or exam (e.g. DBMS assignment)" required>
+<input id="academic-subject" maxlength="80" placeholder="Subject (e.g. DBMS)" required>
+<input id="academic-due" type="date" required>
+<select id="academic-kind" aria-label="Academic item type"><option value="assignment">Assignment</option><option value="exam">Exam</option><option value="project">Project</option><option value="other">Other</option></select>
+<button class="submit" type="submit">Add to my plan</button>
+</form>
+<p id="academic-status" class="muted" aria-live="polite"></p>
+<div id="academic-list"></div>
+</section>
 <section class="card">
 <p id="identity">Connecting to Telegram…</p>
 <p id="status" class="muted"></p>
@@ -376,6 +393,37 @@ async function vote(optionId){
  const data=await response.json();if(!response.ok){status.textContent="Your vote could not be recorded. Try again.";renderPoll(poll);return}
  renderPoll(data.poll);status.textContent="Vote recorded. Your campus signal is now counted.";
 }
+const ACADEMIC_KEY="vgu-pulse-academic-v1";
+function academicItems(){
+ try{const value=JSON.parse(localStorage.getItem(ACADEMIC_KEY)||"[]");return Array.isArray(value)?value.filter(item=>item&&typeof item.title==="string"&&typeof item.subject==="string"&&typeof item.due==="string"):[]}catch{return[]}
+}
+function saveAcademicItems(items){localStorage.setItem(ACADEMIC_KEY,JSON.stringify(items.slice(0,100)))}
+function renderAcademic(){
+ const target=document.querySelector("#academic-list");if(!target)return;
+ const items=academicItems().sort((a,b)=>a.due.localeCompare(b.due));
+ target.replaceChildren();
+ if(!items.length){const p=document.createElement("p");p.className="muted";p.textContent="Your academic plan is empty.";target.append(p);return}
+ const today=new Date().toISOString().slice(0,10);
+ for(const item of items){
+  const row=document.createElement("article");row.className="post";
+  const meta=document.createElement("small");meta.className="muted";meta.textContent=item.kind+" • "+item.subject+" • due "+item.due;
+  const title=document.createElement("strong");title.textContent=item.title;
+  const del=document.createElement("button");del.type="button";del.className="report";del.textContent="Remove";
+  del.addEventListener("click",()=>{saveAcademicItems(academicItems().filter(x=>x.id!==item.id));renderAcademic();});
+  const state=document.createElement("span");state.className="muted";state.style.marginLeft="10px";state.textContent=item.due<today?"Overdue":item.due===today?"Due today":"Upcoming";
+  row.append(meta,document.createElement("br"),title,state,del);target.append(row);
+ }
+}
+const academicForm=document.querySelector("#academic-form");
+academicForm?.addEventListener("submit",(event)=>{
+ event.preventDefault();
+ const title=document.querySelector("#academic-title").value.trim(),subject=document.querySelector("#academic-subject").value.trim(),due=document.querySelector("#academic-due").value,kind=document.querySelector("#academic-kind").value;
+ const status=document.querySelector("#academic-status");
+ if(title.length<2||subject.length<2||!/^\d{4}-\d{2}-\d{2}$/.test(due)){status.textContent="Enter a task, subject and valid due date.";return}
+ const items=academicItems();items.push({id:crypto.randomUUID(),title,subject,due,kind,created_at:new Date().toISOString()});saveAcademicItems(items);
+ academicForm.reset();status.textContent="Added to your academic plan.";renderAcademic();
+});
+renderAcademic();
 async function boot(){
  initSearch();
  try{await loadSearch("")}catch{}
