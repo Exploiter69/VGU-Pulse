@@ -62,6 +62,7 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <div class="eyebrow">What's happening</div><h2>Events & opportunities</h2>
 <div id="events"><p class="muted">Loading verified events…</p></div>
 </section>
+<section class="card" id="academic-summary-card"><div class="eyebrow">My day</div><h2>Your next deadlines</h2><div id="academic-summary"><p class="muted">Your local academic plan will appear here.</p></div><button type="button" class="quick" data-view="academics" style="width:100%;margin-top:10px"><strong>Open Academics</strong><span>Manage assignments, exams and deadlines</span></button></section>
 <section class="card quick-card">
 <div class="eyebrow">Quick access</div><h2>What do you need?</h2>
 <div class="quick-grid">
@@ -98,6 +99,7 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <button class="submit" type="submit">Add to my plan</button>
 </form>
 <p id="academic-status" class="muted" aria-live="polite"></p>
+<select id="academic-filter" aria-label="Filter academic plan"><option value="all">All tasks</option><option value="today">Due today</option><option value="upcoming">Upcoming</option><option value="overdue">Overdue</option></select>
 <div id="academic-list"></div>
 </section>
 </div>
@@ -457,22 +459,46 @@ function academicItems(){
  try{const value=JSON.parse(localStorage.getItem(ACADEMIC_KEY)||"[]");return Array.isArray(value)?value.filter(item=>item&&typeof item.title==="string"&&typeof item.subject==="string"&&typeof item.due==="string"):[]}catch{return[]}
 }
 function saveAcademicItems(items){localStorage.setItem(ACADEMIC_KEY,JSON.stringify(items.slice(0,100)))}
+function academicState(item,today){
+ return item.due<today?"overdue":item.due===today?"today":"upcoming";
+}
 function renderAcademic(){
  const target=document.querySelector("#academic-list");if(!target)return;
  const items=academicItems().sort((a,b)=>a.due.localeCompare(b.due));
- target.replaceChildren();
- if(!items.length){const p=document.createElement("p");p.className="muted";p.textContent="Your academic plan is empty.";target.append(p);return}
+ const filter=document.querySelector("#academic-filter")?.value||"all";
  const today=new Date().toISOString().slice(0,10);
- for(const item of items){
+ const visible=items.filter(item=>filter==="all"||academicState(item,today)===filter);
+ target.replaceChildren();
+ if(!items.length){const p=document.createElement("p");p.className="muted";p.textContent="Your academic plan is empty.";target.append(p);renderAcademicSummary();return}
+ if(!visible.length){const p=document.createElement("p");p.className="muted";p.textContent="No tasks match this filter.";target.append(p);renderAcademicSummary();return}
+ for(const item of visible){
   const row=document.createElement("article");row.className="post";
   const meta=document.createElement("small");meta.className="muted";meta.textContent=item.kind+" • "+item.subject+" • due "+item.due;
   const title=document.createElement("strong");title.textContent=item.title;
   const del=document.createElement("button");del.type="button";del.className="report";del.textContent="Remove";
   del.addEventListener("click",()=>{saveAcademicItems(academicItems().filter(x=>x.id!==item.id));renderAcademic();});
-  const state=document.createElement("span");state.className="muted";state.style.marginLeft="10px";state.textContent=item.due<today?"Overdue":item.due===today?"Due today":"Upcoming";
+  const state=document.createElement("span");state.className="muted";state.style.marginLeft="10px";state.textContent=academicState(item,today)==="overdue"?"Overdue":academicState(item,today)==="today"?"Due today":"Upcoming";
   row.append(meta,document.createElement("br"),title,state,del);target.append(row);
  }
+ renderAcademicSummary();
 }
+function renderAcademicSummary(){
+ const target=document.querySelector("#academic-summary");if(!target)return;
+ const items=academicItems().sort((a,b)=>a.due.localeCompare(b.due));
+ target.replaceChildren();
+ if(!items.length){const p=document.createElement("p");p.className="muted";p.textContent="No local deadlines yet. Add your first assignment or exam.";target.append(p);return}
+ const today=new Date().toISOString().slice(0,10);
+ const overdue=items.filter(item=>academicState(item,today)==="overdue").length;
+ const todayCount=items.filter(item=>academicState(item,today)==="today").length;
+ const next=items.filter(item=>item.due>=today).slice(0,3);
+ if(overdue){const p=document.createElement("p");p.textContent=overdue+" overdue task"+(overdue===1?"":"s")+" need attention.";target.append(p)}
+ if(todayCount){const p=document.createElement("p");p.textContent=todayCount+" task"+(todayCount===1?" is":"s are")+" due today.";target.append(p)}
+ if(next.length){
+  for(const item of next){const row=document.createElement("p");row.className="muted";row.textContent=item.due+" • "+item.subject+" • "+item.title;target.append(row)}
+ }else if(!overdue&&!todayCount){const p=document.createElement("p");p.className="muted";p.textContent="No upcoming deadlines in your local plan.";target.append(p)}
+}
+const academicFilter=document.querySelector("#academic-filter");
+academicFilter?.addEventListener("change",renderAcademic);
 const academicForm=document.querySelector("#academic-form");
 academicForm?.addEventListener("submit",(event)=>{
  event.preventDefault();
@@ -483,6 +509,7 @@ academicForm?.addEventListener("submit",(event)=>{
  academicForm.reset();status.textContent="Added to your academic plan.";renderAcademic();
 });
 renderAcademic();
+renderAcademicSummary();
 async function boot(){
  initSearch();
  try{await loadSearch("")}catch{}
