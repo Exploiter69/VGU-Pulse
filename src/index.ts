@@ -8,6 +8,7 @@ import {
   listStudentReplies,
   upsertTelegramUser,
   validateStudentPostInput,
+  validateStudentReplyInput,
   voteInPoll,
 } from "./db";
 import { sendMessage } from "./telegram-bot";
