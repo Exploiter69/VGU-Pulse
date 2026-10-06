@@ -25,11 +25,16 @@ import { validateInitData } from "./telegram";
 interface Env {
   DB: D1Database;
   BOT_TOKEN?: string;
+  TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_WEBAPP_URL?: string;
   TELEGRAM_WEBHOOK_SECRET?: string;
   SIGNAL_API_URL?: string;
   SIGNAL_SERVICE: Fetcher;
   APP_NAME: string;
+}
+
+function getBotToken(env: Env): string | undefined {
+  return env.BOT_TOKEN ?? env.TELEGRAM_BOT_TOKEN;
 }
 
 function json(data: unknown, status = 200): Response {
@@ -51,7 +56,7 @@ function html(): Response {
 }
 
 async function handleTelegramUpdate(request: Request, env: Env): Promise<Response> {
-  if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
+  if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
 
   const expected = env.TELEGRAM_WEBHOOK_SECRET;
   if (expected && request.headers.get("x-telegram-bot-api-secret-token") !== expected) {
@@ -70,21 +75,21 @@ async function handleTelegramUpdate(request: Request, env: Env): Promise<Respons
 
   if (text === "/start") {
     await sendMessage(
-      env.BOT_TOKEN,
+      getBotToken(env),
       chatId,
       "Welcome to VGU Pulse. Your campus network starts here.",
       env.TELEGRAM_WEBAPP_URL,
     );
   } else if (text === "/help") {
     await sendMessage(
-      env.BOT_TOKEN,
+      getBotToken(env),
       chatId,
       "Use Open VGU Pulse to enter the Mini App. More campus features will appear there as the network grows.",
       env.TELEGRAM_WEBAPP_URL,
     );
   } else {
     await sendMessage(
-      env.BOT_TOKEN,
+      getBotToken(env),
       chatId,
       "Open VGU Pulse to continue.",
       env.TELEGRAM_WEBAPP_URL,
@@ -145,15 +150,15 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/api/student-profile") {
-      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
-      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", env.BOT_TOKEN);
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       return json({ ok: true, trust: "student-reported", profile: await getStudentProfile(env.DB, validated.user.id) });
     }
 
     if (request.method === "POST" && url.pathname === "/api/student-profile") {
-      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
-      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", env.BOT_TOKEN);
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       await upsertTelegramUser(env.DB, validated.user);
       let body: Record<string, unknown>;
@@ -167,8 +172,8 @@ export default {
     }
 
     if (request.method === "DELETE" && url.pathname === "/api/student-profile") {
-      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
-      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", env.BOT_TOKEN);
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       try {
         const deleted = await deleteStudentProfile(env.DB, validated.user.id);
@@ -179,8 +184,8 @@ export default {
     }
 
     if (request.method === "POST" && url.pathname === "/api/student-profile/report") {
-      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
-      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", env.BOT_TOKEN);
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       let body: { profile_public_id?: unknown };
       try { body = (await request.json()) as { profile_public_id?: unknown }; }
@@ -204,8 +209,8 @@ export default {
             : undefined;
         let viewerId: number | undefined;
         const initData = request.headers.get("x-telegram-init-data") ?? "";
-        if (initData && env.BOT_TOKEN) {
-          const validated = await validateInitData(initData, env.BOT_TOKEN);
+        if (initData && getBotToken(env)) {
+          const validated = await validateInitData(initData, getBotToken(env));
           viewerId = validated?.user.id;
         }
         const posts = await listStudentPosts(env.DB, 20, category, viewerId);
@@ -221,9 +226,9 @@ export default {
     }
 
     if (request.method === "POST" && url.pathname === "/api/student-posts") {
-      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
       const initData = request.headers.get("x-telegram-init-data") ?? "";
-      const validated = await validateInitData(initData, env.BOT_TOKEN);
+      const validated = await validateInitData(initData, getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       await upsertTelegramUser(env.DB, validated.user);
 
@@ -253,8 +258,8 @@ export default {
       try {
         let viewerId: number | undefined;
         const initData = request.headers.get("x-telegram-init-data") ?? "";
-        if (initData && env.BOT_TOKEN) {
-          const validated = await validateInitData(initData, env.BOT_TOKEN);
+        if (initData && getBotToken(env)) {
+          const validated = await validateInitData(initData, getBotToken(env));
           viewerId = validated?.user.id;
         }
         const replies = await listStudentReplies(env.DB, postId, 50, viewerId);
@@ -265,8 +270,8 @@ export default {
     }
 
     if (request.method === "DELETE" && url.pathname === "/api/student-posts") {
-      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
-      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", env.BOT_TOKEN);
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       const postId = Number(url.searchParams.get("post_id"));
       if (!Number.isSafeInteger(postId) || postId < 1) {
@@ -281,9 +286,9 @@ export default {
     }
 
     if (request.method === "POST" && url.pathname === "/api/student-posts/replies") {
-      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
       const initData = request.headers.get("x-telegram-init-data") ?? "";
-      const validated = await validateInitData(initData, env.BOT_TOKEN);
+      const validated = await validateInitData(initData, getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       await upsertTelegramUser(env.DB, validated.user);
 
@@ -316,8 +321,8 @@ export default {
     }
 
     if (request.method === "DELETE" && url.pathname === "/api/student-posts/replies") {
-      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
-      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", env.BOT_TOKEN);
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       const replyId = Number(url.searchParams.get("reply_id"));
       if (!Number.isSafeInteger(replyId) || replyId < 1) {
@@ -332,9 +337,9 @@ export default {
     }
 
     if (request.method === "POST" && url.pathname === "/api/student-posts/replies/report") {
-      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
       const initData = request.headers.get("x-telegram-init-data") ?? "";
-      const validated = await validateInitData(initData, env.BOT_TOKEN);
+      const validated = await validateInitData(initData, getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       await upsertTelegramUser(env.DB, validated.user);
 
@@ -356,9 +361,9 @@ export default {
     }
 
     if (request.method === "POST" && url.pathname === "/api/student-posts/report") {
-      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
       const initData = request.headers.get("x-telegram-init-data") ?? "";
-      const validated = await validateInitData(initData, env.BOT_TOKEN);
+      const validated = await validateInitData(initData, getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       await upsertTelegramUser(env.DB, validated.user);
 
@@ -451,8 +456,8 @@ export default {
 
     if (request.method === "POST" && url.pathname === "/api/polls/vote") {
       const initData = request.headers.get("x-telegram-init-data") ?? "";
-      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
-      const validated = await validateInitData(initData, env.BOT_TOKEN);
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(initData, getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       await upsertTelegramUser(env.DB, validated.user);
 
@@ -483,10 +488,10 @@ export default {
     }
 
     if (request.method === "POST" && url.pathname === "/api/auth/telegram") {
-      if (!env.BOT_TOKEN) return json({ ok: false, error: "bot_not_configured" }, 503);
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
 
       const body = (await request.json()) as { initData?: string };
-      const validated = await validateInitData(body.initData ?? "", env.BOT_TOKEN);
+      const validated = await validateInitData(body.initData ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "invalid_init_data" }, 401);
 
       await upsertTelegramUser(env.DB, validated.user);
