@@ -30,6 +30,7 @@ export interface StudentProfile {
   bio: string;
   looking_for: string;
   updated_at: string;
+  status?: "published" | "hidden";
 }
 
 export function validateStudentProfileInput(input: {
@@ -81,13 +82,71 @@ export async function getStudentProfile(db: D1Database, userId: number): Promise
   ).bind(String(userId)).first<StudentProfile>();
 }
 
-export async function listStudentProfiles(db: D1Database, limit = 30): Promise<StudentProfile[]> {
+export async function listStudentProfiles(
+  db: D1Database,
+  limit = 30,
+  viewerUserId?: number,
+  filters?: { q?: string; program?: string; branch?: string; year?: number },
+): Promise<StudentProfile[]> {
+  const q = filters?.q?.trim() || null;
+  const program = filters?.program?.trim() || null;
+  const branch = filters?.branch?.trim() || null;
+  const year = filters?.year ?? null;
+  const viewer = viewerUserId === undefined ? null : String(viewerUserId);
   const rows = await db.prepare(
-    `SELECT public_id, display_name, program, branch, year, bio, looking_for, updated_at
-     FROM student_profiles WHERE status = 'published' AND report_count < 3
-     ORDER BY updated_at DESC, public_id LIMIT ?`,
-  ).bind(Math.min(Math.max(limit, 1), 50)).all<StudentProfile>();
+    `SELECT p.public_id, p.display_name, p.program, p.branch, p.year, p.bio, p.looking_for, p.updated_at
+     FROM student_profiles p
+     WHERE p.status = 'published' AND p.report_count < 3
+       AND (? IS NULL OR LOWER(p.program) LIKE '%' || LOWER(?) || '%')
+       AND (? IS NULL OR LOWER(p.branch) LIKE '%' || LOWER(?) || '%')
+       AND (? IS NULL OR p.year = ?)
+       AND (? IS NULL OR LOWER(p.display_name || ' ' || p.program || ' ' || p.branch || ' ' || p.looking_for || ' ' || p.bio) LIKE '%' || LOWER(?) || '%')
+       AND (? IS NULL OR NOT EXISTS (
+         SELECT 1 FROM student_profile_blocks b
+         JOIN student_profiles bp ON bp.telegram_user_id = b.blocked_telegram_user_id
+         WHERE b.blocker_telegram_user_id = ? AND bp.telegram_user_id = p.telegram_user_id
+       ))
+       AND (? IS NULL OR NOT EXISTS (
+         SELECT 1 FROM student_profile_blocks b
+         WHERE b.blocker_telegram_user_id = p.telegram_user_id AND b.blocked_telegram_user_id = ?
+       ))
+     ORDER BY p.updated_at DESC, p.public_id LIMIT ?`,
+  ).bind(
+    program, program, branch, branch, year, year, q, q,
+    viewer, viewer, viewer, viewer,
+    Math.min(Math.max(limit, 1), 50),
+  ).all<StudentProfile>();
   return rows.results;
+}
+
+export async function setStudentProfileVisibility(db: D1Database, userId: number, visible: boolean): Promise<boolean> {
+  const result = await db.prepare(
+    `UPDATE student_profiles SET status = ? WHERE telegram_user_id = ?`,
+  ).bind(visible ? "published" : "hidden", String(userId)).run();
+  return result.meta.changes > 0;
+}
+
+export async function blockStudentProfile(db: D1Database, blockerUserId: number, blockedPublicId: string): Promise<boolean> {
+  const target = await db.prepare(
+    `SELECT telegram_user_id FROM student_profiles WHERE public_id = ?`,
+  ).bind(blockedPublicId).first<{ telegram_user_id: string }>();
+  if (!target || target.telegram_user_id === String(blockerUserId)) return false;
+  const result = await db.prepare(
+    `INSERT OR IGNORE INTO student_profile_blocks (blocker_telegram_user_id, blocked_telegram_user_id)
+     VALUES (?, ?)`,
+  ).bind(String(blockerUserId), target.telegram_user_id).run();
+  return result.meta.changes > 0;
+}
+
+export async function unblockStudentProfile(db: D1Database, blockerUserId: number, blockedPublicId: string): Promise<boolean> {
+  const target = await db.prepare(
+    `SELECT telegram_user_id FROM student_profiles WHERE public_id = ?`,
+  ).bind(blockedPublicId).first<{ telegram_user_id: string }>();
+  if (!target) return false;
+  const result = await db.prepare(
+    `DELETE FROM student_profile_blocks WHERE blocker_telegram_user_id = ? AND blocked_telegram_user_id = ?`,
+  ).bind(String(blockerUserId), target.telegram_user_id).run();
+  return result.meta.changes > 0;
 }
 
 export async function reportStudentProfile(db: D1Database, profilePublicId: string, reporterUserId: number): Promise<void> {
