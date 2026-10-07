@@ -345,6 +345,10 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
 .settings-note{font-size:12px;color:var(--muted)}
 .toast{position:fixed;left:50%;bottom:calc(78px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(10px);background:var(--surface-3);border:1px solid var(--border-strong);color:var(--text);padding:9px 13px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:50}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.pulse-sheet{width:min(680px,calc(100% - 24px));margin:auto;background:var(--surface);color:var(--text);border:1px solid var(--border-strong);border-radius:18px;padding:20px}
+.pulse-sheet::backdrop{background:rgba(0,0,0,.58);backdrop-filter:blur(4px)}
+.pulse-sheet h3{font-size:20px;margin:0 0 8px}
+.sheet-close{width:100%;margin-top:14px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:11px;font:inherit;font-weight:700;cursor:pointer}
 @media(min-width:900px){
   main{width:min(1080px,calc(100% - 48px));padding:32px 0 64px 220px}
   .view{max-width:760px}
@@ -443,6 +447,7 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
 <section class="card">
   <div class="section-heading"><div><div class="eyebrow">Results</div><h2>VGU knowledge</h2></div></div>
   <div id="search-results"><p class="muted">Try “exam form”, “medical”, “transport” or “hostel”.</p></div>
+  <button type="button" class="inline-link" id="trust-details">How trust works →</button>
 </section>
 <section class="card">
   <div class="section-heading"><div><div class="eyebrow">Trust</div><h2>Know the source</h2></div></div>
@@ -630,7 +635,12 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
     <button type="button" class="inline-link" id="telegram-fullscreen">Use fullscreen</button>
   </div>
 </section>
-</div></main></main>
+</div></main><dialog id="pulse-sheet" class="pulse-sheet">
+  <h3 id="pulse-sheet-title">Pulse</h3>
+  <p id="pulse-sheet-body" class="muted"></p>
+  <button type="button" class="sheet-close" id="pulse-sheet-close">Close</button>
+</dialog>
+</main>
 <script>
 const tg=window.Telegram?.WebApp;
 function applyTelegramTheme(){
@@ -648,6 +658,17 @@ tg?.ready?.();tg?.expand?.();
 function haptic(type="selection"){
  try{if(type==="impact")tg?.HapticFeedback?.impactOccurred("light");else tg?.HapticFeedback?.selectionChanged()}catch{}
 }
+function openPulseSheet(title,body){
+ const sheet=document.getElementById("pulse-sheet");if(!sheet)return;
+ document.getElementById("pulse-sheet-title").textContent=title;
+ document.getElementById("pulse-sheet-body").textContent=body;
+ if(typeof sheet.showModal==="function")sheet.showModal();else sheet.setAttribute("open","");
+}
+document.getElementById("pulse-sheet-close")?.addEventListener("click",()=>document.getElementById("pulse-sheet")?.close?.());
+document.getElementById("trust-details")?.addEventListener("click",()=>{
+ openPulseSheet("How Pulse decides what to show","Official VGU information comes through VGU-Signal and keeps its official label. Community posts and votes are student-reported and are never presented as official VGU information. Private ERP/Digicampus data is not fetched or invented.");
+ haptic();
+});
 function toast(message){
  const node=document.getElementById("pulse-toast");if(!node)return;
  node.textContent=message;node.classList.add("show");clearTimeout(window.__pulseToast);
