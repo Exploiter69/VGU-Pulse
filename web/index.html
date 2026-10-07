@@ -118,7 +118,7 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <p class="muted">Ask a question, share useful campus information, or find people for an opportunity. These posts are student-reported, not official VGU announcements.</p>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><select id="post-filter" aria-label="Filter student posts">
 <option value="">All student posts</option><option value="question">Questions</option><option value="info">Campus information</option><option value="opportunity">Opportunities</option><option value="request">Requests</option>
-</select><select id="post-sort" aria-label="Sort student posts"><option value="newest">Newest</option><option value="active">Most discussed</option><option value="unanswered">Unanswered first</option></select></div>
+</select><select id="post-sort" aria-label="Sort student posts"><option value="newest">Newest</option><option value="useful">Most useful</option><option value="active">Most discussed</option><option value="unanswered">Unanswered first</option></select></div>
 <form id="post-form">
 <select id="post-category" aria-label="Post type">
 <option value="question">Question</option><option value="info">Campus information</option><option value="opportunity">Opportunity</option><option value="request">Request</option>
@@ -329,6 +329,40 @@ function renderHomeCommunity(posts){
  if(!posts.length){const p=document.createElement("p");p.className="muted";p.textContent="No student posts yet. Start the conversation.";homeCommunity.append(p);return}
  for(const post of posts.slice(0,3)){const item=document.createElement("article");item.className="home-item";const title=document.createElement("strong");title.textContent=post.title;const meta=document.createElement("small");meta.className="muted home-meta";meta.textContent=post.category+" • student-reported";item.append(title,meta);homeCommunity.append(item)}
 }
+function voteButtons(kind,item,target){
+ const wrap=document.createElement("span");wrap.style.display="inline-flex";wrap.style.gap="6px";wrap.style.alignItems="center";wrap.style.marginRight="10px";
+ const up=document.createElement("button");up.type="button";up.className="report";up.textContent="▲ "+String(item.upvotes||0);up.setAttribute("aria-label","Upvote");
+ const score=document.createElement("strong");score.textContent=String(item.score||0);score.style.minWidth="24px";score.style.textAlign="center";
+ const down=document.createElement("button");down.type="button";down.className="report";down.textContent="▼ "+String(item.downvotes||0);down.setAttribute("aria-label","Downvote");
+ const refresh=async(vote)=>{
+  if(!initData){status.textContent="Open Pulse from Telegram to vote.";return}
+  up.disabled=true;down.disabled=true;
+  try{
+   const response=await fetch(kind==="post"?"/api/student-posts/vote":"/api/student-posts/replies/vote",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify(kind==="post"?{post_id:item.id,vote}:{reply_id:item.id,vote})});
+   if(!response.ok){status.textContent="Vote could not be recorded.";return}
+   const data=await response.json();const updated=data[kind==="post"?"post":"reply"];
+   if(updated){
+    up.textContent="▲ "+String(updated.upvotes||0);down.textContent="▼ "+String(updated.downvotes||0);score.textContent=String(updated.score||0);
+    up.disabled=false;down.disabled=false;
+    if(updated.viewer_vote===1)up.textContent+=" ✓";if(updated.viewer_vote===-1)down.textContent+=" ✓";
+   }
+  }catch{status.textContent="Network error while voting. Try again."}
+  finally{up.disabled=false;down.disabled=false}
+ };
+ up.addEventListener("click",()=>refresh(1));down.addEventListener("click",()=>refresh(-1));
+ if(item.viewer_vote===1)up.textContent+=" ✓";if(item.viewer_vote===-1)down.textContent+=" ✓";
+ wrap.append(up,score,down);target.append(wrap);
+}
+function renderRelatedPosts(target,posts){
+ target.replaceChildren();
+ if(!posts.length)return;
+ const label=document.createElement("strong");label.textContent="Related student posts";target.append(label);
+ for(const post of posts){
+  const row=document.createElement("div");row.className="muted";row.style.marginTop="7px";
+  row.textContent=post.title+" • "+String(post.reply_count||0)+" replies • score "+String(post.score||0);
+  target.append(row);
+ }
+}
 function renderStudentPosts(posts){
  studentPosts.replaceChildren();
  if(!posts.length){const p=document.createElement("p");p.className="muted";p.textContent="No student posts yet. Be the first to share something useful.";studentPosts.append(p);return}
@@ -337,9 +371,11 @@ function renderStudentPosts(posts){
   const meta=document.createElement("small");meta.className="muted";meta.textContent=post.category+" • student-reported • "+post.author_name+" • "+(post.reply_count||0)+" repl"+((post.reply_count||0)===1?"y":"ies");
   const title=document.createElement("h3");title.textContent=post.title;
   const body=document.createElement("p");body.className="muted";body.textContent=post.body;
-  const report=document.createElement("button");report.className="report";report.type="button";report.textContent="Report";
-  report.addEventListener("click",()=>reportPost(post.id,report));
-
+  const actions=document.createElement("div");actions.style.display="flex";actions.style.flexWrap="wrap";actions.style.alignItems="center";actions.style.gap="4px";
+  voteButtons("post",post,actions);
+  const report=document.createElement("button");report.className="report";report.type="button";report.textContent="Report";report.addEventListener("click",()=>reportPost(post.id,report));
+  actions.append(report);
+  const related=document.createElement("div");related.className="muted";related.style.marginTop="10px";
   const replies=document.createElement("div");replies.className="replies";
   const repliesStatus=document.createElement("p");repliesStatus.className="muted";repliesStatus.textContent="Loading replies…";replies.append(repliesStatus);
   const replyForm=document.createElement("form");replyForm.className="reply-form";
@@ -347,44 +383,28 @@ function renderStudentPosts(posts){
   const replySubmit=document.createElement("button");replySubmit.className="reply-submit";replySubmit.type="submit";replySubmit.textContent="Reply";
   replyForm.append(replyInput,replySubmit);
   replyForm.addEventListener("submit",async(event)=>{
-    event.preventDefault();
-    if(!initData){status.textContent="Open Pulse from Telegram to reply.";return}
-    const body=replyInput.value.trim();
-    if(!body){replyInput.focus();return}
-    replySubmit.disabled=true;
-    replySubmit.textContent="Posting…";
-    try{
-      const response=await fetch("/api/student-posts/replies",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({post_id:post.id,body})});
-      let data={};
-      try{data=await response.json()}catch{}
-      if(!response.ok){
-        status.textContent=data.error==="unauthorized"?"Telegram session expired. Reopen Pulse from Telegram.":data.error==="invalid_reply"?"Reply must contain 1–1000 characters.":data.error==="post_not_found"?"That post is no longer available.":"Reply could not be posted. Try again.";
-        return;
-      }
-      replyInput.value="";
-      await loadReplies(post.id,replies);
-      status.textContent="Reply posted.";
-    }catch{
-      status.textContent="Network error while posting reply. Try again.";
-    }finally{
-      replySubmit.disabled=false;
-      replySubmit.textContent="Reply";
-    }
+   event.preventDefault();
+   if(!initData){status.textContent="Open Pulse from Telegram to reply.";return}
+   const body=replyInput.value.trim();if(!body){replyInput.focus();return}
+   replySubmit.disabled=true;replySubmit.textContent="Posting…";
+   try{
+    const response=await fetch("/api/student-posts/replies",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({post_id:post.id,body})});
+    let data={};try{data=await response.json()}catch{}
+    if(!response.ok){status.textContent=data.error==="unauthorized"?"Telegram session expired. Reopen Pulse from Telegram.":data.error==="invalid_reply"?"Reply must contain 1–1000 characters.":data.error==="post_not_found"?"That post is no longer available.":"Reply could not be posted. Try again.";return}
+    replyInput.value="";await loadReplies(post.id,replies);status.textContent="Reply posted.";
+   }catch{status.textContent="Network error while posting reply. Try again."}
+   finally{replySubmit.disabled=false;replySubmit.textContent="Reply"}
   });
-  const deletePost=document.createElement("button");deletePost.className="report";deletePost.type="button";deletePost.textContent="Delete";
-  deletePost.hidden=!post.owned;
+  const deletePost=document.createElement("button");deletePost.className="report";deletePost.type="button";deletePost.textContent="Delete";deletePost.hidden=!post.owned;
   deletePost.addEventListener("click",async()=>{
-    if(deletePost.dataset.confirming!=="1"){
-      deletePost.dataset.confirming="1";
-      deletePost.textContent="Confirm delete";
-      status.textContent="Tap Confirm delete again to remove this post and its replies.";
-      return;
-    }
-    deletePost.disabled=true;deletePost.textContent="Deleting…";
-    const response=await fetch("/api/student-posts?post_id="+encodeURIComponent(post.id),{method:"DELETE",headers:{"x-telegram-init-data":initData}});
-    if(response.ok){await loadStudentPosts();status.textContent="Post deleted."}else{status.textContent="Post could not be deleted.";deletePost.disabled=false;deletePost.dataset.confirming="";deletePost.textContent="Delete"}
+   if(deletePost.dataset.confirming!=="1"){deletePost.dataset.confirming="1";deletePost.textContent="Confirm delete";status.textContent="Tap Confirm delete again to remove this post and its replies.";return}
+   deletePost.disabled=true;deletePost.textContent="Deleting…";
+   const response=await fetch("/api/student-posts?post_id="+encodeURIComponent(post.id),{method:"DELETE",headers:{"x-telegram-init-data":initData}});
+   if(response.ok){await loadStudentPosts();status.textContent="Post deleted."}else{status.textContent="Post could not be deleted.";deletePost.disabled=false;deletePost.dataset.confirming="";deletePost.textContent="Delete"}
   });
-  article.append(meta,title,body,report,deletePost,replies,replyForm);studentPosts.append(article);
+  actions.append(deletePost);
+  article.append(meta,title,body,actions,related,replies,replyForm);studentPosts.append(article);
+  fetch("/api/student-posts/related?post_id="+encodeURIComponent(post.id)).then(r=>r.ok?r.json():null).then(data=>{if(data?.posts)renderRelatedPosts(related,data.posts)}).catch(()=>{});
   loadReplies(post.id,replies).catch(()=>{repliesStatus.textContent="Replies unavailable.";});
  }
 }
