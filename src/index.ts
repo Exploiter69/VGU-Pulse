@@ -201,6 +201,8 @@ export default {
     if (request.method === "GET" && url.pathname === "/api/student-posts") {
       try {
         const requestedCategory = url.searchParams.get("category");
+        const requestedSort = url.searchParams.get("sort");
+        const sort = requestedSort === "active" || requestedSort === "unanswered" ? requestedSort : "newest";
         const category =
           requestedCategory === "question" ||
           requestedCategory === "info" ||
@@ -214,11 +216,12 @@ export default {
           const validated = await validateInitData(initData, getBotToken(env));
           viewerId = validated?.user.id;
         }
-        const posts = await listStudentPosts(env.DB, 20, category, viewerId);
+        const posts = await listStudentPosts(env.DB, 20, category, viewerId, sort);
         return json({
           ok: true,
           trust: "student-reported",
           category: category ?? "all",
+          sort,
           posts,
         });
       } catch {
