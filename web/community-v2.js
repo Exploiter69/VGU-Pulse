@@ -259,7 +259,7 @@
       }catch{button.textContent="Try again"}
     });
 
-    const askView=document.querySelector('[data-view-panel="ask"]'),askQuestion=document.querySelector("#question");
+    const askView=document.querySelector('[data-view-panel="ask"]'),askQuestion=document.querySelector("#search-query");
     if(askView&&askQuestion){
       const bridge=document.createElement("div");bridge.className="cv2-ask-bridge";
       bridge.innerHTML='<button type="button" class="cv2-tool" data-ask-action="start">Ask students →</button><button type="button" class="cv2-tool" data-ask-action="related">Related discussions →</button>';
