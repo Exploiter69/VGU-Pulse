@@ -99,6 +99,10 @@ describe("final Student OS production contract", () => {
     expect(communityWebSource).toContain('start_param');
     expect(webSource).toContain('CloudStorage');
     expect(webSource).toContain('--tg-content-safe-bottom');
+    expect(webSource).toContain('pulse-activity-item');
+    expect(webSource).toContain('data-activity-id');
+    expect(webSource).toContain('__pulseCommunityOpenItem?.');
+    expect(communityWebSource).toContain('data-reply-id');
     const headers = readFileSync("web/_headers", "utf8");
     expect(headers).toContain("Content-Security-Policy");
     expect(headers).not.toContain("X-Frame-Options: DENY");
