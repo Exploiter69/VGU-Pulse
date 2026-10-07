@@ -295,7 +295,9 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
         CASE WHEN r.anonymous=1 THEN 'Anonymous student' ELSE COALESCE(sp.display_name,'VGU student') END author,
         CASE WHEN r.telegram_user_id=? THEN 1 ELSE 0 END AS mine
         FROM community_replies r LEFT JOIN student_profiles sp ON sp.telegram_user_id=r.telegram_user_id
-        WHERE r.item_id=? AND r.status='published' ORDER BY r.created_at ASC LIMIT 100`).bind(String(user.id),id).all();
+        WHERE r.item_id=? AND r.status='published'
+          AND NOT EXISTS (SELECT 1 FROM student_profile_blocks b WHERE b.blocker_telegram_user_id=? AND b.blocked_telegram_user_id=r.telegram_user_id)
+        ORDER BY r.created_at ASC LIMIT 100`).bind(id,String(user.id)).all();
       return json({ok:true,replies:rows.results??[]});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/poll"){
