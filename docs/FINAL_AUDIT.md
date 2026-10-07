@@ -95,21 +95,18 @@ Current VGU public surfaces were checked independently of the repository. The of
 
 ## Production validation boundary
 
-The repository changes above are implemented and statically audited in GitHub.
+Final production validation completed on 2026-10-07:
+- local Git checkout synced to the latest `main`
+- TypeScript check passed
+- 32/32 tests passed
+- remote D1 migrations: no migrations pending
+- production Worker deployed successfully
+- production version: `eda30493-a6ad-40c2-882a-19806ceb80cd`
+- production health: HTTP 200
+- D1 dependency: `true`
+- Signal dependency: `true`
 
-The latest commits after the user's previous production deployment still require one final local production command:
-
-```bash
-cd ~/VGU-Pulse && git pull --ff-only origin main && npm install && npm run check && npm test && npx wrangler d1 migrations apply vgu-pulse --remote && npx wrangler deploy && curl -sS -i https://vgu-pulse.vgu-signal.workers.dev/health
-```
-
-Expected latest health shape:
-
-```json
-{"service":"vgu-pulse","status":"ok","dependencies":{"database":true,"signal":true}}
-```
-
-A real Telegram mobile smoke test remains necessary for final device-specific confirmation because GitHub/static checks cannot reproduce every Android/iOS Telegram WebView behavior.
+A real Telegram mobile smoke test remains the only device-specific validation that cannot be reproduced by GitHub/static checks; the source includes the Telegram-safe navigation, viewport, safe-area, haptics, fullscreen, sharing and touch-target safeguards.
 
 ## Architecture freeze decision
 
