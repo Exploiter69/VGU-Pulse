@@ -342,6 +342,23 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       return json({ok:true,items:await listItems(env.DB,user.id,new URLSearchParams({q,sort:"trending"}))});
     }
 
+    if(request.method==="GET" && url.pathname==="/api/community-v2/legacy-item"){
+      const id=Number(url.searchParams.get("post_id"));
+      if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_post"},400);
+      const item=await env.DB.prepare(`SELECT p.id,p.category,p.title,p.body,p.created_at,
+        COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name,'')),''),'VGU student') AS author,
+        COALESCE((SELECT SUM(v.vote) FROM student_post_votes v WHERE v.post_id=p.id),0) AS score,
+        (SELECT COUNT(*) FROM student_post_replies r WHERE r.post_id=p.id AND r.status='published' AND r.report_count < 3) AS replies
+        FROM student_posts p JOIN users u ON u.telegram_user_id=p.telegram_user_id
+        WHERE p.id=? AND p.status='published' AND p.report_count < 3`).bind(id).first<Record<string,unknown>>();
+      if(!item)return json({ok:false,error:"post_not_found"},404);
+      const replies=await env.DB.prepare(`SELECT r.id,r.post_id,r.body,r.created_at,
+        COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name,'')),''),'VGU student') AS author
+        FROM student_post_replies r JOIN users u ON u.telegram_user_id=r.telegram_user_id
+        WHERE r.post_id=? AND r.status='published' AND r.report_count < 3
+        ORDER BY r.created_at ASC,r.id ASC LIMIT 50`).bind(id).all<Record<string,unknown>>();
+      return json({ok:true,legacy:true,item,replies:replies.results??[]});
+    }
     if(request.method==="GET" && url.pathname==="/api/community-v2/items"){
       const id=Number(url.searchParams.get("item_id"));
       if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
