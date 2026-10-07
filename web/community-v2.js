@@ -32,7 +32,7 @@
       .cv2-badge{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:999px;padding:4px 8px;color:var(--muted);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
       .cv2-badge.anon{color:var(--warning);border-color:rgba(240,197,111,.25)}
       .cv2-item h3{font-size:17px;margin:7px 0 5px}
-      .cv2-body{white-space:pre-wrap;margin:0}
+      .cv2-body{white-space:pre-wrap;margin:0;overflow-wrap:anywhere}.cv2-body.cv2-collapsed{display:-webkit-box;-webkit-line-clamp:8;-webkit-box-orient:vertical;overflow:hidden}.cv2-more-text{margin-top:5px}
       .cv2-note{color:var(--muted);font-size:12px}
       .cv2-actions{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-top:10px}
       .cv2-tool{min-height:38px;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:10px;padding:7px 10px;font:inherit;font-size:12px;font-weight:650;cursor:pointer}
@@ -103,8 +103,8 @@
         <form method="dialog" class="cv2-sheet" id="cv2-compose-form">
           <div class="cv2-sheet-head"><h3 id="cv2-compose-heading">Start a student post</h3><button class="cv2-close" id="cv2-compose-close" type="button" aria-label="Close">×</button></div>
           <div class="cv2-grid">
-            <div class="cv2-field"><label>What are you trying to do?</label><div class="cv2-intent-grid" id="cv2-intents"><button type="button" data-intent="discussion"><strong>Discussion</strong><span>Start a conversation</span></button><button type="button" data-intent="confession"><strong>Confession</strong><span>Share anonymously</span></button><button type="button" data-intent="campus"><strong>Campus help</strong><span>Something on campus</span></button><button type="button" data-intent="exam"><strong>Exam survival</strong><span>Exam help</span></button><button type="button" data-intent="notes"><strong>Notes / resources</strong><span>Useful material</span></button><button type="button" data-intent="teammate"><strong>Project teammate</strong><span>Find collaborators</span></button><button type="button" data-intent="lost_found"><strong>Lost & found</strong><span>Return or find</span></button><button type="button" data-intent="opportunity"><strong>Opportunity</strong><span>Share an opportunity</span></button></div><input id="cv2-kind" type="hidden" value="discussion"></div>
-            <div class="cv2-field"><label for="cv2-community">Community</label><input id="cv2-community" value="campus" maxlength="60"></div>
+            <div class="cv2-field"><label>What are you trying to do?</label><div class="cv2-intent-grid" id="cv2-intents"><button type="button" data-intent="discussion"><strong>Discussion</strong><span>Start a conversation</span></button><button type="button" data-intent="question"><strong>Question</strong><span>Get student answers</span></button><button type="button" data-intent="confession"><strong>Confession</strong><span>Share anonymously</span></button><button type="button" data-intent="campus"><strong>Campus help</strong><span>Something on campus</span></button><button type="button" data-intent="exam"><strong>Exam survival</strong><span>Exam help</span></button><button type="button" data-intent="senior"><strong>Senior advice</strong><span>Ask upper years</span></button><button type="button" data-intent="notes"><strong>Notes / resources</strong><span>Useful material</span></button><button type="button" data-intent="pyq"><strong>PYQ / exam material</strong><span>Find past papers</span></button><button type="button" data-intent="teacher"><strong>Teacher / elective</strong><span>Compare experiences</span></button><button type="button" data-intent="teammate"><strong>Project teammate</strong><span>Find collaborators</span></button><button type="button" data-intent="lost_found"><strong>Lost & found</strong><span>Return or find</span></button><button type="button" data-intent="ride"><strong>Ride sharing</strong><span>Find a ride</span></button><button type="button" data-intent="roommate"><strong>Room / roommate</strong><span>Find housing help</span></button><button type="button" data-intent="listing"><strong>Student exchange</strong><span>Buy, sell or exchange</span></button><button type="button" data-intent="opportunity"><strong>Opportunity</strong><span>Share an opportunity</span></button></div><input id="cv2-kind" type="hidden" value="discussion"></div>
+            <div class="cv2-field"><label for="cv2-community">Community</label><input id="cv2-community" list="cv2-community-options" value="campus" maxlength="60" autocomplete="off"><datalist id="cv2-community-options"></datalist></div>
           </div>
           <div class="cv2-field"><label for="cv2-title">Title</label><input id="cv2-title" maxlength="180" placeholder="What do you want other students to know?" required></div>
           <div class="cv2-field"><label for="cv2-body">Details</label><textarea id="cv2-body" maxlength="4000" rows="5" placeholder="Give enough context to help someone respond." required></textarea></div>
@@ -153,7 +153,7 @@
       return d;
     }
     const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-    const pretty=s=>{try{return new Date(s).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"})}catch{return s}};
+    const parsePulseDate=s=>{const raw=String(s??"");if(!raw)return new Date(NaN);return new Date(/^\d{4}-\d{2}-\d{2}T/.test(raw)&&!/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw)?raw+"Z":raw)};const pretty=s=>{try{const d=parsePulseDate(s);return Number.isFinite(d.getTime())?d.toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}):String(s??"")}catch{return String(s??"")}};
 
     async function loadFeed(){
       const feed=$("#cv2-feed");
@@ -171,7 +171,7 @@
         feed.innerHTML=data.items.map(item=>`
           <article class="cv2-item" data-id="${item.id}" data-following="${Number(item.following)?1:0}" data-saved="${Number(item.saved)?1:0}">
             <div class="cv2-meta"><div class="cv2-wrap"><span class="cv2-badge">${esc(item.kind.replaceAll("_"," "))}</span>${Number(item.anonymous)?'<span class="cv2-badge anon">Anonymous</span>':''}<span class="cv2-note">${esc(item.community_slug)}</span>${item.updated_at?'<span class="cv2-item-edited">Edited</span>':''}</div><span class="cv2-note">${pretty(item.created_at)}</span></div>
-            <h3>${esc(item.title)}</h3><p class="cv2-body">${esc(item.body)}</p>
+            <h3>${esc(item.title)}</h3><p class="cv2-body ${String(item.body||"").length>420?"cv2-collapsed":""}">${esc(item.body)}</p>${String(item.body||"").length>420?'<button type="button" class="cv2-tool cv2-more-text" data-action="expand">Read more</button>':""}
             <div class="cv2-note">By ${esc(item.author)} · ${item.replies} replies · ${item.upvotes} helpful</div>
             ${Number(item.poll_options)?'<button type="button" class="cv2-tool" data-action="poll">📊 Poll</button><div class="cv2-poll-options" hidden></div>':''}
             <div class="cv2-actions">
@@ -262,16 +262,8 @@
       if(!button||!item)return;
       const id=Number(item.dataset.id),action=button.dataset.action;
       try{
-        if(action==="vote")await api("/api/community-v2/vote",{method:"POST",body:JSON.stringify({item_id:id,vote:Number(button.dataset.value)})});
-        if(action==="follow"){
-          const following=item.dataset.following==="1";
-          await api("/api/community-v2/follow"+(following?"?item_id="+encodeURIComponent(id):""),following?{method:"DELETE"}:{method:"POST",body:JSON.stringify({item_id:id})});
-        }
-        if(action==="save"){
-          const saved=item.dataset.saved==="1";
-          await api("/api/community-v2/save"+(saved?"?item_id="+encodeURIComponent(id):""),saved?{method:"DELETE"}:{method:"POST",body:JSON.stringify({item_id:id})});
-        }
-        if(action==="edit"){
+        if(action==="expand"){const body=item.querySelector(".cv2-body");if(body){body.classList.remove("cv2-collapsed");button.remove()}return}\n        if(action==="vote")await api("/api/community-v2/vote",{method:"POST",body:JSON.stringify({item_id:id,vote:Number(button.dataset.value)})});
+        if(action==="follow"){const following=item.dataset.following==="1";item.dataset.following=following?"0":"1";button.classList.toggle("active",!following);button.textContent=following?"Follow":"Following";try{await api("/api/community-v2/follow"+(following?"?item_id="+encodeURIComponent(id):""),following?{method:"DELETE"}:{method:"POST",body:JSON.stringify({item_id:id})})}catch(e){item.dataset.following=following?"1":"0";button.classList.toggle("active",following);button.textContent=following?"Following":"Follow";throw e}return}\n        if(action==="save"){const saved=item.dataset.saved==="1";item.dataset.saved=saved?"0":"1";button.classList.toggle("active",!saved);button.textContent=saved?"Save":"Saved";try{await api("/api/community-v2/save"+(saved?"?item_id="+encodeURIComponent(id):""),saved?{method:"DELETE"}:{method:"POST",body:JSON.stringify({item_id:id})})}catch(e){item.dataset.saved=saved?"1":"0";button.classList.toggle("active",saved);button.textContent=saved?"Saved":"Save";throw e}return}\n        if(action==="edit"){
           const data=await api("/api/community-v2/items?item_id="+encodeURIComponent(id));
           const current=data.item;
           if(!current)throw new Error("item_not_found");
