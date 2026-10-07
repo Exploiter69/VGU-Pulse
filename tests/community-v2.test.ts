@@ -52,6 +52,7 @@ describe("community V2 contract", () => {
     const index = readFileSync("web/index.html", "utf8");
     expect(backend).toContain('params.get("saved") === "1"');
     expect(backend).toContain('request.method==="PATCH" && url.pathname==="/api/community-v2/items"');
+    expect(backend).toContain('request.method==="GET" && url.pathname==="/api/community-v2/items"');
     expect(backend).toContain('UPDATE community_items SET title=?,body=?,updated_at=CURRENT_TIMESTAMP');
     expect(backend).toContain('/api/community-v2/reputation');
     expect(backend).toContain('/api/community-v2/preferences');
