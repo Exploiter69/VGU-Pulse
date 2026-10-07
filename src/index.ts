@@ -273,14 +273,18 @@ export default {
       if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
       const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
-      let body: { profile_public_id?: unknown };
-      try { body = (await request.json()) as { profile_public_id?: unknown }; }
-      catch { return json({ ok: false, error: "invalid_json" }, 400); }
+      const body = await readJson<{ profile_public_id?: unknown }>(request);
+      if (!body) return json({ ok: false, error: "invalid_json" }, 400);
       if (typeof body.profile_public_id !== "string" || !body.profile_public_id.trim()) return json({ ok: false, error: "invalid_profile" }, 400);
       try {
         await reportStudentProfile(env.DB, body.profile_public_id, validated.user.id);
         return json({ ok: true });
-      } catch { return json({ ok: false, error: "profile_report_failed" }, 500); }
+      } catch (error) {
+        if (error instanceof Error && error.message === "rate_limited") {
+          return json({ ok: false, error: "rate_limited" }, 429);
+        }
+        return json({ ok: false, error: "profile_report_failed" }, 500);
+      }
     }
 
     if (request.method === "GET" && url.pathname === "/api/student-posts") {
@@ -360,7 +364,10 @@ export default {
       try {
         const post = await createStudentPost(env.DB, validated.user.id, input);
         return json({ ok: true, trust: "student-reported", post }, 201);
-      } catch {
+      } catch (error) {
+        if (error instanceof Error && error.message === "rate_limited") {
+          return json({ ok: false, error: "rate_limited" }, 429);
+        }
         return json({ ok: false, error: "post_create_failed" }, 500);
       }
     }
@@ -451,6 +458,9 @@ export default {
         if (error instanceof Error && error.message === "post_not_found") {
           return json({ ok: false, error: "post_not_found" }, 404);
         }
+        if (error instanceof Error && error.message === "rate_limited") {
+          return json({ ok: false, error: "rate_limited" }, 429);
+        }
         return json({ ok: false, error: "reply_create_failed" }, 500);
       }
     }
@@ -478,19 +488,18 @@ export default {
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       await upsertTelegramUser(env.DB, validated.user);
 
-      let body: { reply_id?: unknown };
-      try {
-        body = (await request.json()) as { reply_id?: unknown };
-      } catch {
-        return json({ ok: false, error: "invalid_json" }, 400);
-      }
+      const body = await readJson<{ reply_id?: unknown }>(request);
+      if (!body) return json({ ok: false, error: "invalid_json" }, 400);
       if (!Number.isSafeInteger(body.reply_id) || (body.reply_id as number) < 1) {
         return json({ ok: false, error: "invalid_reply" }, 400);
       }
       try {
         await reportStudentReply(env.DB, body.reply_id as number, validated.user.id);
         return json({ ok: true });
-      } catch {
+      } catch (error) {
+        if (error instanceof Error && error.message === "rate_limited") {
+          return json({ ok: false, error: "rate_limited" }, 429);
+        }
         return json({ ok: false, error: "reply_report_failed" }, 500);
       }
     }
@@ -502,12 +511,8 @@ export default {
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       await upsertTelegramUser(env.DB, validated.user);
 
-      let body: { post_id?: unknown };
-      try {
-        body = (await request.json()) as { post_id?: unknown };
-      } catch {
-        return json({ ok: false, error: "invalid_json" }, 400);
-      }
+      const body = await readJson<{ post_id?: unknown }>(request);
+      if (!body) return json({ ok: false, error: "invalid_json" }, 400);
       if (!Number.isSafeInteger(body.post_id)) {
         return json({ ok: false, error: "invalid_post" }, 400);
       }
@@ -515,7 +520,10 @@ export default {
       try {
         await reportStudentPost(env.DB, body.post_id as number, validated.user.id);
         return json({ ok: true });
-      } catch {
+      } catch (error) {
+        if (error instanceof Error && error.message === "rate_limited") {
+          return json({ ok: false, error: "rate_limited" }, 429);
+        }
         return json({ ok: false, error: "report_failed" }, 500);
       }
     }
