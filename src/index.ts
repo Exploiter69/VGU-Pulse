@@ -259,7 +259,7 @@ export default {
       try {
         const requestedCategory = url.searchParams.get("category");
         const requestedSort = url.searchParams.get("sort");
-        const sort = requestedSort === "active" || requestedSort === "unanswered" ? requestedSort : "newest";
+        const sort = requestedSort === "active" || requestedSort === "unanswered" || requestedSort === "useful" ? requestedSort : "newest";
         const category =
           requestedCategory === "question" ||
           requestedCategory === "info" ||
