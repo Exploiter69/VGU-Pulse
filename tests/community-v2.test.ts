@@ -33,9 +33,16 @@ describe("community V2 contract", () => {
     for (const text of [
       "Trending","Confessions","Campus pulse","Exam survival","Senior → junior advice",
       "Notes / resources","PYQ / exam material","Project teammate","Lost & found",
-      "Ride sharing","Room / roommate","Student exchange","Discussion alerts",
-      "Personalized alerts","Start a student discussion","See related student discussions",
+      "Ride sharing","Room / roommate","Student exchange","Filter","Post",
+      "Ask students","Related discussions",
     ]) expect(source).toContain(text);
+  });
+
+  it("keeps notifications and personal controls in the primary Me surface", () => {
+    const source = readFileSync("web/index.html", "utf8");
+    for (const text of ["VGU updates","Post replies","Mark all read","Academic planner","People profile","Student tools"]) {
+      expect(source).toContain(text);
+    }
   });
 
   it("never exposes Telegram identity for anonymous content", () => {
