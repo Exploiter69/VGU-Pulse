@@ -238,8 +238,7 @@
       const status=$("#cv2-compose-status"),button=$("#cv2-publish");
       try{
         button.disabled=true;status.textContent=editingId?"Saving…":"Publishing…";
-        const postKind=$("#cv2-kind").value,options=$("#cv2-options").value.split(/[
-,]/).map(x=>x.trim()).filter(Boolean);
+        const postKind=$("#cv2-kind").value,options=$("#cv2-options").value.split(/[\n,]/).map(x=>x.trim()).filter(Boolean);
         if(!$("#cv2-title").value.trim()||!$("#cv2-body").value.trim()) throw new Error("invalid_item");
         if(editingId) await api("/api/community-v2/items",{method:"PATCH",body:JSON.stringify({item_id:editingId,title:$("#cv2-title").value,body:$("#cv2-body").value})});
         else if(postKind==="discussion"&&options.length>=2) await api("/api/community-v2/polls",{method:"POST",body:JSON.stringify({kind:postKind,title:$("#cv2-title").value,body:$("#cv2-body").value,community_slug:$("#cv2-community").value,anonymous:$("#cv2-anon").checked,options})});
