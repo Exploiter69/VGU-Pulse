@@ -313,8 +313,27 @@
       askQuestion.parentElement?.appendChild(bridge);
     }
 
-    window.__pulseCommunityOpenItem=async(id,replyId="")=>{
+    const openLegacyItem=async(id,replyId="")=>{
+      const data=await api("/api/community-v2/legacy-item?post_id="+encodeURIComponent(id));
+      const item=data.item;if(!item)throw new Error("post_not_found");
+      $("#cv2-search").value="";kind="";community="";savedOnly=false;personalized=false;sort="new";syncTabs();await loadFeed();
+      const feed=$("#cv2-feed");
+      feed.insertAdjacentHTML("afterbegin",`<article class="cv2-item cv2-legacy-item" data-id="legacy-${item.id}">
+        <div class="cv2-meta"><div class="cv2-wrap"><span class="cv2-badge">Earlier community</span><span class="cv2-note">${esc(item.category)}</span></div><span class="cv2-note">${pretty(item.created_at)}</span></div>
+        <h3>${esc(item.title)}</h3><p class="cv2-body">${esc(item.body)}</p>
+        <div class="cv2-note">By ${esc(item.author)} · ${Number(item.replies||0)} replies · Score ${Number(item.score||0)}</div>
+        <div class="cv2-replies" hidden></div>
+      </article>`);
+      const card=feed.querySelector('.cv2-legacy-item[data-id="legacy-'+CSS.escape(String(item.id))+'"]');
+      if(!card)throw new Error("item_not_visible");
+      card.scrollIntoView({block:"center",behavior:"smooth"});
+      const box=card.querySelector(".cv2-replies");
+      box.innerHTML=(data.replies||[]).map(r=>`<div class="cv2-reply" data-reply-id="${r.id}"><strong>${esc(r.author)}</strong><div>${esc(r.body)}</div><span class="cv2-note">${pretty(r.created_at)}</span></div>`).join("")||'<span class="cv2-note">No replies yet.</span>';
+      if(replyId){const reply=card.querySelector('.cv2-reply[data-reply-id="'+CSS.escape(String(replyId))+'"]');if(reply){box.hidden=false;reply.scrollIntoView({block:"center",behavior:"smooth"});reply.setAttribute("tabindex","-1");reply.focus({preventScroll:true})}}
+    };
+    window.__pulseCommunityOpenItem=async(id,replyId="",source="v2")=>{
       try{
+        if(source==="legacy"){await openLegacyItem(id,replyId);return}
         const data=await api("/api/community-v2/items?item_id="+encodeURIComponent(id));const item=data.item;
         if(!item)throw new Error("item_not_found");
         $("#cv2-search").value=String(item.title||"").slice(0,120);kind="";community="";savedOnly=false;personalized=false;sort="new";syncTabs();await loadFeed();
