@@ -39,6 +39,19 @@ describe("final Student OS production contract", () => {
   });
 
 
+  it("keeps the campus renderer isolated from the academic planner", () => {
+    const start = webSource.indexOf("function renderCampusGuide()");
+    const end = webSource.indexOf("function renderAcademicSummary()", start);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const campusRenderer = webSource.slice(start, end);
+    expect(campusRenderer).toContain("card.append(cat,title,body)");
+    expect(campusRenderer).not.toContain("academicItems()");
+    expect(campusRenderer).not.toContain("renderAcademic()");
+    expect(campusRenderer).not.toContain("renderPersonalAcademicPlan()");
+    expect(campusRenderer).not.toContain("row.append");
+  });
+
   it("keeps campus discovery controls wired", () => {
     expect(webSource).toContain('id="campus-search"');
     expect(webSource).toContain('data-campus-category="all"');

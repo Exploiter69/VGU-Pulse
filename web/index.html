@@ -687,25 +687,76 @@ const campusFacilities=[
  {title:"VGU Main Contact",category:"Contact",body:"Main office, student helpline, toll-free number and general enquiry contact.",contact:"+91 141 285 1000 • +91 95493 60555 • 1800 3131 415",link:"https://vgu.ac.in/contact"}
 ];
 function renderCampusGuide(){
- const target=document.querySelector("#campus-results");if(!target)return;
+ const target=document.querySelector("#campus-results");
+ if(!target)return;
+
  const q=(document.querySelector("#campus-search")?.value||"").trim().toLowerCase();
  const category=document.querySelector("[data-campus-category].active")?.dataset.campusCategory||"all";
- const items=campusFacilities.filter(x=>(category==="all"||x.category===category||((category==="Academics")&&x.category==="Department"))&&(!q||[x.title,x.category,x.body,x.contact||""] .join(" ").toLowerCase().includes(q)));
+
+ const items=campusFacilities.filter(item=>{
+  const categoryMatch =
+   category==="all" ||
+   item.category===category ||
+   (category==="Academics" && item.category==="Department");
+
+  const searchMatch =
+   !q ||
+   [item.title,item.category,item.body,item.contact||""]
+    .join(" ")
+    .toLowerCase()
+    .includes(q);
+
+  return categoryMatch && searchMatch;
+ });
+
  target.replaceChildren();
- if(!items.length){const p=document.createElement("p");p.className="empty-state";p.textContent="Nothing matched that need yet.";target.append(p);return}
- for(const item of items){
-  const card=document.createElement("article");card.className="tool";
-  const cat=document.createElement("small");cat.className="muted";cat.textContent="Official • "+item.category;
-  const title=document.createElement("strong");title.textContent=item.title;if(item.done){title.style.textDecoration="line-through";title.style.opacity=".65"}
-  const done=document.createElement("button");done.type="button";done.className="report";done.textContent=item.done?"Done":"Mark done";done.addEventListener("click",()=>{const next=academicItems().map(x=>x.id===item.id?{...x,done:!x.done}:x);saveAcademicItems(next);renderAcademic();renderAcademicSummary();renderPersonalAcademicPlan()});
-  const edit=document.createElement("button");edit.type="button";edit.className="report";edit.textContent="Edit";edit.addEventListener("click",()=>{academicEditingId=item.id;document.querySelector("#academic-title").value=item.title;document.querySelector("#academic-subject").value=item.subject;document.querySelector("#academic-due").value=item.due;document.querySelector("#academic-kind").value=item.kind||"other";document.querySelector("#academic-form .submit").textContent="Save changes";document.querySelector("#academic-status").textContent="Editing this task."});
-  const del=document.createElement("button");del.type="button";del.className="report";del.textContent="Remove";
-  del.addEventListener("click",()=>{const previous=academicItems(),removed=previous.find(x=>x.id===item.id);if(!removed)return;saveAcademicItems(previous.filter(x=>x.id!==item.id));renderAcademic();renderAcademicSummary();renderPersonalAcademicPlan();toast("Task removed.","Undo",()=>{saveAcademicItems([...academicItems(),removed]);renderAcademic();renderAcademicSummary();renderPersonalAcademicPlan()})});
-  const state=document.createElement("span");state.className="muted";state.style.marginLeft="10px";state.textContent=academicState(item,today)==="overdue"?"Overdue":academicState(item,today)==="today"?"Due today":"Upcoming";
-  row.append(meta,document.createElement("br"),title,state,done,edit,del);target.append(row);  row.append(meta,document.createElement("br"),title,state,del);target.append(row);
+
+ if(!items.length){
+  const empty=document.createElement("p");
+  empty.className="empty-state";
+  empty.textContent="Nothing matched that need yet.";
+  target.append(empty);
+  return;
  }
- renderAcademicSummary();
+
+ for(const item of items){
+  const card=document.createElement("article");
+  card.className="tool";
+
+  const cat=document.createElement("small");
+  cat.className="muted";
+  cat.textContent="Official • "+item.category;
+
+  const title=document.createElement("strong");
+  title.textContent=item.title;
+
+  const body=document.createElement("span");
+  body.textContent=item.body;
+
+  card.append(cat,title,body);
+
+  if(item.contact){
+   const contact=document.createElement("small");
+   contact.className="muted";
+   contact.style.display="block";
+   contact.style.marginTop="8px";
+   contact.textContent="Contact: "+item.contact;
+   card.append(contact);
+  }
+
+  const link=document.createElement("a");
+  link.href=item.link;
+  link.target="_blank";
+  link.rel="noopener noreferrer";
+  link.textContent="Open official VGU source ↗";
+  link.style.display="inline-block";
+  link.style.marginTop="8px";
+  card.append(link);
+
+  target.append(card);
+ }
 }
+
 function renderAcademicSummary(){
  const target=document.querySelector("#academic-summary");if(!target)return;
  const items=academicItems().sort((a,b)=>a.due.localeCompare(b.due));
