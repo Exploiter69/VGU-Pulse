@@ -80,7 +80,7 @@ describe("community V2 contract", () => {
     expect(backend).toContain('request.method==="DELETE" && url.pathname==="/api/community-v2/replies"');
     expect(backend).toContain('item.telegram_user_id!==String(user.id)');
     expect(backend).toContain('blocked_telegram_user_id=i.telegram_user_id');
-    expect(backend).toContain('...args,String(viewerId)).all');
+    expect(backend).toContain('...args,String(viewerId),limit,offset).all');
     expect(backend).toContain('blocked_telegram_user_id=r.telegram_user_id');
     expect(backend).toContain('cannot_report_own_item');
     expect(backend).toContain('cannot_report_own_reply');
@@ -100,6 +100,19 @@ describe("community V2 contract", () => {
     expect(source).toContain('<input id="cv2-kind" type="hidden" value="discussion">');
     expect(source).not.toContain('<select id="cv2-kind">');
     expect(source).toContain('if(dialog?.showModal)dialog.showModal()');
+  });
+
+  it("keeps feed pagination, slug normalization and stable thread interactions wired", () => {
+    const backend = readFileSync("src/community-v2.ts", "utf8");
+    const web = readFileSync("web/community-v2.js", "utf8");
+    expect(backend).toContain("function communitySlug");
+    expect(backend).toContain("LIMIT ? OFFSET ?");
+    expect(backend).toContain("next_offset");
+    expect(web).toContain("Load more discussions");
+    expect(web).toContain('data-action="share"');
+    expect(web).toContain("window.__pulseCommunityOpenItem");
+    expect(web).toContain("renderReplies");
+    expect(web).not.toContain("\\n");
   });
 
   it("never exposes Telegram identity for anonymous content", () => {
