@@ -28,6 +28,10 @@ function clamp(value: unknown, max: number): string {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
+function communitySlug(value: unknown): string {
+  return clamp(value, LIMITS.community).toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, LIMITS.community);
+}
+
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
@@ -104,7 +108,7 @@ async function createItem(db: D1Database, user: CommunityUser, input: Record<str
 
   const p = await profile(db, user.id);
   const anonymous = kind === "confession" || Boolean(input.anonymous);
-  const community = clamp(input.community_slug, LIMITS.community) || "campus";
+  const community = communitySlug(input.community_slug) || "campus";
   const program = clamp(input.audience_program, 80) || p?.program || null;
   const branch = clamp(input.audience_branch, 80) || p?.branch || null;
   const yearValue = Number(input.audience_year ?? p?.year ?? 0);
@@ -182,6 +186,10 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
   const sort = params.get("sort") || "new";
   const community = clamp(params.get("community"), LIMITS.community);
   const search = clamp(params.get("q"), 120);
+  const limitValue = Number(params.get("limit") || 40);
+  const offsetValue = Number(params.get("offset") || 0);
+  const limit = Number.isInteger(limitValue) && limitValue >= 1 && limitValue <= 40 ? limitValue : 40;
+  const offset = Number.isInteger(offsetValue) && offsetValue >= 0 && offsetValue <= 10000 ? offsetValue : 0;
   const p = await profile(db, viewerId);
   const where = ["i.status='published'"];
   const args: unknown[] = [];
@@ -215,8 +223,8 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
       CASE WHEN EXISTS(SELECT 1 FROM community_saves s WHERE s.item_id=i.id AND s.telegram_user_id=?) THEN 1 ELSE 0 END AS saved
       FROM community_items i WHERE ${where.join(" AND ")}
         AND NOT EXISTS (SELECT 1 FROM student_profile_blocks b WHERE b.blocker_telegram_user_id=? AND b.blocked_telegram_user_id=i.telegram_user_id)
-      ORDER BY ${order} LIMIT 40`;
-  const result = await db.prepare(sql).bind(String(viewerId),String(viewerId),String(viewerId),String(viewerId),String(viewerId),...args,String(viewerId)).all<Record<string, unknown>>();
+      ORDER BY ${order} LIMIT ? OFFSET ?`;
+  const result = await db.prepare(sql).bind(String(viewerId),String(viewerId),String(viewerId),String(viewerId),String(viewerId),...args,String(viewerId),limit,offset).all<Record<string, unknown>>();
   const rows = result.results ?? [];
   return Promise.all(rows.map(async row => {
     const owner = await db.prepare("SELECT display_name FROM student_profiles WHERE telegram_user_id=?").bind(String((row as any).telegram_user_id ?? "")).first<{display_name:string}>();
@@ -300,7 +308,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       return json({ok:true,profile:p,community});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/feed"){
-      return json({ok:true,items:await listItems(env.DB,user.id,url.searchParams)});
+      const items=await listItems(env.DB,user.id,url.searchParams);const requestedLimit=Number(url.searchParams.get("limit")||40);const nextOffset=items.length===Math.min(40,Math.max(1,Number.isFinite(requestedLimit)?requestedLimit:40))?Number(url.searchParams.get("offset")||0)+items.length:null;return json({ok:true,items,next_offset:nextOffset});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/reputation"){
       return json({ok:true,reputation:await reputation(env.DB,user.id)});
