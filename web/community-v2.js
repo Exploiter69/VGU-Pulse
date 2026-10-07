@@ -295,7 +295,7 @@
         }
         if(action==="replies"){
           const box=item.querySelector(".cv2-replies");if(!box.hidden){box.hidden=true;return}
-          const renderReplies=async()=>{const d=await api("/api/community-v2/replies?item_id="+id);box.innerHTML=(d.replies||[]).map(r=>`<div class="cv2-reply"><strong>${esc(r.author)}</strong><div>${esc(r.body)}</div><span class="cv2-note">${pretty(r.created_at)}</span> ${r.mine?'<button class="cv2-tool" data-reply-delete="'+r.id+'" type="button">Delete</button>':'<button class="cv2-tool" data-reply-report="'+r.id+'" type="button">Report</button>'}</div>`).join("")||'<span class="cv2-note">No replies yet.</span>';box.insertAdjacentHTML("beforeend",`<div class="cv2-reply-compose"><textarea class="cv2-reply-input" placeholder="Reply to this discussion…"></textarea><button class="cv2-post-btn cv2-reply-send" type="button">Reply</button></div>`);box.hidden=false;box.querySelector(".cv2-reply-send").onclick=async()=>{const input=box.querySelector(".cv2-reply-input"),send=box.querySelector(".cv2-reply-send");if(!input.value.trim())return;send.disabled=true;try{await api("/api/community-v2/replies",{method:"POST",body:JSON.stringify({item_id:id,body:input.value,anonymous:false})});input.value="";await renderReplies()}catch{send.disabled=false;send.textContent="Try again";setTimeout(()=>{if(send.isConnected)send.textContent="Reply"},2200)}}};await renderReplies();return;
+          const renderReplies=async()=>{const d=await api("/api/community-v2/replies?item_id="+id);box.innerHTML=(d.replies||[]).map(r=>`<div class="cv2-reply" data-reply-id="${r.id}"><strong>${esc(r.author)}</strong><div>${esc(r.body)}</div><span class="cv2-note">${pretty(r.created_at)}</span> ${r.mine?'<button class="cv2-tool" data-reply-delete="'+r.id+'" type="button">Delete</button>':'<button class="cv2-tool" data-reply-report="'+r.id+'" type="button">Report</button>'}</div>`).join("")||'<span class="cv2-note">No replies yet.</span>';box.insertAdjacentHTML("beforeend",`<div class="cv2-reply-compose"><textarea class="cv2-reply-input" placeholder="Reply to this discussion…"></textarea><button class="cv2-post-btn cv2-reply-send" type="button">Reply</button></div>`);box.hidden=false;box.querySelector(".cv2-reply-send").onclick=async()=>{const input=box.querySelector(".cv2-reply-input"),send=box.querySelector(".cv2-reply-send");if(!input.value.trim())return;send.disabled=true;try{await api("/api/community-v2/replies",{method:"POST",body:JSON.stringify({item_id:id,body:input.value,anonymous:false})});input.value="";await renderReplies()}catch{send.disabled=false;send.textContent="Try again";setTimeout(()=>{if(send.isConnected)send.textContent="Reply"},2200)}}};await renderReplies();return;
         }
         await loadFeed();
       }catch{const original=button.textContent;button.textContent="Try again";setTimeout(()=>{if(button.isConnected&&button.textContent==="Try again")button.textContent=original},2200)}
@@ -313,11 +313,24 @@
       askQuestion.parentElement?.appendChild(bridge);
     }
 
-    window.__pulseCommunityOpenItem=async(id)=>{
+    window.__pulseCommunityOpenItem=async(id,replyId="")=>{
       try{
         const data=await api("/api/community-v2/items?item_id="+encodeURIComponent(id));const item=data.item;
+        if(!item)throw new Error("item_not_found");
         $("#cv2-search").value=String(item.title||"").slice(0,120);kind="";community="";savedOnly=false;personalized=false;sort="new";syncTabs();await loadFeed();
-        const card=document.querySelector('.cv2-item[data-id="'+CSS.escape(String(id))+'"]');if(card){card.scrollIntoView({block:"center",behavior:"smooth"});card.querySelector('[data-action="replies"]')?.click()}
+        const card=document.querySelector('.cv2-item[data-id="'+CSS.escape(String(id))+"']");
+        if(!card)throw new Error("item_not_visible");
+        card.scrollIntoView({block:"center",behavior:"smooth"});
+        const repliesButton=card.querySelector('[data-action="replies"]');
+        if(!repliesButton)return;
+        repliesButton.click();
+        if(replyId){
+          for(let attempt=0;attempt<12;attempt++){
+            await new Promise(resolve=>setTimeout(resolve,50));
+            const reply=card.querySelector('.cv2-reply[data-reply-id="'+CSS.escape(String(replyId))+"']");
+            if(reply){reply.scrollIntoView({block:"center",behavior:"smooth"});reply.setAttribute("tabindex","-1");reply.focus({preventScroll:true});break}
+          }
+        }
       }catch{toast("That discussion could not be opened.")}
     };
     const startParam=new URLSearchParams(location.search).get("startapp")||new URLSearchParams(location.search).get("tgWebAppStartParam")||window.Telegram?.WebApp?.initDataUnsafe?.start_param||"";
