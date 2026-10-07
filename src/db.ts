@@ -190,6 +190,7 @@ export async function listStudentPosts(
   limit = 20,
   category?: StudentPost["category"],
   userId?: number,
+  sort: "newest" | "active" | "unanswered" = "newest",
 ): Promise<StudentPost[]> {
   const rows = await db
     .prepare(
@@ -201,7 +202,9 @@ export async function listStudentPosts(
        JOIN users u ON u.telegram_user_id = p.telegram_user_id
        WHERE p.status = 'published' AND p.report_count < 3
          AND (? IS NULL OR p.category = ?)
-       ORDER BY p.created_at DESC, p.id DESC
+       ORDER BY CASE WHEN ? = "active" THEN reply_count ELSE 0 END DESC,
+                CASE WHEN ? = "unanswered" THEN CASE WHEN reply_count = 0 THEN 0 ELSE 1 END ELSE 0 END ASC,
+                p.created_at DESC, p.id DESC
        LIMIT ?`,
     )
     .bind(
@@ -209,6 +212,8 @@ export async function listStudentPosts(
       userId === undefined ? null : String(userId),
       category ?? null,
       category ?? null,
+      sort,
+      sort,
       Math.min(Math.max(limit, 1), 50),
     )
     .all<StudentPost>();
