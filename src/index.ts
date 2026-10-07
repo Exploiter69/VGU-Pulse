@@ -191,8 +191,8 @@ export default {
       if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
       const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
-      let body: { visible?: unknown };
-      try { body = (await request.json()) as { visible?: unknown }; } catch { return json({ ok: false, error: "invalid_json" }, 400); }
+      const body = await readJson<{ visible?: unknown }>(request);
+      if (!body) return json({ ok: false, error: "invalid_json" }, 400);
       if (typeof body.visible !== "boolean") return json({ ok: false, error: "invalid_visibility" }, 400);
       return json({ ok: true, visible: await setStudentProfileVisibility(env.DB, validated.user.id, body.visible) });
     }
@@ -201,8 +201,8 @@ export default {
       if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
       const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
-      let body: { public_id?: unknown };
-      try { body = (await request.json()) as { public_id?: unknown }; } catch { return json({ ok: false, error: "invalid_json" }, 400); }
+      const body = await readJson<{ public_id?: unknown }>(request);
+      if (!body) return json({ ok: false, error: "invalid_json" }, 400);
       if (typeof body.public_id !== "string" || body.public_id.length > 100) return json({ ok: false, error: "invalid_profile" }, 400);
       return json({ ok: true, blocked: await blockStudentProfile(env.DB, validated.user.id, body.public_id) });
     }
@@ -247,9 +247,8 @@ export default {
       const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       await upsertTelegramUser(env.DB, validated.user);
-      let body: Record<string, unknown>;
-      try { body = (await request.json()) as Record<string, unknown>; }
-      catch { return json({ ok: false, error: "invalid_json" }, 400); }
+      const body = await readJson<Record<string, unknown>>(request);
+      if (!body) return json({ ok: false, error: "invalid_json" }, 400);
       const input = validateStudentProfileInput(body);
       if (!input) return json({ ok: false, error: "invalid_profile" }, 400);
       try {
@@ -322,9 +321,8 @@ export default {
       if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
       const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
-      let body: { post_id?: unknown; vote?: unknown };
-      try { body = (await request.json()) as { post_id?: unknown; vote?: unknown }; }
-      catch { return json({ ok: false, error: "invalid_json" }, 400); }
+      const body = await readJson<{ post_id?: unknown; vote?: unknown }>(request);
+      if (!body) return json({ ok: false, error: "invalid_json" }, 400);
       const postId = Number(body.post_id);
       if (!Number.isSafeInteger(postId) || postId < 1 || (body.vote !== 1 && body.vote !== -1)) return json({ ok: false, error: "invalid_vote" }, 400);
       try {
@@ -411,9 +409,8 @@ export default {
       if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
       const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
-      let body: { reply_id?: unknown; vote?: unknown };
-      try { body = (await request.json()) as { reply_id?: unknown; vote?: unknown }; }
-      catch { return json({ ok: false, error: "invalid_json" }, 400); }
+      const body = await readJson<{ reply_id?: unknown; vote?: unknown }>(request);
+      if (!body) return json({ ok: false, error: "invalid_json" }, 400);
       const replyId = Number(body.reply_id);
       if (!Number.isSafeInteger(replyId) || replyId < 1 || (body.vote !== 1 && body.vote !== -1)) return json({ ok: false, error: "invalid_vote" }, 400);
       try {
@@ -434,12 +431,8 @@ export default {
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       await upsertTelegramUser(env.DB, validated.user);
 
-      let body: { post_id?: unknown; body?: unknown };
-      try {
-        body = (await request.json()) as { post_id?: unknown; body?: unknown };
-      } catch {
-        return json({ ok: false, error: "invalid_json" }, 400);
-      }
+      const body = await readJson<{ post_id?: unknown; body?: unknown }>(request);
+      if (!body) return json({ ok: false, error: "invalid_json" }, 400);
       if (!Number.isSafeInteger(body.post_id) || (body.post_id as number) < 1) {
         return json({ ok: false, error: "invalid_post" }, 400);
       }
