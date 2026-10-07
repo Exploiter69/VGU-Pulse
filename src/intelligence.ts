@@ -55,6 +55,10 @@ const CAMPUS: IntelligenceItem[] = [
   ["Hostels","Official hostel information","https://vgu.ac.in/campus-life/hostels"],
   ["Gymnasium","Campus gymnasium","https://vgu.ac.in/campus-facilities/general-facilities-and-services"],
   ["Student Handbook","Student rules and reference","https://www.vgu.ac.in/Student%20Handbook%202025%20.pdf"],
+  ["Student Cell","Records, certificates, ERP support, scholarships and grievances","https://vgu.ac.in/centers-and-cells/student-cell"],
+  ["Controller of Examinations","Exam timetables, examinations, results, grade cards and transcripts","https://vgu.ac.in/academic-leadership/controller-of-examination"],
+  ["Anti-Ragging Support","Official anti-ragging contacts and support","https://www.vgu.ac.in/Student%20Handbook%202025%20.pdf"],
+  ["VGU Main Contact","Main office, student helpline and general enquiries","https://vgu.ac.in/contact"],
 ].map(([title, summary, url]) => ({kind:"campus", title, summary, url, trust:"official", source:"VGU campus facilities"}));
 
 function text(value: unknown): string {
