@@ -673,6 +673,64 @@ function renderCampusGuide(){
   target.append(card);
  }
 }
+function profileHeaders(){return initData?{"x-telegram-init-data":initData}:{}}
+function renderProfiles(items){
+ if(!profiles)return;
+ profiles.replaceChildren();
+ if(!items.length){const p=document.createElement("p");p.className="muted";p.textContent="No matching opt-in profiles yet.";profiles.append(p);return}
+ for(const person of items){
+  const card=document.createElement("article");card.className="post";
+  const name=document.createElement("strong");name.textContent=person.display_name||"VGU student";
+  const meta=document.createElement("div");meta.className="muted";meta.textContent=[person.program,person.branch,person.year?"Year "+person.year:""].filter(Boolean).join(" • ");
+  const bio=document.createElement("p");bio.className="muted";bio.textContent=person.bio||"";
+  const looking=document.createElement("p");looking.className="muted";looking.textContent=person.looking_for?"Looking for: "+person.looking_for:"";
+  const actions=document.createElement("div");actions.className="wrap-row";
+  if(person.public_id&&person.mine!==true){
+   const block=document.createElement("button");block.type="button";block.className="report";block.textContent="Block";block.onclick=async()=>{if(block.dataset.confirming!=="1"){block.dataset.confirming="1";block.textContent="Confirm block";return}block.disabled=true;try{await fetch("/api/student-profile/block",{method:"POST",headers:{"content-type":"application/json",...profileHeaders()},body:JSON.stringify({public_id:person.public_id})});card.remove();await loadBlockedPeople();toast("Student blocked.");}catch{block.disabled=false;block.textContent="Try again"}};
+   const report=document.createElement("button");report.type="button";report.className="report";report.textContent="Report";report.onclick=async()=>{report.disabled=true;try{const response=await fetch("/api/student-profile/report",{method:"POST",headers:{"content-type":"application/json",...profileHeaders()},body:JSON.stringify({profile_public_id:person.public_id})});if(!response.ok)throw Error();report.textContent="Reported";}catch{report.disabled=false;report.textContent="Try again"}};
+   actions.append(block,report);
+  }
+  card.append(name,meta,bio,looking,actions);profiles.append(card);
+ }
+}
+async function loadProfiles(){
+ if(!profiles)return;
+ const params=new URLSearchParams();
+ const q=peopleSearch?.value.trim();if(q)params.set("q",q);
+ if(peopleYear?.value)params.set("year",peopleYear.value);
+ if(peopleProgram?.value.trim())params.set("program",peopleProgram.value.trim());
+ if(peopleBranch?.value.trim())params.set("branch",peopleBranch.value.trim());
+ const response=await fetch("/api/students?"+params);if(!response.ok)throw Error("profiles_failed");
+ const data=await response.json();renderProfiles(data.profiles||[]);
+}
+async function loadProfile(){
+ if(!initData)return;
+ const response=await fetch("/api/student-profile",{headers:profileHeaders()});if(!response.ok)throw Error("profile_failed");
+ const data=await response.json(),p=data.profile;
+ if(!p){profileDelete.hidden=true;profileVisibility.hidden=true;profileStatus.textContent="No published profile yet.";return}
+ document.querySelector("#profile-name").value=p.display_name||"";
+ document.querySelector("#profile-program").value=p.program||"";
+ document.querySelector("#profile-branch").value=p.branch||"";
+ document.querySelector("#profile-year").value=p.year||"";
+ document.querySelector("#profile-bio").value=p.bio||"";
+ document.querySelector("#profile-looking").value=p.looking_for||"";
+ profileDelete.hidden=false;profileVisibility.hidden=false;profileVisibility.textContent=p.status==="published"?"Hide my profile":"Publish my profile";profileVisibility.dataset.visible=p.status==="published"?"1":"0";profileStatus.textContent=p.status==="published"?"Your profile is visible to opted-in students.":"Your profile is hidden.";
+}
+async function loadBlockedPeople(){
+ if(!blockedPeople||!initData)return;
+ const response=await fetch("/api/student-profile/blocks",{headers:profileHeaders()});if(!response.ok)throw Error("blocked_failed");
+ const data=await response.json(),items=data.profiles||[];blockedPeople.replaceChildren();
+ if(!items.length){blockedPeople.textContent="No blocked students.";return}
+ const title=document.createElement("strong");title.textContent="Blocked students";blockedPeople.append(title);
+ for(const person of items){const row=document.createElement("div");row.className="wrap-row";row.style.marginTop="8px";const name=document.createElement("span");name.textContent=person.display_name||"VGU student";const button=document.createElement("button");button.type="button";button.className="report";button.textContent="Unblock";button.onclick=async()=>{button.disabled=true;try{const response=await fetch("/api/student-profile/unblock",{method:"POST",headers:{"content-type":"application/json",...profileHeaders()},body:JSON.stringify({public_id:person.public_id})});if(!response.ok)throw Error();await loadBlockedPeople();await loadProfiles()}catch{button.disabled=false;button.textContent="Try again"}};row.append(name,button);blockedPeople.append(row)}
+}
+function initPeopleUi(){
+ const reload=()=>loadProfiles().catch(()=>{profiles.replaceChildren();const p=document.createElement("p");p.className="muted";p.textContent="Student profiles are temporarily unavailable. Try again later.";profiles.append(p)});
+ peopleSearchButton?.addEventListener("click",reload);peopleSearch?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();reload()}});peopleYear?.addEventListener("change",reload);peopleProgram?.addEventListener("input",()=>{clearTimeout(window.__peopleTimer);window.__peopleTimer=setTimeout(reload,250)});peopleBranch?.addEventListener("input",()=>{clearTimeout(window.__peopleBranchTimer);window.__peopleBranchTimer=setTimeout(reload,250)});
+ profileForm?.addEventListener("submit",async event=>{event.preventDefault();if(!initData){profileStatus.textContent="Open Pulse from Telegram to publish a profile.";return}const payload={display_name:document.querySelector("#profile-name").value.trim(),program:document.querySelector("#profile-program").value.trim(),branch:document.querySelector("#profile-branch").value.trim(),year:Number(document.querySelector("#profile-year").value),bio:document.querySelector("#profile-bio").value.trim(),looking_for:document.querySelector("#profile-looking").value.trim()};profileStatus.textContent="Saving…";try{const response=await fetch("/api/student-profile",{method:"POST",headers:{"content-type":"application/json",...profileHeaders()},body:JSON.stringify(payload)});const data=await response.json();if(!response.ok)throw Error(data.error||"profile_save_failed");profileStatus.textContent="Profile saved.";await loadProfile();await loadProfiles();await loadPersonalPulse()}catch(e){profileStatus.textContent=e.message==="invalid_profile"?"Please check the profile fields.":"Could not save your profile. Try again."}});
+ profileDelete?.addEventListener("click",async()=>{profileDelete.disabled=true;try{const response=await fetch("/api/student-profile",{method:"DELETE",headers:profileHeaders()});if(!response.ok)throw Error();profileForm.reset();profileDelete.hidden=true;profileVisibility.hidden=true;profileStatus.textContent="Profile deleted.";await loadProfiles();}catch{profileStatus.textContent="Could not delete your profile."}finally{profileDelete.disabled=false}});
+ profileVisibility?.addEventListener("click",async()=>{const visible=profileVisibility.dataset.visible!=="1";profileVisibility.disabled=true;try{const response=await fetch("/api/student-profile/visibility",{method:"POST",headers:{"content-type":"application/json",...profileHeaders()},body:JSON.stringify({visible})});if(!response.ok)throw Error();profileVisibility.dataset.visible=visible?"1":"0";profileVisibility.textContent=visible?"Hide my profile":"Publish my profile";profileStatus.textContent=visible?"Profile published.":"Profile hidden.";await loadProfiles()}catch{profileStatus.textContent="Could not update profile visibility."}finally{profileVisibility.disabled=false}});
+}
 async function loadHome(){
  const response=await fetch("/api/home");if(!response.ok)throw Error("home_failed");
  const data=await response.json();
@@ -951,13 +1009,13 @@ document.querySelectorAll("[data-campus-category]").forEach(button=>{
   identity.textContent="Open Pulse from Telegram to unlock participation.";
  }
 
- try{await loadHome()}catch{status.textContent="Pulse information is temporarily unavailable."}
- try{await loadProfiles()}catch{profiles.replaceChildren();const p=document.createElement("p");p.className="muted";p.textContent="Student profiles are temporarily unavailable. Try again later.";profiles.append(p)}
+ initPeopleUi();\n try{await loadHome()}catch{status.textContent="Pulse information is temporarily unavailable. Try again."}
+ try{await loadProfiles()}catch{}
 
  if(initData){
   await authPromise;
   try{await loadProfile()}catch{}
-  try{await loadStudentPosts()}catch{}
+
   try{await loadPersonalPulse()}catch{}
   try{await loadNotifications()}catch{}
   try{await loadCommunityAccount()}catch{}
