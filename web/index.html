@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>VGU Pulse</title>
-<script src="https://telegram.org/js/telegram-web-app.js?63"></script>
+<script src="https://telegram.org/js/telegram-web-app.js?64"></script>
 <style>
 /* Premium Pulse UI system */
 :root{
@@ -230,7 +230,7 @@ label{font-size:13px;color:var(--muted);font-weight:650}
   .view{max-width:760px}
 }
 @media(max-width:899px){
-  main{padding-top:20px}
+  main{padding-top:calc(20px + var(--tg-safe-top,0px))}
   .nav{
     position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));
     padding:5px;box-shadow:0 12px 34px rgba(0,0,0,.38);
@@ -239,7 +239,7 @@ label{font-size:13px;color:var(--muted);font-weight:650}
   body{padding-bottom:env(safe-area-inset-bottom)}
 }
 @media(max-width:620px){
-  main{width:min(100% - 24px,760px);padding-top:16px;padding-bottom:100px}
+  main{width:min(100% - 24px,760px);padding-top:calc(16px + var(--tg-safe-top,0px));padding-bottom:calc(100px + var(--tg-content-safe-bottom,0px))}
   .app-title{font-size:22px}
   .app-subtitle{font-size:13px}
   .card{padding:16px;border-radius:15px}
@@ -673,9 +673,21 @@ function applyTelegramTheme(){
  const light=p.bg_color && /^#(?:f|e|d)/i.test(p.bg_color);
  document.body.classList.toggle("tg-light",!!light);
 }
+function applyTelegramInsets(){
+ const root=document.documentElement;
+ const safe=tg?.safeAreaInset||{};
+ const content=tg?.contentSafeAreaInset||{};
+ for(const [name,value] of Object.entries({top:safe.top,bottom:safe.bottom,left:safe.left,right:safe.right}))
+  root.style.setProperty("--tg-safe-"+name,Math.max(0,Number(value)||0)+"px");
+ for(const [name,value] of Object.entries({top:content.top,bottom:content.bottom,left:content.left,right:content.right}))
+  root.style.setProperty("--tg-content-safe-"+name,Math.max(0,Number(value)||0)+"px");
+}
 applyTelegramTheme();
+applyTelegramInsets();
 tg?.onEvent?.("themeChanged",applyTelegramTheme);
 tg?.onEvent?.("viewportChanged",()=>document.documentElement.style.setProperty("--tg-viewport-height",(tg.viewportHeight||window.innerHeight)+"px"));
+tg?.onEvent?.("safeAreaChanged",applyTelegramInsets);
+tg?.onEvent?.("contentSafeAreaChanged",applyTelegramInsets);
 tg?.ready?.();tg?.expand?.();
 function haptic(type="selection"){
  try{if(type==="impact")tg?.HapticFeedback?.impactOccurred("light");else tg?.HapticFeedback?.selectionChanged()}catch{}
@@ -698,23 +710,37 @@ function toast(message){
 }
 const navItems=[...document.querySelectorAll("[data-view]")];
 const viewPanels=[...document.querySelectorAll("[data-view-panel]")];
-let previousView="home";
-function showView(name){
+const navigationStack=["home"];
+function showView(name,{replaceHistory=false}={}){
   const target=viewPanels.some(panel=>panel.dataset.viewPanel===name)?name:"home";
   if(target!==name&&name!=="home")return;
   const current=viewPanels.find(panel=>panel.classList.contains("active"))?.dataset.viewPanel||"home";
-  if(target!==current)previousView=current;
+  if(target===current)return;
+  if(replaceHistory){
+    if(target==="home")navigationStack.splice(0,navigationStack.length,"home");
+    else navigationStack[navigationStack.length-1]=target;
+  }else if(target==="home"){
+    navigationStack.splice(0,navigationStack.length,"home");
+  }else if(navigationStack[navigationStack.length-1]!==target){
+    navigationStack.push(target);
+  }
   for(const panel of viewPanels)panel.classList.toggle("active",panel.dataset.viewPanel===target);
   for(const item of navItems)item.classList.toggle("active",item.dataset.view===target);
   if(tg?.BackButton){if(target==="home")tg.BackButton.hide();else tg.BackButton.show()}
   syncMainButton(target);
   window.scrollTo({top:0,behavior:"smooth"});
 }
+function goBack(){
+  if(navigationStack.length>1){
+    navigationStack.pop();
+    showView(navigationStack[navigationStack.length-1],{replaceHistory:true});
+  }else showView("home",{replaceHistory:true});
+}
 for(const item of navItems)item.addEventListener("click",()=>{haptic();showView(item.dataset.view)});
 document.querySelectorAll("[data-community-tab]").forEach(button=>button.addEventListener("click",()=>{
  document.querySelector("#post-title")?.focus();haptic();
 }));
-tg?.BackButton?.onClick?.(()=>showView(previousView==="home"?"home":previousView));
+tg?.BackButton?.onClick?.(goBack);
 function syncMainButton(target){
  const button=tg?.MainButton;if(!button)return;
  button.hide();
@@ -787,7 +813,7 @@ async function loadSearch(query=""){
  const data=await response.json();renderSearchResults(data.results||[],data);
 }
 function initSearch(){
- const quick=["Exam form","Backlog exam","Re-registration","Academic calendar","ERP / Digicampus","Medical","Transport","Hostel","Library"];
+ const quick=["Exam form","Backlog exam","Re-registration","Academic calendar","ERP / Digicampus","Fees","Scholarship","Placements","Clubs","Events","Student welfare","Medical","Transport","Hostel","Library","ABC"];
  for(const label of quick){
   const button=document.createElement("button");button.type="button";button.className="report";button.textContent=label;
   button.addEventListener("click",()=>{searchQuery.value=label;loadSearch(label).catch(()=>{searchResults.textContent="Search is temporarily unavailable."})});
