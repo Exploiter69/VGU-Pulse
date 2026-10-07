@@ -383,6 +383,44 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
 }
 @media(prefers-reduced-motion:reduce){.toast{transition:none}}
 
+<style>
+/* Pulse UX v2: calmer hierarchy, fewer competing surfaces */
+:root{
+  --bg:#090c10;
+  --surface:#10151b;
+  --surface-2:#151b22;
+  --surface-3:#1b222b;
+  --border:rgba(255,255,255,.09);
+  --border-strong:rgba(255,255,255,.16);
+  --text:#f5f7fa;
+  --muted:#98a2af;
+  --faint:#687382;
+  --accent:#8ab4ff;
+  --accent-strong:#6fa3ff;
+  --success:#7ad7a7;
+  --warning:#f0c56f;
+  --danger:#ef8d96;
+}
+body{background:var(--bg);color:var(--text)}
+body:before{display:none}
+main{max-width:780px!important}
+.app-header{margin-bottom:16px}
+.app-title{font-size:24px;font-weight:780}
+.app-subtitle{max-width:560px}
+.nav{box-shadow:0 8px 28px rgba(0,0,0,.24)}
+.nav-item{font-size:13px}
+.view>.card{background:transparent;border:0;border-top:1px solid var(--border);border-radius:0;padding:20px 0;margin:0}
+.view>.card:first-child{border-top:0}
+.view>.hero{border:0}
+.section-heading{margin:22px 0 8px}
+.today-stat{background:var(--surface-2)}
+.quick{background:var(--surface-2)}
+.action-row .quick{background:var(--surface-2);min-height:68px}
+.hero{background:transparent!important}
+.hero h2{font-size:28px}
+.view-tools{gap:6px}
+.view-tools .inline-link{background:var(--surface-2);border:1px solid var(--border);border-radius:10px}
+</style>
 </style>
 </head>
 <body>
@@ -498,31 +536,7 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
   </div>
 </section>
 </div><div class="view" data-view-panel="community">
-<section class="hero">
-  <div class="eyebrow">Community</div><h2>What's happening around campus?</h2>
-  <p class="muted">Questions, useful information, opportunities and requests from students. This layer is student-reported.</p>
-  <div class="view-tools"><button type="button" class="inline-link" data-community-tab="discussions">Discussions</button><button type="button" class="inline-link" data-view="people">People →</button><button type="button" class="inline-link" data-view="pulse">My activity →</button></div>
-</section>
-<section class="card">
-  <div class="community-compose">
-    <form id="post-form">
-      <label class="field-label" for="post-category">Category</label><select id="post-category"><option value="question">Question</option><option value="info">Campus information</option><option value="opportunity">Opportunity</option><option value="request">Request</option></select><label class="field-label" for="post-title">Title</label><input id="post-title" maxlength="120" placeholder="What do you need to say?" required><label class="field-label" for="post-body">Details</label><textarea id="post-body" maxlength="2000" rows="3" placeholder="Give other students enough context…" required></textarea><div class="compose-row"><span class="muted compose-note">Keep it useful. No private data.</span><button class="submit" type="submit">Post</button></div>
-      <p id="post-status" class="muted" aria-live="polite"></p>
-    </form>
-  </div>
-</section>
-<section class="card">
-  <div class="section-heading"><div><div class="eyebrow">Community intelligence</div><h2>What students are asking</h2></div><span class="trust-badge student">Student-reported</span></div>
-  <p class="muted">Deterministic signals from recent community activity — not official VGU information.</p>
-  <div id="community-insights"><p class="muted">Loading community signals…</p></div>
-</section>
-<section class="card">
-  <div class="chips" role="group" aria-label="Community filters">
-    <select id="post-filter" aria-label="Filter student posts" class="wide-select"><option value="">For everyone</option><option value="question">Questions</option><option value="info">Campus info</option><option value="opportunity">Opportunities</option><option value="request">Requests</option></select>
-    <select id="post-sort" aria-label="Sort student posts" class="wide-select"><option value="newest">New</option><option value="useful">Most useful</option><option value="active">Most discussed</option><option value="unanswered">Unanswered</option></select>
-  </div>
-  <div id="student-posts"><p class="muted">Loading student posts…</p></div>
-</section>
+  <div id="community-v2-mount"></div>
 </div><div class="view" data-view-panel="people">
 <section class="hero">
   <div class="eyebrow">People</div><h2>Find someone to build with.</h2>
