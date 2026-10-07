@@ -82,11 +82,11 @@
         </div>
         <div class="cv2-tabs" role="tablist" aria-label="Community feed">
           <button type="button" class="cv2-tab active" data-sort="trending">Trending</button>
-          <button type="button" class="cv2-tab" data-sort="new">Latest</button>
-          <button type="button" class="cv2-tab" data-kind="confession">Confessions</button>
-          <button type="button" class="cv2-tab" data-kind="campus">Campus</button>
-          <button type="button" class="cv2-tab" data-kind="exam">Exam survival</button>
-          <button type="button" class="cv2-tab" data-special="saved">Saved</button>
+          <button type="button" class="cv2-tab" role="tab" aria-selected="false" data-sort="new">Latest</button>
+          <button type="button" class="cv2-tab" role="tab" aria-selected="false" data-kind="confession">Confessions</button>
+          <button type="button" class="cv2-tab" role="tab" aria-selected="false" data-kind="campus">Campus</button>
+          <button type="button" class="cv2-tab" role="tab" aria-selected="false" data-kind="exam">Exam survival</button>
+          <button type="button" class="cv2-tab" role="tab" aria-selected="false" data-special="saved">Saved</button>
         </div>
         <div class="cv2-context">
           <span class="cv2-context-label">Showing</span>
