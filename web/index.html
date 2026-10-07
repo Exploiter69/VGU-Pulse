@@ -47,7 +47,7 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <button type="button" class="nav-item" data-view="people">People</button>
 <button type="button" class="nav-item" data-view="campus">Campus</button>
 <button type="button" class="nav-item" data-view="tools">Tools</button>
-<button type="button" class="nav-item" data-view="pulse">Pulse</button>
+<button type="button" class="nav-item" data-view="pulse">My Pulse</button>
 </nav>
 
 <div class="view active" data-view-panel="home">
@@ -198,10 +198,16 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 
 <div class="view" data-view-panel="pulse">
 <section class="card">
-<div class="row"><div><div class="eyebrow">Participate</div><h2>Campus pulse</h2></div><span id="vote-total" class="muted"></span></div>
-<p id="question" class="muted">Loading today's question…</p>
-<div id="options"></div>
+<div class="eyebrow">Personal Pulse</div><h2 id="my-pulse-title">Your Pulse</h2>
+<p id="my-pulse-status" class="muted">Open Pulse from Telegram to load your personal dashboard.</p>
+<div class="today-grid" id="my-pulse-stats">
+<div class="today-stat"><strong>—</strong><span>My posts</span></div><div class="today-stat"><strong>—</strong><span>My replies</span></div><div class="today-stat"><strong>—</strong><span>My votes</span></div><div class="today-stat"><strong>—</strong><span>Profile</span></div>
+</div>
 </section>
+<section class="card"><div class="eyebrow">My plan</div><h2>Deadlines & next actions</h2><div id="my-pulse-academics"><p class="muted">Your local academic plan will appear here.</p></div><button type="button" class="quick" data-view="academics" style="width:100%;margin-top:10px"><strong>Open Academics</strong><span>Manage your local assignments, exams and deadlines</span></button></section>
+<section class="card"><div class="eyebrow">People for you</div><h2>Suggested study & project partners</h2><p class="muted">Suggestions use your opt-in profile. No messages are sent and Telegram IDs are never exposed.</p><div id="my-pulse-matches"><p class="muted">Create a profile in People to get suggestions.</p></div><button type="button" class="quick" data-view="people" style="width:100%;margin-top:10px"><strong>Manage my profile</strong><span>Update what you study and what you are looking for</span></button></section>
+<section class="card"><div class="eyebrow">My activity</div><h2>Recent contributions</h2><div id="my-pulse-activity"><p class="muted">Your posts and replies will appear here.</p></div><button type="button" class="quick" data-view="community" style="width:100%;margin-top:10px"><strong>Open Community</strong><span>Continue discussions and discover useful posts</span></button></section>
+<section class="card"><div class="row"><div><div class="eyebrow">Campus pulse</div><h2>Today's question</h2></div><span id="vote-total" class="muted"></span></div><p id="question" class="muted">Loading today's question…</p><div id="options"></div></section>
 </div>
 </main>
 <script>
@@ -233,7 +239,7 @@ function initTools(){
 }
 initTools();
 let initData="",poll=null;
-const profileForm=document.querySelector("#profile-form"),profileStatus=document.querySelector("#profile-status"),profiles=document.querySelector("#profiles"),profileDelete=document.querySelector("#profile-delete"),profileVisibility=document.querySelector("#profile-visibility"),blockedPeople=document.querySelector("#blocked-people"),peopleSearch=document.querySelector("#people-search"),peopleSearchButton=document.querySelector("#people-search-button"),peopleYear=document.querySelector("#people-year"),peopleProgram=document.querySelector("#people-program"),peopleBranch=document.querySelector("#people-branch");const todayStats=document.querySelector("#today-stats");const homePulse=document.querySelector("#home-pulse"),homeCommunity=document.querySelector("#home-community");const identity=document.querySelector("#identity"),status=document.querySelector("#status"),searchForm=document.querySelector("#search-form"),searchQuery=document.querySelector("#search-query"),searchQuick=document.querySelector("#search-quick"),searchResults=document.querySelector("#search-results"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status"),postFilter=document.querySelector("#post-filter");
+const profileForm=document.querySelector("#profile-form"),profileStatus=document.querySelector("#profile-status"),profiles=document.querySelector("#profiles"),profileDelete=document.querySelector("#profile-delete"),profileVisibility=document.querySelector("#profile-visibility"),blockedPeople=document.querySelector("#blocked-people"),peopleSearch=document.querySelector("#people-search"),peopleSearchButton=document.querySelector("#people-search-button"),peopleYear=document.querySelector("#people-year"),peopleProgram=document.querySelector("#people-program"),peopleBranch=document.querySelector("#people-branch");const todayStats=document.querySelector("#today-stats");const myPulseStatus=document.querySelector("#my-pulse-status"),myPulseStats=document.querySelector("#my-pulse-stats"),myPulseAcademics=document.querySelector("#my-pulse-academics"),myPulseMatches=document.querySelector("#my-pulse-matches"),myPulseActivity=document.querySelector("#my-pulse-activity");const homePulse=document.querySelector("#home-pulse"),homeCommunity=document.querySelector("#home-community");const identity=document.querySelector("#identity"),status=document.querySelector("#status"),searchForm=document.querySelector("#search-form"),searchQuery=document.querySelector("#search-query"),searchQuick=document.querySelector("#search-quick"),searchResults=document.querySelector("#search-results"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status"),postFilter=document.querySelector("#post-filter");
 
 document.addEventListener("click",(event)=>{
  const link=event.target.closest("a[href]");
@@ -656,6 +662,41 @@ academicForm?.addEventListener("submit",(event)=>{
 renderAcademic();
 renderAcademicSummary();
 renderTodayStats([],[],null);
+function renderPersonalAcademicPlan(){
+ if(!myPulseAcademics)return;
+ const items=academicItems().sort((a,b)=>a.due.localeCompare(b.due));
+ myPulseAcademics.replaceChildren();
+ const today=new Date().toISOString().slice(0,10);
+ const next=items.filter(item=>item.due>=today).slice(0,4);
+ const overdue=items.filter(item=>item.due<today).length;
+ if(overdue){const p=document.createElement("p");p.textContent=overdue+" overdue task"+(overdue===1?" needs":"s need")+" attention.";myPulseAcademics.append(p)}
+ if(!next.length){const p=document.createElement("p");p.className="muted";p.textContent=overdue?"No upcoming deadlines in your local plan.":"Your local academic plan is empty.";myPulseAcademics.append(p);return}
+ for(const item of next){const row=document.createElement("p");row.className="muted";row.textContent=item.due+" • "+item.subject+" • "+item.title;myPulseAcademics.append(row)}
+}
+function renderPersonalPulse(data){
+ if(!myPulseStatus)return;
+ const pulse=data?.pulse;
+ if(!pulse){myPulseStatus.textContent="Create an opt-in profile in People to personalize your Pulse.";renderPersonalAcademicPlan();return}
+ const stats=[pulse.stats?.posts||0,pulse.stats?.replies||0,pulse.stats?.votes||0,pulse.profile?"Ready":"Not set"];
+ myPulseStats?.querySelectorAll(".today-stat strong").forEach((el,i)=>el.textContent=String(stats[i]));
+ myPulseStatus.textContent=pulse.profile?("Personalized for "+pulse.profile.display_name+" • "+pulse.profile.program+" • "+pulse.profile.branch+" • Year "+pulse.profile.year):"You have not published an opt-in student profile yet.";
+ myPulseMatches?.replaceChildren();
+ if(!pulse.matches?.length){const p=document.createElement("p");p.className="muted";p.textContent=pulse.profile?"No close profile matches yet. Broaden your People profile or try again later.":"Create an opt-in profile in People to get suggestions.";myPulseMatches?.append(p)}
+ else for(const person of pulse.matches){const item=document.createElement("article");item.className="post";const name=document.createElement("strong");name.textContent=person.display_name;const meta=document.createElement("div");meta.className="muted";meta.textContent=person.program+" • "+person.branch+" • Year "+person.year;const looking=document.createElement("p");looking.className="muted";looking.textContent="Looking for: "+person.looking_for;item.append(name,meta,looking);myPulseMatches.append(item)}
+ myPulseActivity?.replaceChildren();
+ const activity=[];
+ for(const post of pulse.recent_posts||[]){activity.push({date:post.created_at,text:"Post • "+post.title+" • score "+post.score})}
+ for(const reply of pulse.recent_replies||[]){activity.push({date:reply.created_at,text:"Reply • "+reply.body})}
+ activity.sort((a,b)=>b.date.localeCompare(a.date));
+ if(!activity.length){const p=document.createElement("p");p.className="muted";p.textContent="No community activity yet. Ask a question or share something useful.";myPulseActivity.append(p)}
+ else for(const item of activity.slice(0,6)){const p=document.createElement("p");p.className="muted";p.textContent=item.text;myPulseActivity.append(p)}
+ renderPersonalAcademicPlan();
+}
+async function loadPersonalPulse(){
+ if(!initData){renderPersonalAcademicPlan();return}
+ try{const r=await fetch("/api/me/pulse",{headers:{"x-telegram-init-data":initData}});if(!r.ok)throw Error("personal_pulse_failed");renderPersonalPulse(await r.json())}
+ catch{myPulseStatus.textContent="Personal Pulse is temporarily unavailable. Your local academic plan still works.";renderPersonalAcademicPlan()}
+}
 async function boot(){
  initSearch();
  try{await loadSearch("")}catch{}
@@ -696,6 +737,7 @@ async function boot(){
   await authPromise;
   try{await loadProfile()}catch{}
   try{await loadStudentPosts()}catch{}
+  try{await loadPersonalPulse()}catch{}
   try{await loadBlockedPeople()}catch{}
  }
  if(tg?.ready)tg.ready();
