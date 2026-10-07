@@ -118,6 +118,25 @@ async function createItem(db: D1Database, user: CommunityUser, input: Record<str
 
   const id = Number(result.meta.last_row_id);
   await award(db, user.id, 3, "created_item", `item:${id}`);
+  await db.prepare(
+    `INSERT OR IGNORE INTO student_notifications (telegram_user_id, kind, title, body, reference_key)
+     SELECT p.telegram_user_id, 'community', 'New discussion for your community',
+       ?, ?
+     FROM notification_preferences n
+     JOIN student_profiles p ON p.telegram_user_id = n.telegram_user_id AND p.status = 'published'
+     WHERE n.personalized_alerts = 1
+       AND p.telegram_user_id <> ?
+       AND (? IS NULL OR p.program = ?)
+       AND (? IS NULL OR p.branch = ?)
+       AND (? IS NULL OR p.year = ?)`,
+  ).bind(
+    `New ${kind.replaceAll("_"," ")}: ${title.slice(0, 140)}`,
+    `v2-personal:${id}`,
+    String(user.id),
+    program, program,
+    branch, branch,
+    year, year,
+  ).run();
   return (await getItem(db, id, user.id))!;
 }
 
@@ -253,6 +272,11 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
   if(!url.pathname.startsWith("/api/community-v2")) return null;
 
   try{
+    if(request.method==="GET" && url.pathname==="/api/community-v2/context"){
+      const p=await profile(env.DB,user.id);
+      const community=p ? p.branch.toLowerCase().replace(/[^a-z0-9]+/g,"-") + "-year-" + p.year : "campus";
+      return json({ok:true,profile:p,community});
+    }
     if(request.method==="GET" && url.pathname==="/api/community-v2/feed"){
       return json({ok:true,items:await listItems(env.DB,user.id,url.searchParams)});
     }
