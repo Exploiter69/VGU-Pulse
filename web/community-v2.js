@@ -1,7 +1,6 @@
 (() => {
   const boot = () => {
-    const communityView = document.querySelector('[data-view="community"]')?.closest?.(".view") ||
-      document.querySelector("#community");
+    const communityView = document.querySelector('[data-view-panel="community"]');
     if (!communityView || document.getElementById("community-v2-root")) return;
 
     const style = document.createElement("style");
@@ -274,7 +273,7 @@
     $("#cv2-alert-community").addEventListener("change",savePreferences);
     $("#cv2-alert-personal").addEventListener("change",savePreferences);
 
-    const askView=document.querySelector('[data-view="ask"]')?.closest?.(".view");
+    const askView=document.querySelector('[data-view-panel="ask"]');
     const askQuestion=document.querySelector("#question");
     if(askView && askQuestion){
       const bridge=document.createElement("div");
