@@ -4,6 +4,7 @@ import {
   deleteStudentProfile,
   deleteStudentReply,
   getStudentProfile,
+  getPersonalPulse,
   listStudentProfiles,
   reportStudentProfile,
   blockStudentProfile,
@@ -205,6 +206,17 @@ export default {
       const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       return json({ ok: true, profiles: await listBlockedProfiles(env.DB, validated.user.id) });
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/me/pulse") {
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
+      if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+      try {
+        return json({ ok: true, trust: "student-reported", pulse: await getPersonalPulse(env.DB, validated.user.id) });
+      } catch {
+        return json({ ok: false, error: "personal_pulse_unavailable" }, 500);
+      }
     }
 
     if (request.method === "GET" && url.pathname === "/api/student-profile") {
