@@ -8,6 +8,7 @@
     style.textContent = `
       #community-v2-root{margin-top:10px}
       .cv2-hero{padding:18px;border:1px solid var(--border);border-radius:15px;background:linear-gradient(145deg,rgba(125,181,255,.08),transparent 70%)}
+      .cv2-title{margin:4px 0}
       .cv2-tabs{display:flex;gap:6px;overflow:auto;margin:12px 0;padding:2px 0;scrollbar-width:none}
       .cv2-tabs::-webkit-scrollbar{display:none}
       .cv2-tab{flex:0 0 auto;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:999px;padding:8px 11px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
@@ -17,6 +18,7 @@
       .cv2-compose textarea{min-height:76px;background:transparent}
       .cv2-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
       .cv2-actions .submit{width:auto}
+      .cv2-ask-bridge{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
       .cv2-toggle{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:7px 10px;border:1px solid var(--border);border-radius:999px;color:var(--muted);font-size:12px;font-weight:650}
       .cv2-toggle input{width:16px;min-width:16px;height:16px;min-height:16px;margin:0}
       .cv2-item{padding:17px 0;border-top:1px solid var(--border)}
@@ -46,7 +48,7 @@
     root.innerHTML = `
       <div class="cv2-hero">
         <div class="eyebrow">VGU Network</div>
-        <h2 style="margin:4px 0">What's happening at VGU?</h2>
+        <h2 class="cv2-title">What's happening at VGU?</h2>
         <p class="muted">Verified information stays official. Student conversations stay student-owned.</p>
         <div class="cv2-tabs" role="tablist">
           <button class="cv2-tab active" data-sort="trending">🔥 Trending</button>
@@ -175,9 +177,13 @@
     }
 
     async function loadCommunities() {
-      const data = await api("/api/community-v2/communities");
+      const [data, context] = await Promise.all([
+        api("/api/community-v2/communities"),
+        api("/api/community-v2/context"),
+      ]);
       const box = $("#cv2-communities");
-      const names = ["campus", ...(data.communities||[]).map(x=>x.community_slug)].filter((x,i,a)=>a.indexOf(x)===i).slice(0,12);
+      const names = ["campus", context.community, ...(data.communities||[]).map(x=>x.community_slug)].filter((x,i,a)=>a.indexOf(x)===i).slice(0,12);
+      $("#cv2-community").value = context.community || "campus";
       box.innerHTML = names.map(name => `<button class="chip cv2-community-chip" data-community="${esc(name)}">${esc(name)}</button>`).join("");
     }
 
@@ -266,10 +272,10 @@
     const askView=document.querySelector('[data-view="ask"]')?.closest?.(".view");
     const askQuestion=document.querySelector("#question");
     if(askView && askQuestion){
-      const bridge=document.createElement("button");
-      bridge.type="button";bridge.className="inline-link";bridge.textContent="Ask VGU students →";
-      bridge.style.marginTop="8px";
-      bridge.addEventListener("click",()=>{
+      const bridge=document.createElement("div");
+      bridge.className="cv2-ask-bridge";
+      bridge.innerHTML='<button type="button" class="inline-link" data-ask-action="start">Start a student discussion →</button><button type="button" class="inline-link" data-ask-action="related">See related student discussions →</button>';
+      bridge.querySelector('[data-ask-action="start"]').addEventListener("click",()=>{
         const title=askQuestion.value.trim();
         const viewButton=document.querySelector('[data-view="community"]');
         if(viewButton) viewButton.click();
@@ -279,6 +285,16 @@
           $("#cv2-body").value="";
           $("#cv2-title").focus();
           $("#cv2-compose-status").textContent="Turn your question into a student discussion.";
+        },50);
+      });
+      bridge.querySelector('[data-ask-action="related"]').addEventListener("click",async()=>{
+        const q=askQuestion.value.trim();
+        const viewButton=document.querySelector('[data-view="community"]');
+        if(viewButton) viewButton.click();
+        setTimeout(async()=>{
+          $("#cv2-search").value=q;
+          sort="trending"; kind="";
+          await loadFeed();
         },50);
       });
       askQuestion.parentElement?.appendChild(bridge);
