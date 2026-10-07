@@ -79,11 +79,11 @@
           <button class="cv2-post-btn" id="cv2-compose-open" type="button">＋ Create</button>
         </div>
         <div class="cv2-tabs" role="tablist" aria-label="Community feed">
-          <button class="cv2-tab active" data-sort="trending">Trending</button>
-          <button class="cv2-tab" data-sort="new">Latest</button>
-          <button class="cv2-tab" data-kind="confession">Confessions</button>
-          <button class="cv2-tab" data-kind="campus">Campus</button>
-          <button class="cv2-tab" data-kind="exam">Exam survival</button>
+          <button type="button" class="cv2-tab active" data-sort="trending">Trending</button>
+          <button type="button" class="cv2-tab" data-sort="new">Latest</button>
+          <button type="button" class="cv2-tab" data-kind="confession">Confessions</button>
+          <button type="button" class="cv2-tab" data-kind="campus">Campus</button>
+          <button type="button" class="cv2-tab" data-kind="exam">Exam survival</button>
         </div>
         <div class="cv2-context">
           <span class="cv2-context-label">Showing</span>
@@ -161,15 +161,15 @@
             <div class="cv2-meta"><div class="cv2-wrap"><span class="cv2-badge">${esc(item.kind.replaceAll("_"," "))}</span>${Number(item.anonymous)?'<span class="cv2-badge anon">Anonymous</span>':''}<span class="cv2-note">${esc(item.community_slug)}</span></div><span class="cv2-note">${pretty(item.created_at)}</span></div>
             <h3>${esc(item.title)}</h3><p class="cv2-body">${esc(item.body)}</p>
             <div class="cv2-note">By ${esc(item.author)} · ${item.replies} replies · ${item.upvotes} helpful</div>
-            ${Number(item.poll_options)?'<button class="cv2-tool" data-action="poll">📊 Poll</button><div class="cv2-poll-options" hidden></div>':''}
+            ${Number(item.poll_options)?'<button type="button" class="cv2-tool" data-action="poll">📊 Poll</button><div class="cv2-poll-options" hidden></div>':''}
             <div class="cv2-actions">
-              <button class="cv2-tool ${Number(item.my_vote)===1?'active':''}" data-action="vote" data-value="1">▲ ${item.upvotes}</button>
-              <button class="cv2-tool ${Number(item.my_vote)===-1?'active':''}" data-action="vote" data-value="-1">▼ ${item.downvotes}</button>
-              <button class="cv2-tool" data-action="replies">💬 ${item.replies}</button>
-              <button class="cv2-tool ${item.following?'active':''}" data-action="follow">${item.following?'Following':'Follow'}</button>
-              <button class="cv2-tool ${item.saved?'active':''}" data-action="save">${item.saved?'Saved':'Save'}</button>
-              ${item.mine?'<button class="cv2-tool" data-action="delete">Delete</button>':''}
-              ${item.mine?'':'<button class="cv2-tool" data-action="report">Report</button><button class="cv2-tool" data-action="block">Block</button>'}
+              <button type="button" class="cv2-tool ${Number(item.my_vote)===1?'active':''}" data-action="vote" data-value="1">▲ ${item.upvotes}</button>
+              <button type="button" class="cv2-tool ${Number(item.my_vote)===-1?'active':''}" data-action="vote" data-value="-1">▼ ${item.downvotes}</button>
+              <button type="button" class="cv2-tool" data-action="replies">💬 ${item.replies}</button>
+              <button type="button" class="cv2-tool ${item.following?'active':''}" data-action="follow">${item.following?'Following':'Follow'}</button>
+              <button type="button" class="cv2-tool ${item.saved?'active':''}" data-action="save">${item.saved?'Saved':'Save'}</button>
+              ${item.mine?'<button type="button" class="cv2-tool" data-action="delete">Delete</button>':''}
+              ${item.mine?'':'<button type="button" class="cv2-tool" data-action="report">Report</button><button type="button" class="cv2-tool" data-action="block">Block</button>'}
             </div>
             <div class="cv2-replies" hidden></div>
           </article>`).join("");
@@ -193,7 +193,7 @@
       try{
         const data=await api("/api/community-v2/communities");
         const names=["campus",contextCommunity,...(data.communities||[]).map(x=>x.community_slug)].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).slice(0,16);
-        $("#cv2-communities").innerHTML=names.map(n=>`<button class="cv2-community-chip" data-community="${esc(n)}">${esc(n)}</button>`).join("");
+        $("#cv2-communities").innerHTML=names.map(n=>`<button type="button" class="cv2-community-chip" data-community="${esc(n)}">${esc(n)}</button>`).join("");
       }catch{
         $("#cv2-communities").innerHTML='<span class="cv2-note">Communities will appear when student activity is available.</span>';
       }
@@ -265,7 +265,7 @@
           const box=item.querySelector(".cv2-poll-options");
           if(!box.hidden){box.hidden=true;return}
           const d=await api("/api/community-v2/poll?item_id="+id);
-          box.innerHTML=(d.options||[]).map(o=>`<button class="cv2-poll-option" data-option-id="${o.id}">${esc(o.label)} <span class="cv2-note">· ${o.votes} votes</span></button>`).join("")||'<span class="cv2-note">Poll unavailable.</span>';
+          box.innerHTML=(d.options||[]).map(o=>`<button type="button" class="cv2-poll-option" data-option-id="${o.id}">${esc(o.label)} <span class="cv2-note">· ${o.votes} votes</span></button>`).join("")||'<span class="cv2-note">Poll unavailable.</span>';
           box.querySelectorAll("[data-option-id]").forEach(option=>option.onclick=async()=>{await api("/api/community-v2/poll-vote",{method:"POST",body:JSON.stringify({item_id:id,option_id:Number(option.dataset.optionId)})});box.hidden=true;await loadFeed()});
           box.hidden=false;return;
         }
