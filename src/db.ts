@@ -77,7 +77,7 @@ export async function upsertStudentProfile(
 
 export async function getStudentProfile(db: D1Database, userId: number): Promise<StudentProfile | null> {
   return db.prepare(
-    `SELECT public_id, telegram_user_id, display_name, program, branch, year, bio, looking_for, updated_at
+    `SELECT public_id, telegram_user_id, display_name, program, branch, year, bio, looking_for, updated_at, status
      FROM student_profiles WHERE telegram_user_id = ?`,
   ).bind(String(userId)).first<StudentProfile>();
 }
@@ -116,6 +116,17 @@ export async function listStudentProfiles(
     viewer, viewer, viewer, viewer,
     Math.min(Math.max(limit, 1), 50),
   ).all<StudentProfile>();
+  return rows.results;
+}
+
+export async function listBlockedProfiles(db: D1Database, userId: number): Promise<Array<{ public_id: string; display_name: string }>> {
+  const rows = await db.prepare(
+    `SELECT p.public_id, p.display_name
+     FROM student_profile_blocks b
+     JOIN student_profiles p ON p.telegram_user_id = b.blocked_telegram_user_id
+     WHERE b.blocker_telegram_user_id = ?
+     ORDER BY p.display_name`,
+  ).bind(String(userId)).all<{ public_id: string; display_name: string }>();
   return rows.results;
 }
 
