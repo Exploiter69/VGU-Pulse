@@ -214,7 +214,14 @@ label{font-size:13px;color:var(--muted);font-weight:650}
   border:0;background:none;color:var(--accent);font:inherit;font-weight:700;
   padding:5px 0;cursor:pointer;text-decoration:none;
 }
-.view-tools{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.view-tools{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px};.notification-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+.notify-option{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:7px 11px;border:1px solid var(--border);border-radius:999px;background:var(--surface-2);color:var(--muted);font-size:13px;font-weight:650;cursor:pointer;user-select:none}
+.notify-option:has(input:checked){color:var(--text);border-color:var(--accent);background:rgba(125,181,255,.08)}
+.notify-option input{appearance:none;-webkit-appearance:none;width:16px;height:16px;min-width:16px;min-height:16px;margin:0;border:1px solid var(--border-strong);border-radius:5px;background:transparent;display:grid;place-items:center;cursor:pointer}
+.notify-option input:checked{border-color:var(--accent);background:var(--accent)}
+.notify-option input:checked::after{content:"";width:7px;height:4px;border-left:2px solid var(--accent-ink);border-bottom:2px solid var(--accent-ink);transform:rotate(-45deg) translateY(-1px)}
+.notify-option input:focus-visible{outline:2px solid rgba(125,181,255,.45);outline-offset:2px}
+
 .view-tools .inline-link{padding:7px 10px;border:1px solid var(--border);border-radius:999px;background:var(--surface-2)}
 .empty-state{padding:24px 8px;text-align:center;color:var(--muted)}
 .mobile-nav-label{display:inline}
@@ -623,9 +630,9 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
 <section class="card">
   <div class="section-heading"><div><div class="eyebrow">Attention</div><h2>Notifications</h2></div><span id="notification-count" class="muted"></span></div>
   <p class="settings-note">Opt in to verified VGU updates and replies to your community posts. Telegram delivery uses the same bot and existing $0 Worker infrastructure.</p>
-  <div class="view-tools">
-    <label class="chip"><input id="notify-official" type="checkbox"> VGU updates</label>
-    <label class="chip"><input id="notify-community" type="checkbox"> Post replies</label>
+  <div class="notification-tools">
+    <label class="notify-option"><input id="notify-official" type="checkbox"><span>VGU updates</span></label>
+    <label class="notify-option"><input id="notify-community" type="checkbox"><span>Post replies</span></label>
     <button type="button" class="inline-link" id="notifications-read">Mark all read</button>
   </div>
   <p id="notification-status" class="muted" aria-live="polite"></p>
