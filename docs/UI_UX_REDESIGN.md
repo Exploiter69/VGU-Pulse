@@ -5,6 +5,8 @@
 - Research: complete
 - Product direction: Student OS
 - Frontend redesign: complete in source
+- Screen-level UX completion: implemented across Home, Ask, Community, People, Campus, Academics, Tools and Me
+- Telegram-native interaction layer: implemented (theme, viewport, Back Button, contextual Main Button, haptics, fullscreen action)
 - Backend/API architecture: unchanged
 - Database migrations: none
 - Paid infrastructure: none
@@ -65,6 +67,20 @@ Shared patterns include:
 - responsive cards
 - mobile bottom navigation
 - desktop side navigation
+
+## Implemented UX scope
+
+- Five primary destinations: Home, Ask, Community, Campus, Me.
+- Home is intent-first: today, verified information, local deadlines, student activity and shortcuts.
+- Ask Pulse is the universal VGU knowledge surface with visually distinct Official VGU and Student-reported results.
+- Community is discussion-first with compose, filters, voting/replies and contextual People/My activity access.
+- People is discovery-first with search, filters, opt-in profile editing, block/report controls and visible deterministic match reasons where available.
+- Campus is need-first with search, category shortcuts, official service directory and official portal links.
+- Academics is task-first with Today/Upcoming/Overdue KPIs and the existing browser-only planner.
+- Tools remains browser-only and is reachable contextually from Home and Me.
+- Me is the personal space for activity, deadlines, partner suggestions, profile access, tools and settings.
+- Telegram theme parameters, viewport changes, Back Button, contextual Main Button, haptics and fullscreen are wired without changing backend contracts.
+- Native `confirm()` is intentionally avoided because the Mini App uses in-page confirmation patterns.
 
 ## Validation target
 
