@@ -6,94 +6,321 @@
 <title>VGU Pulse</title>
 <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
 <style>
-:root{color-scheme:dark;font-family:system-ui,sans-serif}
-body{margin:0;min-height:100vh;background:#0f1115;color:#f5f7fa}
-main{max-width:720px;margin:auto;padding:28px 18px 48px}
-.eyebrow{color:#8f9aaa;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
-.muted{color:#9aa3b2}.card{background:#181b22;border:1px solid #2b303b;border-radius:18px;padding:20px;margin:14px 0}
-.option{width:100%;text-align:left;background:#222733;color:#f5f7fa;border:1px solid #343b49;margin:7px 0;border-radius:12px;padding:14px;cursor:pointer}
-.option.selected{border-color:#6ea8fe}.option:disabled{opacity:.72;cursor:default}
-.bar{margin-top:8px;background:#252b36;border-radius:999px;overflow:hidden;height:8px}.fill{height:100%;background:#6ea8fe;width:0;transition:width .25s ease}
+/* Premium Pulse UI system */
+:root{
+  color-scheme:dark;
+  --bg:#0b0d10;
+  --surface:#12161b;
+  --surface-2:#171c22;
+  --surface-3:#1d232b;
+  --border:#252c35;
+  --border-strong:#313a46;
+  --text:#f4f6f8;
+  --muted:#929daa;
+  --faint:#697380;
+  --accent:#7db5ff;
+  --accent-strong:#5f9ff4;
+  --accent-ink:#07111f;
+  --success:#73d6a2;
+  --warning:#f2c46d;
+  --danger:#f18b91;
+  --radius:16px;
+  --radius-sm:12px;
+  --content:760px;
+  --nav-width:180px;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html{background:var(--bg);scroll-behavior:smooth}
+body{
+  margin:0;
+  min-height:100vh;
+  background:
+    radial-gradient(circle at 50% -12%,rgba(125,181,255,.09),transparent 34rem),
+    var(--bg);
+  color:var(--text);
+  font-size:15px;
+  line-height:1.55;
+}
+body:before{
+  content:"";
+  position:fixed;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.015),transparent 30%);
+}
+main{
+  width:min(var(--content),calc(100% - 32px));
+  margin:0 auto;
+  padding:32px 0 96px;
+}
+.app-header{margin:0 0 20px;padding:4px 0}
+.app-header-top{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand-mark{display:flex;align-items:center;gap:10px}
+.brand-dot{width:11px;height:11px;border-radius:50%;background:var(--accent);box-shadow:0 0 22px rgba(125,181,255,.45)}
+.app-title{margin:0;font-size:24px;line-height:1.15;letter-spacing:-.035em;font-weight:760}
+.app-subtitle{margin:6px 0 0;color:var(--muted);font-size:14px;max-width:520px}
+.eyebrow{color:var(--faint);font-size:11px;font-weight:750;letter-spacing:.11em;text-transform:uppercase}
+h1,h2,h3{letter-spacing:-.025em;line-height:1.2}
+h2{font-size:20px;margin:5px 0 8px}
+h3{font-size:16px;margin:4px 0 6px}
+p{margin:8px 0}
+.muted{color:var(--muted)}
+.card{
+  background:linear-gradient(180deg,rgba(255,255,255,.018),transparent 65%),var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:20px;
+  margin:12px 0;
+  box-shadow:0 1px 2px rgba(0,0,0,.2);
+}
+.view>.card:first-child{margin-top:0}
+.view>.card:last-child{margin-bottom:0}
+.nav{
+  display:flex;
+  gap:4px;
+  margin:0;
+  padding:5px;
+  background:rgba(18,22,27,.92);
+  border:1px solid var(--border);
+  border-radius:14px;
+  backdrop-filter:blur(18px);
+  z-index:20;
+}
+.nav-item{
+  flex:1;
+  min-width:0;
+  min-height:42px;
+  border:0;
+  border-radius:10px;
+  padding:9px 10px;
+  background:transparent;
+  color:var(--muted);
+  font:inherit;
+  font-size:13px;
+  font-weight:650;
+  cursor:pointer;
+  transition:background .16s ease,color .16s ease,transform .16s ease;
+}
+.nav-item:hover{color:var(--text);background:var(--surface-3)}
+.nav-item.active{background:var(--surface-3);color:var(--text);box-shadow:inset 0 0 0 1px var(--border-strong)}
+.nav-item[data-view="ask"].active{color:var(--accent)}
+.view{display:none;animation:view-in .18s ease}
+.view.active{display:block}
+@keyframes view-in{from{opacity:.55;transform:translateY(3px)}to{opacity:1;transform:none}}
+.quick{
+  width:100%;
+  text-align:left;
+  background:var(--surface-2);
+  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:14px;
+  cursor:pointer;
+  font:inherit;
+  transition:border-color .16s ease,background .16s ease,transform .16s ease;
+}
+.quick:hover{border-color:var(--border-strong);background:var(--surface-3)}
+.quick:active,.submit:active,.nav-item:active{transform:scale(.99)}
+.quick strong,.quick span{display:block}
+.quick span{color:var(--muted);font-size:13px;margin-top:4px}
+.quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.submit{
+  width:100%;
+  min-height:44px;
+  background:var(--accent);
+  color:var(--accent-ink);
+  border:0;
+  border-radius:11px;
+  padding:11px 14px;
+  font:inherit;
+  font-weight:760;
+  cursor:pointer;
+  transition:filter .16s ease,transform .16s ease;
+}
+.submit:hover{filter:brightness(1.06)}
+.option{
+  width:100%;text-align:left;background:var(--surface-2);color:var(--text);
+  border:1px solid var(--border);margin:7px 0;border-radius:12px;padding:14px;cursor:pointer;
+}
+.option.selected{border-color:var(--accent);background:rgba(125,181,255,.08)}
+.option:disabled{opacity:.72;cursor:default}
+.bar{margin-top:8px;background:var(--surface-3);border-radius:999px;overflow:hidden;height:7px}
+.fill{height:100%;background:var(--accent);width:0;transition:width .25s ease}
 .row{display:flex;justify-content:space-between;gap:12px;align-items:center}
-.nav{display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;margin:8px 0 14px;scrollbar-width:none}
-.nav::-webkit-scrollbar{display:none}
-.nav-item{flex:0 0 auto;background:#181b22;color:#9aa3b2;border:1px solid #2b303b;border-radius:999px;padding:9px 13px;font:inherit;cursor:pointer}
-.nav-item.active{background:#6ea8fe;color:#08101d;border-color:#6ea8fe;font-weight:700}
-.view{display:none}.view.active{display:block}
-.quick-card{margin-top:0}.quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.quick{background:#222733;color:#f5f7fa;border:1px solid #343b49;border-radius:12px;padding:14px;text-align:left;cursor:pointer;font:inherit}
-.quick strong,.quick span{display:block}.quick span{color:#9aa3b2;font-size:13px;margin-top:4px}.home-summary{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.home-item{padding:10px 0;border-top:1px solid #2b303b}.home-item:first-child{border-top:0}.home-meta{display:block;margin-top:5px}.today-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.today-stat{background:#222733;border:1px solid #343b49;border-radius:12px;padding:12px}.today-stat strong{display:block;font-size:20px}.today-stat span{display:block;color:#9aa3b2;font-size:13px;margin-top:3px}@media(max-width:520px){.today-grid{grid-template-columns:1fr}}
-@media(max-width:520px){.quick-grid{grid-template-columns:1fr}}
-textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:#f5f7fa;border:1px solid #343b49;border-radius:12px;padding:12px;margin:6px 0 10px;font:inherit}
-.submit{width:100%;background:#6ea8fe;color:#08101d;border:0;border-radius:12px;padding:13px;font-weight:700;cursor:pointer}
-.post{padding:14px 0;border-top:1px solid #2b303b}.post:first-child{border-top:0}
-.reply{margin:10px 0 0 14px;padding:10px 0 0 12px;border-left:2px solid #2b303b}
+textarea,input,select{
+  width:100%;box-sizing:border-box;
+  background:var(--surface-2);color:var(--text);
+  border:1px solid var(--border);border-radius:11px;
+  padding:12px 13px;margin:6px 0 10px;font:inherit;min-height:44px;
+}
+textarea{resize:vertical;min-height:96px}
+input::placeholder,textarea::placeholder{color:var(--faint)}
+input:focus,textarea:focus,select:focus,.quick:focus,.submit:focus,.nav-item:focus{
+  outline:2px solid rgba(125,181,255,.45);outline-offset:2px;border-color:var(--accent);
+}
+label{font-size:13px;color:var(--muted);font-weight:650}
+.today-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.today-stat{
+  background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:13px;
+}
+.today-stat strong{display:block;font-size:21px;line-height:1.1;letter-spacing:-.03em}
+.today-stat span{display:block;color:var(--muted);font-size:12px;margin-top:5px}
+.post{padding:16px 0;border-top:1px solid var(--border)}
+.post:first-child{border-top:0}
+.reply{margin:10px 0 0 14px;padding:10px 0 0 12px;border-left:2px solid var(--border)}
 .reply-form{margin:10px 0 0 14px}
 .reply-form textarea{margin-bottom:6px}
-.reply-submit{background:#222733;color:#f5f7fa;border:1px solid #343b49;border-radius:10px;padding:8px 12px;cursor:pointer}
-.report{background:none;border:0;color:#9aa3b2;padding:4px 0;cursor:pointer}.tool-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tool{display:block;background:#222733;color:#f5f7fa;border:1px solid #343b49;border-radius:12px;padding:12px;text-decoration:none}.tool strong{display:block}.tool span{display:block;color:#9aa3b2;font-size:13px;margin-top:4px}@media(max-width:520px){.tool-grid{grid-template-columns:1fr}}.profile{padding:12px 0;border-top:1px solid #2b303b}
+.reply-submit{background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:8px 12px;cursor:pointer}
+.report{background:none;border:0;color:var(--muted);padding:5px 0;cursor:pointer}
+.report:hover{color:var(--text)}
+.tool-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tool{
+  display:block;background:var(--surface-2);color:var(--text);
+  border:1px solid var(--border);border-radius:12px;padding:14px;text-decoration:none;
+  transition:border-color .16s ease,background .16s ease;
+}
+.tool:hover{border-color:var(--border-strong);background:var(--surface-3)}
+.tool strong{display:block;font-size:14px}
+.tool span{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+.profile{padding:14px 0;border-top:1px solid var(--border)}
+.trust-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  border:1px solid var(--border);border-radius:999px;
+  padding:4px 8px;font-size:11px;font-weight:750;letter-spacing:.02em;
+}
+.trust-badge.official{color:var(--success);background:rgba(115,214,162,.07);border-color:rgba(115,214,162,.2)}
+.trust-badge.student{color:var(--warning);background:rgba(242,196,109,.07);border-color:rgba(242,196,109,.2)}
+.section-heading{display:flex;justify-content:space-between;align-items:end;gap:12px;margin:22px 0 8px}
+.section-heading:first-child{margin-top:0}
+.hero{
+  padding:24px;
+  background:linear-gradient(145deg,rgba(125,181,255,.10),rgba(125,181,255,.025) 45%,var(--surface) 85%);
+  border-color:rgba(125,181,255,.16);
+}
+.hero h2{font-size:25px;margin:7px 0}
+.hero p{max-width:600px}
+.hero-search{display:flex;gap:8px;margin-top:18px}
+.hero-search input{margin:0}
+.hero-search .submit{width:auto;white-space:nowrap}
+.action-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.action-row .quick{min-height:72px}
+.action-row .quick strong{font-size:14px}
+.inline-link{
+  border:0;background:none;color:var(--accent);font:inherit;font-weight:700;
+  padding:5px 0;cursor:pointer;text-decoration:none;
+}
+.view-tools{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.view-tools .inline-link{padding:7px 10px;border:1px solid var(--border);border-radius:999px;background:var(--surface-2)}
+.empty-state{padding:24px 8px;text-align:center;color:var(--muted)}
+.mobile-nav-label{display:inline}
+@media(min-width:900px){
+  main{padding:32px 0 64px 220px;width:min(1080px,calc(100% - 48px));max-width:none}
+  .nav{
+    position:fixed;left:18px;top:50%;transform:translateY(-50%);
+    width:var(--nav-width);display:flex;flex-direction:column;padding:8px;
+    background:rgba(18,22,27,.9);
+  }
+  .nav-item{text-align:left;justify-content:flex-start;padding:11px 12px}
+  .app-header{max-width:760px}
+  .view{max-width:760px}
+}
+@media(max-width:899px){
+  main{padding-top:20px}
+  .nav{
+    position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));
+    padding:5px;box-shadow:0 12px 34px rgba(0,0,0,.38);
+  }
+  .nav-item{font-size:12px}
+  body{padding-bottom:env(safe-area-inset-bottom)}
+}
+@media(max-width:620px){
+  main{width:min(100% - 24px,760px);padding-top:16px;padding-bottom:100px}
+  .app-title{font-size:22px}
+  .app-subtitle{font-size:13px}
+  .card{padding:16px;border-radius:15px}
+  .today-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .quick-grid,.tool-grid{grid-template-columns:1fr}
+  .action-row{grid-template-columns:1fr}
+  .hero{padding:19px}
+  .hero h2{font-size:22px}
+  .hero-search{display:block}
+  .hero-search .submit{width:100%;margin-top:3px}
+  .nav-item{padding:8px 5px;min-height:43px}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .view,.quick,.submit,.nav-item,.tool{transition:none;animation:none}
+}
 </style>
 </head>
 <body>
 <main>
-<div class="eyebrow">VGU • TODAY</div>
-<h1>VGU Pulse</h1>
-<p class="muted">What's happening at VGU, and who can I do it with?</p>
+<header class="app-header">
+  <div class="app-header-top">
+    <div class="brand-mark"><span class="brand-dot" aria-hidden="true"></span><h1 class="app-title">VGU Pulse</h1></div>
+    <span class="trust-badge official">VGU • student OS</span>
+  </div>
+  <p class="app-subtitle">Know what's happening. Know what to do. Find who can help.</p>
+</header>
 <nav class="nav" aria-label="Pulse sections">
 <button type="button" class="nav-item active" data-view="home">Home</button>
 <button type="button" class="nav-item" data-view="ask">Ask</button>
-<button type="button" class="nav-item" data-view="academics">Academics</button>
 <button type="button" class="nav-item" data-view="community">Community</button>
-<button type="button" class="nav-item" data-view="people">People</button>
 <button type="button" class="nav-item" data-view="campus">Campus</button>
-<button type="button" class="nav-item" data-view="tools">Tools</button>
-<button type="button" class="nav-item" data-view="pulse">My Pulse</button>
+<button type="button" class="nav-item" data-view="pulse">Me</button>
 </nav>
 
 <div class="view active" data-view-panel="home">
-<section class="card">
-<p id="identity">Connecting to Telegram…</p>
-<p id="status" class="muted"></p>
+<section class="card hero">
+  <div class="eyebrow">Your day</div>
+  <h2 id="home-greeting">Good to see you.</h2>
+  <p id="identity" class="muted">Connecting to Telegram…</p>
+  <p id="status" class="muted"></p>
+  <div class="action-row" style="margin-top:16px">
+    <button type="button" class="quick" data-view="ask"><strong>Ask</strong><span>Find VGU information</span></button>
+    <button type="button" class="quick" data-view="academics"><strong>Plan</strong><span>See your deadlines</span></button>
+    <button type="button" class="quick" data-view="tools"><strong>Tools</strong><span>Calculate quickly</span></button>
+  </div>
 </section>
 <section class="card">
-<div class="eyebrow">Today</div><h2>Your campus at a glance</h2>
+<div class="section-heading"><div><div class="eyebrow">Today</div><h2>Your campus at a glance</h2></div></div>
 <div class="today-grid" id="today-stats"><div class="today-stat"><strong>—</strong><span>Official updates</span></div><div class="today-stat"><strong>—</strong><span>Deadlines</span></div><div class="today-stat"><strong>—</strong><span>Student posts</span></div><div class="today-stat"><strong>—</strong><span>Active poll</span></div></div>
-<div class="eyebrow" style="margin-top:18px">Official updates</div>
+<div class="section-heading"><div><div class="eyebrow">Verified VGU</div><h2>What matters</h2></div><span class="trust-badge official">Official</span></div>
 <div id="notices"><p class="muted">Loading verified information…</p></div>
 <button type="button" class="quick" data-view="ask" style="width:100%;margin-top:10px"><strong>Ask Pulse</strong><span>Search the full official information archive</span></button>
 </section>
 <section class="card">
-<div class="eyebrow">What's happening</div><h2>Events & opportunities</h2>
+<div class="section-heading"><div><div class="eyebrow">What's happening</div><h2>Events & opportunities</h2></div></div>
 <div id="events"><p class="muted">Loading verified events…</p></div>
 <button type="button" class="quick" data-view="ask" style="width:100%;margin-top:10px"><strong>Find more</strong><span>Search official and student-reported campus information</span></button>
 </section>
-<section class="card" id="academic-summary-card"><div class="eyebrow">My day</div><h2>Your next deadlines</h2><div id="academic-summary"><p class="muted">Your local academic plan will appear here.</p></div><button type="button" class="quick" data-view="academics" style="width:100%;margin-top:10px"><strong>Open Academics</strong><span>Manage assignments, exams and deadlines</span></button></section>
-<section class="card"><div class="eyebrow">Campus pulse</div><h2>What students are saying</h2><div id="home-pulse"><p class="muted">Loading campus activity…</p></div><button type="button" class="quick" data-view="pulse" style="width:100%;margin-top:10px"><strong>Open Pulse</strong><span>See the current campus question and vote</span></button></section>
-<section class="card"><div class="eyebrow">Community</div><h2>Student activity</h2><div id="home-community"><p class="muted">Loading student activity…</p></div><button type="button" class="quick" data-view="community" style="width:100%;margin-top:10px"><strong>Open Community</strong><span>Ask, share and reply with other students</span></button></section>
+<section class="card" id="academic-summary-card"><div class="section-heading"><div><div class="eyebrow">My plan</div><h2>Your next deadlines</h2></div><button type="button" class="inline-link" data-view="academics">Open plan →</button></div><div id="academic-summary"><p class="muted">Your local academic plan will appear here.</p></div><button type="button" class="quick" data-view="academics" style="width:100%;margin-top:10px"><strong>Open Academics</strong><span>Manage assignments, exams and deadlines</span></button></section>
+<section class="card"><div class="section-heading"><div><div class="eyebrow">Campus pulse</div><h2>What students are saying</h2></div><span class="trust-badge student">Student-reported</span></div><div id="home-pulse"><p class="muted">Loading campus activity…</p></div><button type="button" class="quick" data-view="pulse" style="width:100%;margin-top:10px"><strong>Open Pulse</strong><span>See the current campus question and vote</span></button></section>
+<section class="card"><div class="section-heading"><div><div class="eyebrow">Community</div><h2>Student activity</h2></div><span class="trust-badge student">Student-reported</span></div><div id="home-community"><p class="muted">Loading student activity…</p></div><button type="button" class="quick" data-view="community" style="width:100%;margin-top:10px"><strong>Open Community</strong><span>Ask, share and reply with other students</span></button></section>
 <section class="card quick-card">
-<div class="eyebrow">Quick access</div><h2>What do you need?</h2>
-<div class="quick-grid">
-<button type="button" class="quick" data-view="ask"><strong>Ask Pulse</strong><span>Find official info and campus answers</span></button>
-<button type="button" class="quick" data-view="academics"><strong>Academics</strong><span>Assignments, exams and deadlines</span></button>
-<button type="button" class="quick" data-view="community"><strong>Community</strong><span>Questions, info and opportunities</span></button>
-<button type="button" class="quick" data-view="people"><strong>People</strong><span>Find students for study and projects</span></button>
-<button type="button" class="quick" data-view="tools"><strong>Student Tools</strong><span>SGPA, CGPA, attendance and marks</span></button>
+<div class="section-heading"><div><div class="eyebrow">Shortcuts</div><h2>Go somewhere</h2></div></div>
+<div class="view-tools">
+<button type="button" class="inline-link" data-view="ask">Ask Pulse</button>
+<button type="button" class="inline-link" data-view="academics">Academics</button>
+<button type="button" class="inline-link" data-view="community">Community</button>
+<button type="button" class="inline-link" data-view="people">People</button>
+<button type="button" class="inline-link" data-view="campus">Campus</button>
+<button type="button" class="inline-link" data-view="tools">Tools</button>
 </div></section>
 </div>
 
 <div class="view" data-view-panel="ask">
-<section class="card" id="student-intelligence"><div class="eyebrow">Student intelligence</div><h2>Ask Pulse</h2><p class="muted">Search official VGU information, academic resources, campus facilities and student-reported knowledge in one place. Academic questions are routed deterministically, and private ERP/Digicampus data is never invented.</p><form id="search-form"><input id="search-query" type="search" maxlength="160" placeholder="Try: exam form, medical, transport, hostel…" aria-label="Search Pulse"><button class="submit" type="submit">Search Pulse</button></form><div id="search-quick" style="display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px"></div><div id="search-results"><p class="muted">Search for something you need on campus.</p></div></section>
+<section class="card" id="student-intelligence"><div class="eyebrow">VGU intelligence</div><h2>Ask Pulse</h2><p class="muted">One search for official VGU information, campus services and student knowledge. Private ERP/Digicampus data is never invented. Academic questions are routed deterministically, and private ERP/Digicampus data is never invented.</p><form id="search-form"><input id="search-query" type="search" maxlength="160" placeholder="Try: exam form, medical, transport, hostel…" aria-label="Search Pulse"><button class="submit" type="submit">Search Pulse</button></form><div id="search-quick" style="display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px"></div><div id="search-results"><p class="muted">Search for something you need on campus.</p></div></section>
 <section class="card">
-<div class="eyebrow">Trust</div>
-<p><strong>Official</strong> = VGU information from trusted sources.</p>
-<p><strong>Student-reported</strong> = community information that has not been treated as official.</p>
-<p class="muted">Pulse adds the student layer; VGU-Signal remains the source of truth for official information.</p>
+<div class="section-heading"><div><div class="eyebrow">Trust layer</div><h2>Know what you're reading</h2></div></div>
+<p><span class="trust-badge official">Official</span> VGU information from trusted sources.</p>
+<p><span class="trust-badge student">Student-reported</span> Community information that is not treated as official.</p>
+<p class="muted">VGU-Signal remains the source of truth for official information.</p>
 </section>
 </div>
 
 <div class="view" data-view-panel="academics">
 <section class="card" id="academic-companion">
-<div class="eyebrow">Academic companion</div><h2>Plan your semester</h2>
+<div class="eyebrow">Your semester</div><h2>Plan what matters</h2>
 <p class="muted">Track your own subjects, assignments, exams and deadlines in Pulse. Personal planner data stays in this browser; it is not pulled from private ERP/Digicampus systems.</p>
 <div class="tool-grid">
 <a class="tool" href="https://www.vgu.ac.in/Student%20Handbook%202025%20.pdf" target="_blank" rel="noopener noreferrer"><strong>Student Handbook</strong><span>Official academic reference</span></a>
@@ -114,8 +341,8 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 
 <div class="view" data-view-panel="community">
 <section class="card">
-<div class="eyebrow">Student-reported</div><h2>Campus community</h2>
-<p class="muted">Ask a question, share useful campus information, or find people for an opportunity. These posts are student-reported, not official VGU announcements.</p>
+<div class="eyebrow">Community</div><h2>What's happening among students</h2>
+<p class="muted">Ask a question, share useful campus information, or find people for an opportunity. These posts are student-reported, not official VGU announcements.</p><div class="view-tools"><button type="button" class="inline-link" data-view="people">Find people →</button><button type="button" class="inline-link" data-view="pulse">My activity →</button></div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><select id="post-filter" aria-label="Filter student posts">
 <option value="">All student posts</option><option value="question">Questions</option><option value="info">Campus information</option><option value="opportunity">Opportunities</option><option value="request">Requests</option>
 </select><select id="post-sort" aria-label="Sort student posts"><option value="newest">Newest</option><option value="useful">Most useful</option><option value="active">Most discussed</option><option value="unanswered">Unanswered first</option></select></div>
@@ -134,7 +361,7 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 
 <div class="view" data-view-panel="people">
 <section class="card">
-<div class="eyebrow">Student network</div><h2>Find people</h2>
+<div class="eyebrow">People</div><h2>Find someone to build with</h2>
 <p class="muted">Opt in with a small profile for study groups, projects, teams and opportunities. Only published profiles appear here. Pulse never exposes Telegram IDs or provides unsolicited messaging.</p>
 <label for="people-search" class="muted" style="display:block;margin-bottom:4px">Search people</label>
 <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
@@ -165,7 +392,7 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 
 <div class="view" data-view-panel="campus">
 <section class="card">
-<div class="eyebrow">Student toolkit</div><h2>Useful VGU links</h2>
+<div class="eyebrow">Campus</div><h2>Get where you need to go</h2>
 <p class="muted">Direct links to services VGU publishes for students. Pulse does not replace the official portals.</p>
 <div class="tool-grid">
 <a class="tool" href="https://tcsion.com/SelfServices" target="_blank" rel="noopener noreferrer"><strong>Student ERP</strong><span>Student gateway</span></a>
@@ -189,7 +416,7 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 </div>
 
 <div class="view" data-view-panel="tools">
-<section class="card"><div class="eyebrow">Student utilities</div><h2>Quick tools</h2><p class="muted">These calculators run entirely in your browser. Pulse does not save your marks, attendance or grades.</p></section>
+<section class="card"><div class="eyebrow">Tools</div><h2>Useful calculations, instantly</h2><p class="muted">These calculators run entirely in your browser. Pulse does not save your marks, attendance or grades.</p></section>
 <section class="card"><div class="eyebrow">SGPA</div><h2>SGPA calculator</h2><p class="muted">Enter each subject's credit and grade point.</p><div id="sgpa-rows"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="sgpa-add" class="quick" type="button">Add subject</button><button id="sgpa-calc" class="submit" type="button" style="width:auto">Calculate SGPA</button></div><p id="sgpa-result" class="muted" aria-live="polite">Add subjects to calculate.</p></section>
 <section class="card"><div class="eyebrow">CGPA</div><h2>CGPA calculator</h2><p class="muted">Calculate a credit-weighted CGPA from semester SGPA values.</p><div id="cgpa-rows"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="cgpa-add" class="quick" type="button">Add semester</button><button id="cgpa-calc" class="submit" type="button" style="width:auto">Calculate CGPA</button></div><p id="cgpa-result" class="muted" aria-live="polite">Add semesters to calculate.</p></section>
 <section class="card"><div class="eyebrow">Attendance</div><h2>Attendance calculator</h2><div class="tool-grid"><div><label for="att-present">Classes attended</label><input id="att-present" type="number" min="0" step="1" placeholder="e.g. 32"></div><div><label for="att-total">Classes held</label><input id="att-total" type="number" min="0" step="1" placeholder="e.g. 40"></div></div><label for="att-target">Target attendance %</label><input id="att-target" type="number" min="0" max="100" step="0.1" value="75"><button id="att-calc" class="submit" type="button">Calculate attendance</button><p id="att-result" class="muted" aria-live="polite">Enter your attendance to see the result.</p></section>
@@ -198,14 +425,19 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 
 <div class="view" data-view-panel="pulse">
 <section class="card">
-<div class="eyebrow">Personal Pulse</div><h2 id="my-pulse-title">Your Pulse</h2>
-<p id="my-pulse-status" class="muted">Open Pulse from Telegram to load your personal dashboard.</p>
+<div class="eyebrow">Me</div><h2 id="my-pulse-title">Your Pulse</h2>
+<p id="my-pulse-status" class="muted">Your personal space for deadlines, activity and people suggestions.</p>
+<div class="view-tools">
+<button type="button" class="inline-link" data-view="academics">Academics</button>
+<button type="button" class="inline-link" data-view="people">People</button>
+<button type="button" class="inline-link" data-view="tools">Tools</button>
+</div>
 <div class="today-grid" id="my-pulse-stats">
 <div class="today-stat"><strong>—</strong><span>My posts</span></div><div class="today-stat"><strong>—</strong><span>My replies</span></div><div class="today-stat"><strong>—</strong><span>My votes</span></div><div class="today-stat"><strong>—</strong><span>Profile</span></div>
 </div>
 </section>
 <section class="card"><div class="eyebrow">My plan</div><h2>Deadlines & next actions</h2><div id="my-pulse-academics"><p class="muted">Your local academic plan will appear here.</p></div><button type="button" class="quick" data-view="academics" style="width:100%;margin-top:10px"><strong>Open Academics</strong><span>Manage your local assignments, exams and deadlines</span></button></section>
-<section class="card"><div class="eyebrow">People for you</div><h2>Suggested study & project partners</h2><p class="muted">Suggestions use your opt-in profile. No messages are sent and Telegram IDs are never exposed.</p><div id="my-pulse-matches"><p class="muted">Create a profile in People to get suggestions.</p></div><button type="button" class="quick" data-view="people" style="width:100%;margin-top:10px"><strong>Manage my profile</strong><span>Update what you study and what you are looking for</span></button></section>
+<section class="card"><div class="eyebrow">People for you</div><h2>Suggested study & project partners</h2><p class="muted">Suggestions use your opt-in profile. No messages are sent and Telegram IDs are never exposed.</p><span class="trust-badge student">Opt-in only</span><div id="my-pulse-matches"><p class="muted">Create a profile in People to get suggestions.</p></div><button type="button" class="quick" data-view="people" style="width:100%;margin-top:10px"><strong>Manage my profile</strong><span>Update what you study and what you are looking for</span></button></section>
 <section class="card"><div class="eyebrow">My activity</div><h2>Recent contributions</h2><div id="my-pulse-activity"><p class="muted">Your posts and replies will appear here.</p></div><button type="button" class="quick" data-view="community" style="width:100%;margin-top:10px"><strong>Open Community</strong><span>Continue discussions and discover useful posts</span></button></section>
 <section class="card"><div class="row"><div><div class="eyebrow">Campus pulse</div><h2>Today's question</h2></div><span id="vote-total" class="muted"></span></div><p id="question" class="muted">Loading today's question…</p><div id="options"></div></section>
 </div>
@@ -713,7 +945,7 @@ async function boot(){
     clearTimeout(timeout);
     const data=await response.json();
     if(response.ok){
-     identity.textContent="Welcome, "+(data.user.first_name||data.user.username||"student")+".";
+     identity.textContent="Telegram identity verified."; const greeting=document.querySelector("#home-greeting"); if(greeting) greeting.textContent="Good to see you, "+(data.user.first_name||data.user.username||"student")+".";
      status.textContent="Telegram identity verified.";
      return true;
     }
@@ -727,7 +959,7 @@ async function boot(){
    }
   })();
  }else{
-  identity.textContent="Open Pulse from Telegram to enable student participation.";
+  identity.textContent="Open Pulse from Telegram to unlock participation.";
  }
 
  try{await loadHome()}catch{status.textContent="Pulse information is temporarily unavailable."}
