@@ -46,6 +46,7 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <button type="button" class="nav-item" data-view="community">Community</button>
 <button type="button" class="nav-item" data-view="people">People</button>
 <button type="button" class="nav-item" data-view="campus">Campus</button>
+<button type="button" class="nav-item" data-view="tools">Tools</button>
 <button type="button" class="nav-item" data-view="pulse">Pulse</button>
 </nav>
 
@@ -76,6 +77,7 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <button type="button" class="quick" data-view="academics"><strong>Academics</strong><span>Assignments, exams and deadlines</span></button>
 <button type="button" class="quick" data-view="community"><strong>Community</strong><span>Questions, info and opportunities</span></button>
 <button type="button" class="quick" data-view="people"><strong>People</strong><span>Find students for study and projects</span></button>
+<button type="button" class="quick" data-view="tools"><strong>Student Tools</strong><span>SGPA, CGPA, attendance and marks</span></button>
 </div></section>
 </div>
 
@@ -182,6 +184,14 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 </section>
 </div>
 
+<div class="view" data-view-panel="tools">
+<section class="card"><div class="eyebrow">Student utilities</div><h2>Quick tools</h2><p class="muted">These calculators run entirely in your browser. Pulse does not save your marks, attendance or grades.</p></section>
+<section class="card"><div class="eyebrow">SGPA</div><h2>SGPA calculator</h2><p class="muted">Enter each subject's credit and grade point.</p><div id="sgpa-rows"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="sgpa-add" class="quick" type="button">Add subject</button><button id="sgpa-calc" class="submit" type="button" style="width:auto">Calculate SGPA</button></div><p id="sgpa-result" class="muted" aria-live="polite">Add subjects to calculate.</p></section>
+<section class="card"><div class="eyebrow">CGPA</div><h2>CGPA calculator</h2><p class="muted">Calculate a credit-weighted CGPA from semester SGPA values.</p><div id="cgpa-rows"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="cgpa-add" class="quick" type="button">Add semester</button><button id="cgpa-calc" class="submit" type="button" style="width:auto">Calculate CGPA</button></div><p id="cgpa-result" class="muted" aria-live="polite">Add semesters to calculate.</p></section>
+<section class="card"><div class="eyebrow">Attendance</div><h2>Attendance calculator</h2><div class="tool-grid"><div><label for="att-present">Classes attended</label><input id="att-present" type="number" min="0" step="1" placeholder="e.g. 32"></div><div><label for="att-total">Classes held</label><input id="att-total" type="number" min="0" step="1" placeholder="e.g. 40"></div></div><label for="att-target">Target attendance %</label><input id="att-target" type="number" min="0" max="100" step="0.1" value="75"><button id="att-calc" class="submit" type="button">Calculate attendance</button><p id="att-result" class="muted" aria-live="polite">Enter your attendance to see the result.</p></section>
+<section class="card"><div class="eyebrow">Marks</div><h2>Marks calculator</h2><p class="muted">Combine obtained and maximum marks. This does not assume VGU's internal/external weighting.</p><div id="marks-rows"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="marks-add" class="quick" type="button">Add component</button><button id="marks-calc" class="submit" type="button" style="width:auto">Calculate percentage</button></div><p id="marks-result" class="muted" aria-live="polite">Add components to calculate.</p></section>
+</div>
+
 <div class="view" data-view-panel="pulse">
 <section class="card">
 <div class="row"><div><div class="eyebrow">Participate</div><h2>Campus pulse</h2></div><span id="vote-total" class="muted"></span></div>
@@ -203,6 +213,21 @@ function showView(name){
 }
 for(const item of navItems)item.addEventListener("click",()=>showView(item.dataset.view));
 tg?.BackButton?.onClick?.(()=>showView("home"));
+function numValue(id){const el=document.getElementById(id);const n=Number(el?.value);return Number.isFinite(n)?n:NaN}
+function makeRow(containerId,fields){const row=document.createElement("div");row.style.cssText="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:8px 0";for(const f of fields){const input=document.createElement("input");input.type="number";input.min="0";if(f.max)input.max=f.max;input.step=f.step||"0.01";input.placeholder=f.placeholder;input.setAttribute("aria-label",f.label);row.append(input)}document.getElementById(containerId)?.append(row);return row}
+function initTools(){
+ const sgpaRows=document.getElementById("sgpa-rows"),cgpaRows=document.getElementById("cgpa-rows"),marksRows=document.getElementById("marks-rows");if(!sgpaRows||!cgpaRows||!marksRows)return;
+ const addSgpa=()=>makeRow("sgpa-rows",[{label:"Credits",placeholder:"Credits",step:"0.5"},{label:"Grade point",placeholder:"Grade point",max:"10"}]);
+ const addCgpa=()=>makeRow("cgpa-rows",[{label:"SGPA",placeholder:"SGPA",max:"10"},{label:"Semester credits",placeholder:"Credits",step:"0.5"}]);
+ const addMarks=()=>makeRow("marks-rows",[{label:"Obtained marks",placeholder:"Obtained"},{label:"Maximum marks",placeholder:"Maximum"}]);
+ document.getElementById("sgpa-add")?.addEventListener("click",addSgpa);document.getElementById("cgpa-add")?.addEventListener("click",addCgpa);document.getElementById("marks-add")?.addEventListener("click",addMarks);
+ addSgpa();addSgpa();addCgpa();addCgpa();addMarks();
+ document.getElementById("sgpa-calc")?.addEventListener("click",()=>{const rows=[...sgpaRows.children].map(r=>[...r.querySelectorAll("input")].map(x=>Number(x.value))).filter(v=>v.length===2&&v.every(Number.isFinite)).filter(([c,g])=>c>0&&g>=0&&g<=10),out=document.getElementById("sgpa-result");if(!out)return;if(!rows.length){out.textContent="Enter valid credits and grade points (0–10).";return}const credits=rows.reduce((s,[c])=>s+c,0),score=rows.reduce((s,[c,g])=>s+c*g,0)/credits;out.textContent=`SGPA: ${score.toFixed(2)} across ${credits} credits.`});
+ document.getElementById("cgpa-calc")?.addEventListener("click",()=>{const rows=[...cgpaRows.children].map(r=>[...r.querySelectorAll("input")].map(x=>Number(x.value))).filter(v=>v.length===2&&v.every(Number.isFinite)).filter(([s,c])=>s>=0&&s<=10&&c>0),out=document.getElementById("cgpa-result");if(!out)return;if(!rows.length){out.textContent="Enter valid SGPA values (0–10) and positive semester credits.";return}const credits=rows.reduce((a,[,c])=>a+c,0),score=rows.reduce((a,[s,c])=>a+s*c,0)/credits;out.textContent=`CGPA: ${score.toFixed(2)} across ${credits} weighted credits.`});
+ document.getElementById("marks-calc")?.addEventListener("click",()=>{const rows=[...marksRows.children].map(r=>[...r.querySelectorAll("input")].map(x=>Number(x.value))).filter(v=>v.length===2&&v.every(Number.isFinite)).filter(([o,m])=>o>=0&&m>0&&o<=m),out=document.getElementById("marks-result");if(!out)return;if(!rows.length){out.textContent="Enter valid obtained/max marks (obtained cannot exceed maximum).";return}const obtained=rows.reduce((s,[o])=>s+o,0),maximum=rows.reduce((s,[,m])=>s+m,0);out.textContent=`Percentage: ${(obtained/maximum*100).toFixed(2)}% (${obtained}/${maximum}).`});
+ document.getElementById("att-calc")?.addEventListener("click",()=>{const present=numValue("att-present"),total=numValue("att-total"),target=numValue("att-target"),out=document.getElementById("att-result");if(!out)return;if(!Number.isFinite(present)||!Number.isFinite(total)||!Number.isFinite(target)||present<0||total<=0||present>total||target<0||target>100){out.textContent="Enter valid attendance and a target between 0% and 100%.";return}const current=present/total*100;if(current>=target){out.textContent=`Current attendance: ${current.toFixed(2)}%. You are already at or above the target.`;return}if(target>=100){out.textContent="A 100% target cannot be reached by attending future classes if you have already missed any.";return}const needed=Math.ceil((target*total/100-present)/(1-target/100));out.textContent=`Current attendance: ${current.toFixed(2)}%. Attend the next ${needed} class${needed===1?"":"es"} consecutively to reach at least ${target.toFixed(1)}%.`});
+}
+initTools();
 let initData="",poll=null;
 const profileForm=document.querySelector("#profile-form"),profileStatus=document.querySelector("#profile-status"),profiles=document.querySelector("#profiles"),profileDelete=document.querySelector("#profile-delete"),profileVisibility=document.querySelector("#profile-visibility"),blockedPeople=document.querySelector("#blocked-people"),peopleSearch=document.querySelector("#people-search"),peopleYear=document.querySelector("#people-year"),peopleProgram=document.querySelector("#people-program"),peopleBranch=document.querySelector("#people-branch");const todayStats=document.querySelector("#today-stats");const homePulse=document.querySelector("#home-pulse"),homeCommunity=document.querySelector("#home-community");const identity=document.querySelector("#identity"),status=document.querySelector("#status"),searchForm=document.querySelector("#search-form"),searchQuery=document.querySelector("#search-query"),searchQuick=document.querySelector("#search-quick"),searchResults=document.querySelector("#search-results"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status"),postFilter=document.querySelector("#post-filter");
 
