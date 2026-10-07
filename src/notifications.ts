@@ -174,12 +174,34 @@ export async function runNotificationSweep(
 ): Promise<{ queued: number; sent: number; failed: number }> {
   if (!botToken) return { queued: 0, sent: 0, failed: 0 };
   const queued = await queueOfficialNotifications(db, signalService);
-  const pending = await db.prepare(
-    `SELECT id, telegram_user_id, title, body
-     FROM student_notifications
+  await db.prepare(
+    `DELETE FROM student_notifications
      WHERE sent_at IS NULL
-     ORDER BY created_at ASC
-     LIMIT 100`,
+       AND (
+         (kind = 'official' AND NOT EXISTS (
+           SELECT 1 FROM notification_preferences p
+           WHERE p.telegram_user_id = student_notifications.telegram_user_id
+             AND p.official_updates = 1
+         ))
+         OR
+         (kind = 'community' AND NOT EXISTS (
+           SELECT 1 FROM notification_preferences p
+           WHERE p.telegram_user_id = student_notifications.telegram_user_id
+             AND p.community_replies = 1
+         ))
+       )`,
+  ).run();
+
+  const pending = await db.prepare(
+    `SELECT n.id, n.telegram_user_id, n.title, n.body
+     FROM student_notifications n
+     JOIN notification_preferences p
+       ON p.telegram_user_id = n.telegram_user_id
+     WHERE n.sent_at IS NULL
+       AND ((n.kind = 'official' AND p.official_updates = 1)
+         OR (n.kind = 'community' AND p.community_replies = 1))
+     ORDER BY n.created_at DESC, n.id DESC
+     LIMIT 18`,
   ).all<{ id: number; telegram_user_id: string; title: string; body: string }>();
 
   let sent = 0;
