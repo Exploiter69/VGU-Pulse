@@ -32,7 +32,7 @@
       .cv2-badge{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:999px;padding:4px 8px;color:var(--muted);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
       .cv2-badge.anon{color:var(--warning);border-color:rgba(240,197,111,.25)}
       .cv2-item h3{font-size:17px;margin:7px 0 5px}
-      .cv2-body{white-space:pre-wrap;margin:0}
+      .cv2-body{white-space:pre-wrap;margin:0;overflow-wrap:anywhere}.cv2-body.cv2-collapsed{display:-webkit-box;-webkit-line-clamp:8;-webkit-box-orient:vertical;overflow:hidden}.cv2-more-text{margin-top:5px}
       .cv2-note{color:var(--muted);font-size:12px}
       .cv2-actions{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-top:10px}
       .cv2-tool{min-height:38px;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:10px;padding:7px 10px;font:inherit;font-size:12px;font-weight:650;cursor:pointer}
@@ -82,11 +82,11 @@
         </div>
         <div class="cv2-tabs" role="tablist" aria-label="Community feed">
           <button type="button" class="cv2-tab active" data-sort="trending">Trending</button>
-          <button type="button" class="cv2-tab" data-sort="new">Latest</button>
-          <button type="button" class="cv2-tab" data-kind="confession">Confessions</button>
-          <button type="button" class="cv2-tab" data-kind="campus">Campus</button>
-          <button type="button" class="cv2-tab" data-kind="exam">Exam survival</button>
-          <button type="button" class="cv2-tab" data-special="saved">Saved</button>
+          <button type="button" class="cv2-tab" role="tab" aria-selected="false" data-sort="new">Latest</button>
+          <button type="button" class="cv2-tab" role="tab" aria-selected="false" data-kind="confession">Confessions</button>
+          <button type="button" class="cv2-tab" role="tab" aria-selected="false" data-kind="campus">Campus</button>
+          <button type="button" class="cv2-tab" role="tab" aria-selected="false" data-kind="exam">Exam survival</button>
+          <button type="button" class="cv2-tab" role="tab" aria-selected="false" data-special="saved">Saved</button>
         </div>
         <div class="cv2-context">
           <span class="cv2-context-label">Showing</span>
@@ -103,12 +103,12 @@
         <form method="dialog" class="cv2-sheet" id="cv2-compose-form">
           <div class="cv2-sheet-head"><h3 id="cv2-compose-heading">Start a student post</h3><button class="cv2-close" id="cv2-compose-close" type="button" aria-label="Close">×</button></div>
           <div class="cv2-grid">
-            <div class="cv2-field"><label>What are you trying to do?</label><div class="cv2-intent-grid" id="cv2-intents"><button type="button" data-intent="discussion"><strong>Discussion</strong><span>Start a conversation</span></button><button type="button" data-intent="confession"><strong>Confession</strong><span>Share anonymously</span></button><button type="button" data-intent="campus"><strong>Campus help</strong><span>Something on campus</span></button><button type="button" data-intent="exam"><strong>Exam survival</strong><span>Exam help</span></button><button type="button" data-intent="notes"><strong>Notes / resources</strong><span>Useful material</span></button><button type="button" data-intent="teammate"><strong>Project teammate</strong><span>Find collaborators</span></button><button type="button" data-intent="lost_found"><strong>Lost & found</strong><span>Return or find</span></button><button type="button" data-intent="opportunity"><strong>Opportunity</strong><span>Share an opportunity</span></button></div><input id="cv2-kind" type="hidden" value="discussion"></div>
-            <div class="cv2-field"><label for="cv2-community">Community</label><input id="cv2-community" value="campus" maxlength="60"></div>
+            <div class="cv2-field"><label>What are you trying to do?</label><div class="cv2-intent-grid" id="cv2-intents"><button type="button" data-intent="discussion"><strong>Discussion</strong><span>Start a conversation</span></button><button type="button" data-intent="question"><strong>Question</strong><span>Get student answers</span></button><button type="button" data-intent="confession"><strong>Confession</strong><span>Share anonymously</span></button><button type="button" data-intent="campus"><strong>Campus help</strong><span>Something on campus</span></button><button type="button" data-intent="exam"><strong>Exam survival</strong><span>Exam help</span></button><button type="button" data-intent="senior"><strong>Senior advice</strong><span>Ask upper years</span></button><button type="button" data-intent="notes"><strong>Notes / resources</strong><span>Useful material</span></button><button type="button" data-intent="pyq"><strong>PYQ / exam material</strong><span>Find past papers</span></button><button type="button" data-intent="teacher"><strong>Teacher / elective</strong><span>Compare experiences</span></button><button type="button" data-intent="teammate"><strong>Project teammate</strong><span>Find collaborators</span></button><button type="button" data-intent="lost_found"><strong>Lost & found</strong><span>Return or find</span></button><button type="button" data-intent="ride"><strong>Ride sharing</strong><span>Find a ride</span></button><button type="button" data-intent="roommate"><strong>Room / roommate</strong><span>Find housing help</span></button><button type="button" data-intent="listing"><strong>Student exchange</strong><span>Buy, sell or exchange</span></button><button type="button" data-intent="opportunity"><strong>Opportunity</strong><span>Share an opportunity</span></button></div><input id="cv2-kind" type="hidden" value="discussion"></div>
+            <div class="cv2-field"><label for="cv2-community">Community</label><input id="cv2-community" list="cv2-community-options" value="campus" maxlength="60" autocomplete="off"><datalist id="cv2-community-options"></datalist></div>
           </div>
           <div class="cv2-field"><label for="cv2-title">Title</label><input id="cv2-title" maxlength="180" placeholder="What do you want other students to know?" required></div>
           <div class="cv2-field"><label for="cv2-body">Details</label><textarea id="cv2-body" maxlength="4000" rows="5" placeholder="Give enough context to help someone respond." required></textarea></div>
-          <div class="cv2-field" id="cv2-poll-fields" hidden><label for="cv2-options">Poll options</label><input id="cv2-options" placeholder="Option 1, Option 2, Option 3"></div>
+          <div class="cv2-field" id="cv2-poll-fields" hidden><label for="cv2-options">Poll options</label><input id="cv2-options" placeholder="One option per line"></div>
           <label class="cv2-anon-toggle"><input id="cv2-anon" type="checkbox"><span>Post anonymously</span></label>
           <div class="cv2-actions-row"><span id="cv2-compose-status" class="cv2-note" aria-live="polite"></span><button class="cv2-post-btn" id="cv2-publish" type="button">Publish</button></div>
         </form>
@@ -138,7 +138,7 @@
 
     const $=s=>root.querySelector(s);
     const intentButtons=[...root.querySelectorAll("[data-intent]")];
-    intentButtons.forEach(btn=>btn.onclick=()=>{const kind=$("#cv2-kind");kind.value=btn.dataset.intent;intentButtons.forEach(x=>x.classList.toggle("active",x===btn));kind.dispatchEvent(new Event("change"))});
+    intentButtons.forEach(btn=>btn.onclick=()=>{const kind=$("#cv2-kind");kind.value=btn.dataset.intent==="question"?"discussion":btn.dataset.intent;intentButtons.forEach(x=>x.classList.toggle("active",x===btn));kind.dispatchEvent(new Event("change"))});
     intentButtons[0]?.classList.add("active");
     const tg=window.Telegram?.WebApp;
     const initData=tg?.initData||"";
@@ -153,25 +153,26 @@
       return d;
     }
     const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-    const pretty=s=>{try{return new Date(s).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"})}catch{return s}};
+    const parsePulseDate=s=>{const raw=String(s??"");if(!raw)return new Date(NaN);return new Date(/^\d{4}-\d{2}-\d{2}T/.test(raw)&&!/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw)?raw+"Z":raw)};const pretty=s=>{try{const d=parsePulseDate(s);return Number.isFinite(d.getTime())?d.toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}):String(s??"")}catch{return String(s??"")}};
 
-    async function loadFeed(){
+    let feedOffset=0;
+    async function loadFeed({append=false}={}){
       const feed=$("#cv2-feed");
       try{
-
-        const params=new URLSearchParams({sort});
-        if(kind) params.set("kind",kind);
-        if(personalized) params.set("personalized","1");
-        if(!savedOnly && community) params.set("community",community);
-        if(savedOnly) params.set("saved","1");
-        const q=$("#cv2-search").value.trim(); if(q) params.set("q",q);
+        const params=new URLSearchParams({sort,limit:"40",offset:String(append?feedOffset:0)});
+        if(kind)params.set("kind",kind);
+        if(personalized)params.set("personalized","1");
+        if(!savedOnly&&community)params.set("community",community);
+        if(savedOnly)params.set("saved","1");
+        const q=$("#cv2-search").value.trim();if(q)params.set("q",q);
         const data=await api("/api/community-v2/feed?"+params);
-        const feed=$("#cv2-feed");
-        if(!data.items?.length){feed.innerHTML='<div class="cv2-empty">Nothing here yet. Be the first student to start a conversation.</div>';return;}
-        feed.innerHTML=data.items.map(item=>`
+        if(!append)feed.replaceChildren();
+        const items=data.items||[];
+        if(!items.length&&!append){feed.innerHTML='<div class="cv2-empty">Nothing here yet. Be the first student to start a conversation.</div>';return}
+        const html=items.map(item=>`
           <article class="cv2-item" data-id="${item.id}" data-following="${Number(item.following)?1:0}" data-saved="${Number(item.saved)?1:0}">
             <div class="cv2-meta"><div class="cv2-wrap"><span class="cv2-badge">${esc(item.kind.replaceAll("_"," "))}</span>${Number(item.anonymous)?'<span class="cv2-badge anon">Anonymous</span>':''}<span class="cv2-note">${esc(item.community_slug)}</span>${item.updated_at?'<span class="cv2-item-edited">Edited</span>':''}</div><span class="cv2-note">${pretty(item.created_at)}</span></div>
-            <h3>${esc(item.title)}</h3><p class="cv2-body">${esc(item.body)}</p>
+            <h3>${esc(item.title)}</h3><p class="cv2-body ${String(item.body||"").length>420?"cv2-collapsed":""}">${esc(item.body)}</p>${String(item.body||"").length>420?'<button type="button" class="cv2-tool cv2-more-text" data-action="expand">Read more</button>':""}
             <div class="cv2-note">By ${esc(item.author)} · ${item.replies} replies · ${item.upvotes} helpful</div>
             ${Number(item.poll_options)?'<button type="button" class="cv2-tool" data-action="poll">📊 Poll</button><div class="cv2-poll-options" hidden></div>':''}
             <div class="cv2-actions">
@@ -179,15 +180,21 @@
               <button type="button" class="cv2-tool ${Number(item.my_vote)===-1?'active':''}" data-action="vote" data-value="-1">▼ ${item.downvotes}</button>
               <button type="button" class="cv2-tool" data-action="replies">💬 ${item.replies}</button>
               <button type="button" class="cv2-tool ${item.following?'active':''}" data-action="follow">${item.following?'Following':'Follow'}</button>
-              <button type="button" class="cv2-tool ${item.saved?'active':''}" data-action="save">${item.saved?'Saved':'Save'}</button>
-              ${item.mine?'<button type="button" class="cv2-tool" data-action="edit">Edit</button><button type="button" class="cv2-tool" data-action="delete">Delete</button>':''}
-              ${item.mine?'':'<button type="button" class="cv2-tool" data-action="moderate">More</button>'}
+              <button type="button" class="cv2-tool ${item.saved?'active':''}" data-action="save">${item.saved?'Saved':'Save'}</button><button type="button" class="cv2-tool" data-action="share">Share</button>
+              ${item.mine?'<button type="button" class="cv2-tool" data-action="edit">Edit</button><button type="button" class="cv2-tool" data-action="delete">Delete</button>':'<button type="button" class="cv2-tool" data-action="moderate">More</button>'}
             </div>
             <div class="cv2-replies" hidden></div>
           </article>`).join("");
+        feed.insertAdjacentHTML("beforeend",html);
+        feed.querySelector("#cv2-load-more-wrap")?.remove();
+        feedOffset=Number.isFinite(Number(data.next_offset))?Number(data.next_offset):0;
+        if(data.next_offset!==null&&data.next_offset!==undefined){
+          feed.insertAdjacentHTML("beforeend",'<div id="cv2-load-more-wrap" style="padding:14px 0;text-align:center"><button type="button" class="cv2-tool" id="cv2-load-more">Load more discussions</button></div>');
+          $("#cv2-load-more").onclick=async()=>{const b=$("#cv2-load-more");b.disabled=true;b.textContent="Loading…";try{await loadFeed({append:true})}catch{b.disabled=false;b.textContent="Try again"}};
+        }
       }catch{
-        feed.innerHTML='<div class="cv2-empty">Community could not be loaded. <button class="cv2-tool" id="cv2-feed-retry" type="button">Retry</button></div>';
-        $("#cv2-feed-retry").onclick=loadFeed;
+        if(!append){feed.innerHTML='<div class="cv2-empty">Community could not be loaded. <button class="cv2-tool" id="cv2-feed-retry" type="button">Retry</button></div>';$("#cv2-feed-retry").onclick=loadFeed}
+        else throw new Error("feed_failed");
       }
     }
     async function loadCommunities(){
@@ -205,7 +212,7 @@
       try{
         const data=await api("/api/community-v2/communities");
         const names=["campus",contextCommunity,...(data.communities||[]).map(x=>x.community_slug)].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).slice(0,16);
-        $("#cv2-communities").innerHTML=names.map(n=>`<button type="button" class="cv2-community-chip" data-community="${esc(n)}">${esc(n)}</button>`).join("");
+        $("#cv2-communities").innerHTML=names.map(n=>`<button type="button" class="cv2-community-chip" data-community="${esc(n)}">${esc(n)}</button>`).join("");const list=$("#cv2-community-options");if(list)list.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join("");
       }catch{
         $("#cv2-communities").innerHTML='<span class="cv2-note">Communities will appear when student activity is available.</span>';
       }
@@ -231,7 +238,7 @@
       const status=$("#cv2-compose-status"),button=$("#cv2-publish");
       try{
         button.disabled=true;status.textContent=editingId?"Saving…":"Publishing…";
-        const postKind=$("#cv2-kind").value,options=$("#cv2-options").value.split(",").map(x=>x.trim()).filter(Boolean);
+        const postKind=$("#cv2-kind").value,options=$("#cv2-options").value.split(/[\n,]/).map(x=>x.trim()).filter(Boolean);
         if(!$("#cv2-title").value.trim()||!$("#cv2-body").value.trim()) throw new Error("invalid_item");
         if(editingId) await api("/api/community-v2/items",{method:"PATCH",body:JSON.stringify({item_id:editingId,title:$("#cv2-title").value,body:$("#cv2-body").value})});
         else if(postKind==="discussion"&&options.length>=2) await api("/api/community-v2/polls",{method:"POST",body:JSON.stringify({kind:postKind,title:$("#cv2-title").value,body:$("#cv2-body").value,community_slug:$("#cv2-community").value,anonymous:$("#cv2-anon").checked,options})});
@@ -262,15 +269,11 @@
       if(!button||!item)return;
       const id=Number(item.dataset.id),action=button.dataset.action;
       try{
+        if(action==="share"){await window.__pulseShare?.("post-"+id,"VGU Pulse discussion: "+String(item.querySelector("h3")?.textContent||""));return}
+        if(action==="expand"){const body=item.querySelector(".cv2-body");if(body){body.classList.remove("cv2-collapsed");button.remove()}return}
         if(action==="vote")await api("/api/community-v2/vote",{method:"POST",body:JSON.stringify({item_id:id,vote:Number(button.dataset.value)})});
-        if(action==="follow"){
-          const following=item.dataset.following==="1";
-          await api("/api/community-v2/follow"+(following?"?item_id="+encodeURIComponent(id):""),following?{method:"DELETE"}:{method:"POST",body:JSON.stringify({item_id:id})});
-        }
-        if(action==="save"){
-          const saved=item.dataset.saved==="1";
-          await api("/api/community-v2/save"+(saved?"?item_id="+encodeURIComponent(id):""),saved?{method:"DELETE"}:{method:"POST",body:JSON.stringify({item_id:id})});
-        }
+        if(action==="follow"){const following=item.dataset.following==="1";item.dataset.following=following?"0":"1";button.classList.toggle("active",!following);button.textContent=following?"Follow":"Following";try{await api("/api/community-v2/follow"+(following?"?item_id="+encodeURIComponent(id):""),following?{method:"DELETE"}:{method:"POST",body:JSON.stringify({item_id:id})})}catch(e){item.dataset.following=following?"1":"0";button.classList.toggle("active",following);button.textContent=following?"Following":"Follow";throw e}return}
+        if(action==="save"){const saved=item.dataset.saved==="1";item.dataset.saved=saved?"0":"1";button.classList.toggle("active",!saved);button.textContent=saved?"Save":"Saved";try{await api("/api/community-v2/save"+(saved?"?item_id="+encodeURIComponent(id):""),saved?{method:"DELETE"}:{method:"POST",body:JSON.stringify({item_id:id})})}catch(e){item.dataset.saved=saved?"1":"0";button.classList.toggle("active",saved);button.textContent=saved?"Saved":"Save";throw e}return}
         if(action==="edit"){
           const data=await api("/api/community-v2/items?item_id="+encodeURIComponent(id));
           const current=data.item;
@@ -292,20 +295,15 @@
         }
         if(action==="replies"){
           const box=item.querySelector(".cv2-replies");if(!box.hidden){box.hidden=true;return}
-          const d=await api("/api/community-v2/replies?item_id="+id);
-          box.innerHTML=(d.replies||[]).map(r=>`<div class="cv2-reply"><strong>${esc(r.author)}</strong><div>${esc(r.body)}</div><span class="cv2-note">${pretty(r.created_at)}</span> ${r.mine?'<button class="cv2-tool" data-reply-delete="'+r.id+'" type="button">Delete</button>':'<button class="cv2-tool" data-reply-report="'+r.id+'" type="button">Report</button>'}</div>`).join("")||'<span class="cv2-note">No replies yet.</span>';
-          box.insertAdjacentHTML("beforeend",`<div class="cv2-reply-compose"><textarea class="cv2-reply-input" placeholder="Reply to this discussion…"></textarea><button class="cv2-post-btn cv2-reply-send" type="button">Reply</button></div>`);
-          box.hidden=false;
-          box.querySelector(".cv2-reply-send").onclick=async()=>{const input=box.querySelector(".cv2-reply-input");await api("/api/community-v2/replies",{method:"POST",body:JSON.stringify({item_id:id,body:input.value,anonymous:false})});await loadFeed()};
-          return;
+          const renderReplies=async()=>{const d=await api("/api/community-v2/replies?item_id="+id);box.innerHTML=(d.replies||[]).map(r=>`<div class="cv2-reply"><strong>${esc(r.author)}</strong><div>${esc(r.body)}</div><span class="cv2-note">${pretty(r.created_at)}</span> ${r.mine?'<button class="cv2-tool" data-reply-delete="'+r.id+'" type="button">Delete</button>':'<button class="cv2-tool" data-reply-report="'+r.id+'" type="button">Report</button>'}</div>`).join("")||'<span class="cv2-note">No replies yet.</span>';box.insertAdjacentHTML("beforeend",`<div class="cv2-reply-compose"><textarea class="cv2-reply-input" placeholder="Reply to this discussion…"></textarea><button class="cv2-post-btn cv2-reply-send" type="button">Reply</button></div>`);box.hidden=false;box.querySelector(".cv2-reply-send").onclick=async()=>{const input=box.querySelector(".cv2-reply-input"),send=box.querySelector(".cv2-reply-send");if(!input.value.trim())return;send.disabled=true;try{await api("/api/community-v2/replies",{method:"POST",body:JSON.stringify({item_id:id,body:input.value,anonymous:false})});input.value="";await renderReplies()}catch{send.disabled=false;send.textContent="Try again";setTimeout(()=>{if(send.isConnected)send.textContent="Reply"},2200)}}};await renderReplies();return;
         }
         await loadFeed();
-      }catch{button.textContent="Try again"}
+      }catch{const original=button.textContent;button.textContent="Try again";setTimeout(()=>{if(button.isConnected&&button.textContent==="Try again")button.textContent=original},2200)}
     });
 
     $("#cv2-more-close").onclick=()=>$("#cv2-more-dialog")?.close?.();
     $("#cv2-more-report").onclick=async()=>{if(!moderationItemId)return;try{await api("/api/community-v2/report",{method:"POST",body:JSON.stringify({item_id:moderationItemId,reason:$("#cv2-report-reason").value})});$("#cv2-more-status").textContent="Reported. Thank you.";setTimeout(()=>$("#cv2-more-dialog")?.close?.(),500)}catch(e){$("#cv2-more-status").textContent=e.message==="cannot_report_own_item"?"You cannot report your own post.":"Could not report this post."}};
-    $("#cv2-more-block").onclick=async()=>{if(!moderationItemId)return;try{await api("/api/community-v2/block",{method:"POST",body:JSON.stringify({item_id:moderationItemId}));$("#cv2-more-status").textContent="Author blocked.";setTimeout(async()=>{$("#cv2-more-dialog")?.close?.();await loadFeed()},500)}catch{$("#cv2-more-status").textContent="Could not block this author."}};
+    $("#cv2-more-block").onclick=async()=>{if(!moderationItemId)return;try{await api("/api/community-v2/block",{method:"POST",body:JSON.stringify({item_id:moderationItemId})});$("#cv2-more-status").textContent="Author blocked.";setTimeout(async()=>{$("#cv2-more-dialog")?.close?.();await loadFeed()},500)}catch{$("#cv2-more-status").textContent="Could not block this author."}};
     const askView=document.querySelector('[data-view-panel="ask"]'),askQuestion=document.querySelector("#search-query");
     if(askView&&askQuestion){
       const bridge=document.createElement("div");bridge.className="cv2-ask-bridge";
@@ -315,6 +313,15 @@
       askQuestion.parentElement?.appendChild(bridge);
     }
 
+    window.__pulseCommunityOpenItem=async(id)=>{
+      try{
+        const data=await api("/api/community-v2/items?item_id="+encodeURIComponent(id));const item=data.item;
+        $("#cv2-search").value=String(item.title||"").slice(0,120);kind="";community="";savedOnly=false;personalized=false;sort="new";syncTabs();await loadFeed();
+        const card=document.querySelector('.cv2-item[data-id="'+CSS.escape(String(id))+'"]');if(card){card.scrollIntoView({block:"center",behavior:"smooth"});card.querySelector('[data-action="replies"]')?.click()}
+      }catch{toast("That discussion could not be opened.")}
+    };
+    const startParam=new URLSearchParams(location.search).get("startapp")||new URLSearchParams(location.search).get("tgWebAppStartParam")||window.Telegram?.WebApp?.initDataUnsafe?.start_param||"";
+    if(/^(post|poll)-\d+$/.test(startParam)){const id=startParam.split("-")[1];setTimeout(()=>{document.querySelector('[data-view="community"]')?.click();setTimeout(()=>window.__pulseCommunityOpenItem?.(id),300)},900)}
     window.__pulseCommunitySaved=async()=>{savedOnly=true;sort="new";kind="";personalized=false;$("#cv2-search").value="";syncTabs();await loadFeed()};
     window.__pulseCommunityAll=async()=>{savedOnly=false;sort="trending";kind="";personalized=false;syncTabs();await loadFeed()};
     loadCommunities();

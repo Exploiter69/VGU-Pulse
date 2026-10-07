@@ -171,6 +171,19 @@ export default {
       }, healthy ? 200 : 503);
     }
 
+    if (request.method === "GET" && url.pathname === "/api/share-link") {
+      const target = (url.searchParams.get("target") ?? "home").trim().replace(/[^a-zA-Z0-9:_-]/g, "").slice(0, 64) || "home";
+      const token = getBotToken(env);
+      if (!token) return json({ ok: false, error: "bot_not_configured" }, 503);
+      try {
+        const response = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+        const payload = await response.json() as { ok?: boolean; result?: { username?: string } };
+        const username = payload.result?.username;
+        if (!response.ok || !payload.ok || !username) return json({ ok: false, error: "bot_username_unavailable" }, 503);
+        return json({ ok: true, url: `https://t.me/${username}?startapp=${encodeURIComponent(target)}` });
+      } catch { return json({ ok: false, error: "share_link_unavailable" }, 503); }
+    }
+
     if (request.method === "POST" && url.pathname === "/telegram/webhook") {
       return handleTelegramUpdate(request, env);
     }
