@@ -357,10 +357,24 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
       const id=Number(input.item_id); const reason=clamp(input.reason,LIMITS.reason)||"other";
       const result=await env.DB.prepare("INSERT OR IGNORE INTO community_reports(item_id,telegram_user_id,reason) VALUES(?,?,?)").bind(id,String(user.id),reason).run();
-      if(Number(result.meta.changes??0)) await env.DB.batch([
-        env.DB.prepare("UPDATE community_items SET report_count=report_count+1,status=CASE WHEN report_count+1>=3 THEN 'hidden' ELSE status END WHERE id=?").bind(id),
-        env.DB.prepare("UPDATE community_replies SET report_count=report_count+1,status=CASE WHEN report_count+1>=3 THEN 'hidden' ELSE status END WHERE item_id=?").bind(id),
-      ]);
+      if(Number(result.meta.changes??0)) await env.DB.prepare(
+        "UPDATE community_items SET report_count=report_count+1,status=CASE WHEN report_count+1>=3 THEN 'hidden' ELSE status END WHERE id=?",
+      ).bind(id).run();
+      return json({ok:true});
+    }
+    if(request.method==="POST" && url.pathname==="/api/community-v2/report-reply"){
+      const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
+      const id=Number(input.reply_id); if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_reply"},400);
+      const result=await env.DB.prepare("UPDATE community_replies SET report_count=report_count+1,status=CASE WHEN report_count+1>=3 THEN 'hidden' ELSE status END WHERE id=? AND status='published'").bind(id).run();
+      if(!Number(result.meta.changes??0)) return json({ok:false,error:"reply_not_found"},404);
+      return json({ok:true});
+    }
+    if(request.method==="POST" && url.pathname==="/api/community-v2/block"){
+      const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
+      const id=Number(input.item_id); if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
+      const owner=await env.DB.prepare("SELECT telegram_user_id FROM community_items WHERE id=?").bind(id).first<{telegram_user_id:string}>();
+      if(!owner || owner.telegram_user_id===String(user.id)) return json({ok:false,error:"invalid_target"},400);
+      await env.DB.prepare("INSERT OR IGNORE INTO student_profile_blocks(blocker_telegram_user_id,blocked_telegram_user_id) VALUES(?,?)").bind(String(user.id),owner.telegram_user_id).run();
       return json({ok:true});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/preferences"){
