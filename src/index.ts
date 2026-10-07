@@ -376,6 +376,26 @@ export default {
       }
     }
 
+    if (request.method === "POST" && url.pathname === "/api/student-posts/replies/vote") {
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
+      if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+      let body: { reply_id?: unknown; vote?: unknown };
+      try { body = (await request.json()) as { reply_id?: unknown; vote?: unknown }; }
+      catch { return json({ ok: false, error: "invalid_json" }, 400); }
+      const replyId = Number(body.reply_id);
+      if (!Number.isSafeInteger(replyId) || replyId < 1 || (body.vote !== 1 && body.vote !== -1)) return json({ ok: false, error: "invalid_vote" }, 400);
+      try {
+        await voteStudentReply(env.DB, replyId, validated.user.id, body.vote as -1 | 1);
+        const owner = await env.DB.prepare("SELECT post_id FROM student_post_replies WHERE id = ?").bind(replyId).first<{ post_id: number }>();
+        const replies = owner ? await listStudentReplies(env.DB, owner.post_id, 50, validated.user.id) : [];
+        return json({ ok: true, reply: replies.find((item) => item.id === replyId) });
+      } catch (error) {
+        if (error instanceof Error && error.message === "reply_not_found") return json({ ok: false, error: "reply_not_found" }, 404);
+        return json({ ok: false, error: "vote_failed" }, 500);
+      }
+    }
+
     if (request.method === "POST" && url.pathname === "/api/student-posts/replies") {
       if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
       const initData = request.headers.get("x-telegram-init-data") ?? "";
