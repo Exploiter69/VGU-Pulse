@@ -155,20 +155,21 @@
     const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
     const parsePulseDate=s=>{const raw=String(s??"");if(!raw)return new Date(NaN);return new Date(/^\d{4}-\d{2}-\d{2}T/.test(raw)&&!/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw)?raw+"Z":raw)};const pretty=s=>{try{const d=parsePulseDate(s);return Number.isFinite(d.getTime())?d.toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}):String(s??"")}catch{return String(s??"")}};
 
-    async function loadFeed(){
+    let feedOffset=0;
+    async function loadFeed({append=false}={}){
       const feed=$("#cv2-feed");
       try{
-
-        const params=new URLSearchParams({sort});
-        if(kind) params.set("kind",kind);
-        if(personalized) params.set("personalized","1");
-        if(!savedOnly && community) params.set("community",community);
-        if(savedOnly) params.set("saved","1");
-        const q=$("#cv2-search").value.trim(); if(q) params.set("q",q);
+        const params=new URLSearchParams({sort,limit:"40",offset:String(append?feedOffset:0)});
+        if(kind)params.set("kind",kind);
+        if(personalized)params.set("personalized","1");
+        if(!savedOnly&&community)params.set("community",community);
+        if(savedOnly)params.set("saved","1");
+        const q=$("#cv2-search").value.trim();if(q)params.set("q",q);
         const data=await api("/api/community-v2/feed?"+params);
-        const feed=$("#cv2-feed");
-        if(!data.items?.length){feed.innerHTML='<div class="cv2-empty">Nothing here yet. Be the first student to start a conversation.</div>';return;}
-        feed.innerHTML=data.items.map(item=>`
+        if(!append)feed.replaceChildren();
+        const items=data.items||[];
+        if(!items.length&&!append){feed.innerHTML='<div class="cv2-empty">Nothing here yet. Be the first student to start a conversation.</div>';return}
+        const html=items.map(item=>`
           <article class="cv2-item" data-id="${item.id}" data-following="${Number(item.following)?1:0}" data-saved="${Number(item.saved)?1:0}">
             <div class="cv2-meta"><div class="cv2-wrap"><span class="cv2-badge">${esc(item.kind.replaceAll("_"," "))}</span>${Number(item.anonymous)?'<span class="cv2-badge anon">Anonymous</span>':''}<span class="cv2-note">${esc(item.community_slug)}</span>${item.updated_at?'<span class="cv2-item-edited">Edited</span>':''}</div><span class="cv2-note">${pretty(item.created_at)}</span></div>
             <h3>${esc(item.title)}</h3><p class="cv2-body ${String(item.body||"").length>420?"cv2-collapsed":""}">${esc(item.body)}</p>${String(item.body||"").length>420?'<button type="button" class="cv2-tool cv2-more-text" data-action="expand">Read more</button>':""}
@@ -180,14 +181,20 @@
               <button type="button" class="cv2-tool" data-action="replies">💬 ${item.replies}</button>
               <button type="button" class="cv2-tool ${item.following?'active':''}" data-action="follow">${item.following?'Following':'Follow'}</button>
               <button type="button" class="cv2-tool ${item.saved?'active':''}" data-action="save">${item.saved?'Saved':'Save'}</button>
-              ${item.mine?'<button type="button" class="cv2-tool" data-action="edit">Edit</button><button type="button" class="cv2-tool" data-action="delete">Delete</button>':''}
-              ${item.mine?'':'<button type="button" class="cv2-tool" data-action="moderate">More</button>'}
+              ${item.mine?'<button type="button" class="cv2-tool" data-action="edit">Edit</button><button type="button" class="cv2-tool" data-action="delete">Delete</button>':'<button type="button" class="cv2-tool" data-action="moderate">More</button>'}
             </div>
             <div class="cv2-replies" hidden></div>
           </article>`).join("");
+        feed.insertAdjacentHTML("beforeend",html);
+        feed.querySelector("#cv2-load-more")?.remove();
+        feedOffset=Number.isFinite(Number(data.next_offset))?Number(data.next_offset):0;
+        if(data.next_offset!==null&&data.next_offset!==undefined){
+          feed.insertAdjacentHTML("beforeend",'<div id="cv2-load-more-wrap" style="padding:14px 0;text-align:center"><button type="button" class="cv2-tool" id="cv2-load-more">Load more discussions</button></div>');
+          $("#cv2-load-more").onclick=async()=>{const b=$("#cv2-load-more");b.disabled=true;b.textContent="Loading…";try{await loadFeed({append:true})}catch{b.disabled=false;b.textContent="Try again"}};
+        }
       }catch{
-        feed.innerHTML='<div class="cv2-empty">Community could not be loaded. <button class="cv2-tool" id="cv2-feed-retry" type="button">Retry</button></div>';
-        $("#cv2-feed-retry").onclick=loadFeed;
+        if(!append){feed.innerHTML='<div class="cv2-empty">Community could not be loaded. <button class="cv2-tool" id="cv2-feed-retry" type="button">Retry</button></div>';$("#cv2-feed-retry").onclick=loadFeed}
+        else throw new Error("feed_failed");
       }
     }
     async function loadCommunities(){
