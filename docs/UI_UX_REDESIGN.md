@@ -1,98 +1,132 @@
-# VGU-Pulse UI/UX Redesign
+# VGU Pulse UI/UX — Simplification Pass
 
-## Status
+Date: 2026-10-07
 
-- Research: complete
-- Product direction: Student OS
-- Frontend redesign: complete in source
-- Screen-level UX completion: implemented across Home, Ask, Community, People, Campus, Academics, Tools and Me
-- Telegram-native interaction layer: implemented (theme, viewport, Back Button, contextual Main Button, haptics, fullscreen action)
-- Backend/API architecture: unchanged
-- Database migrations: none
-- Paid infrastructure: none
-- Production deployment: pending local validation + Wrangler deploy
+## Why this pass exists
 
-## Primary information architecture
+The previous UI had the right feature set but the wrong information hierarchy. It exposed too many concepts at once:
 
-VGU-Pulse now presents five primary destinations:
+- five primary navigation destinations plus three hidden secondary views
+- a legacy Community surface and a second V2 Community surface on the same screen
+- many community types presented as equally important tabs
+- compose fields permanently visible instead of being an intentional action
+- People, Academics and Tools reachable from scattered shortcuts rather than one clear home
+- notifications and reputation mixed into the Community experience
 
-1. **Home** — what matters today
-2. **Ask** — VGU information and deterministic search
-3. **Community** — student discussions, with People reachable as a related workflow
-4. **Campus** — practical VGU services and facilities
-5. **Me** — personal Pulse, academic plan, profile, and utilities
+The result was feature discoverability without task discoverability: students could see many capabilities but could not predict where a task belonged.
 
-Existing views remain in the application so no feature is discarded:
-- Academics
-- People
-- Tools
-- Personal Pulse
+## New mental model
 
-They are reached contextually from the five primary destinations.
+Pulse has five stable top-level destinations:
 
-## Design principles
+1. **Home** — what matters today.
+2. **Ask** — find an answer or the right official source.
+3. **Community** — talk to students and find student knowledge.
+4. **Campus** — find services, places and official portals.
+5. **Me** — your plan, profile, notifications and private tools.
 
-- Intent before feature names.
-- Strong hierarchy instead of equal-weight cards.
-- Official vs student-reported information is always visually distinguishable.
-- Mobile-first Telegram Mini App behavior.
-- Desktop uses the same information architecture with a persistent side navigation.
-- Five primary destinations replace the previous eight-item top navigation.
-- Browser-only academic planning and calculators remain local.
-- Telegram identity remains optional for public browsing and required for participation.
-- No unsolicited messaging.
-- No private ERP/Digicampus data is invented or exposed.
-- No new paid services or infrastructure.
+Secondary capabilities live inside the destination that explains them:
 
-## Visual system
+- People → Community workflow / personal profile in Me.
+- Academics → Home/Me → Study plan.
+- Tools → Me → Student tools.
+- Notifications → Me.
+- Reputation → earned through Community, displayed with personal activity.
+- Community topics → feed filters, not primary navigation.
 
-The redesign introduces shared tokens for:
-- surfaces
-- borders
-- typography
-- accent
-- semantic success/warning/danger states
-- spacing and radii
-- focus states
-- reduced-motion behavior
+## Community model
 
-Shared patterns include:
-- app header
-- navigation
-- section headings
-- trust badges
-- action rows
-- quick links
-- search surfaces
-- responsive cards
-- mobile bottom navigation
-- desktop side navigation
+Community is now feed-first.
 
-## Implemented UX scope
+Always visible:
+- Trending
+- Latest
+- Confessions
+- Campus
+- Exam survival
+- Search
+- Filter
+- + Post
 
-- Five primary destinations: Home, Ask, Community, Campus, Me.
-- Home is intent-first: today, verified information, local deadlines, student activity and shortcuts.
-- Ask Pulse is the universal VGU knowledge surface with visually distinct Official VGU and Student-reported results.
-- Community is discussion-first with compose, filters, voting/replies and contextual People/My activity access.
-- People is discovery-first with search, filters, opt-in profile editing, block/report controls and visible deterministic match reasons where available.
-- Campus is need-first with search, category shortcuts, official service directory and official portal links.
-- Academics is task-first with Today/Upcoming/Overdue KPIs and the existing browser-only planner.
-- Tools remains browser-only and is reachable contextually from Home and Me.
-- Me is the personal space for activity, deadlines, partner suggestions, profile access, tools and settings.
-- Telegram theme parameters, viewport changes, Back Button, contextual Main Button, haptics and fullscreen are wired without changing backend contracts.
-- Native `confirm()` is intentionally avoided because the Mini App uses in-page confirmation patterns.
+Secondary:
+- senior → junior
+- teammates
+- notes/resources
+- PYQs
+- teacher/elective advice
+- lost & found
+- rides
+- roommates
+- exchange
+- opportunities
+- branch/year communities
 
-## Validation target
+Those remain available through the filter/composer surfaces without competing with the core feed.
 
-Before production release, validate:
-- `npm test`
-- `npm run check`
-- Telegram Mini App on narrow mobile viewport
-- Telegram Mini App on desktop
-- Home / Ask / Community / Campus / Me navigation
-- contextual Academics / People / Tools access
-- Telegram-authenticated actions
-- public browsing without Telegram authentication
-- local academic planner persistence
-- search and API error states
-- safe-area spacing around mobile navigation
+## Visual direction
+
+The interface uses a calm dark "campus utility" system:
+
+- one primary accent
+- semantic colors only for trust/status
+- fewer bordered cards
+- more whitespace and separators
+- strong page titles
+- compact secondary controls
+- dialogs/sheets for advanced actions
+- persistent primary navigation
+- minimum touch-friendly controls
+
+Official and student-owned information remain visually distinct.
+
+## UX rules
+
+1. Never expose a feature merely because it exists.
+2. Prefer one obvious action over several equivalent actions.
+3. Keep top-level navigation stable.
+4. Keep related features together.
+5. Put advanced filters behind Filter/More rather than making them permanent UI.
+6. Compose is an action, not the entire page.
+7. Search should search the current mental domain.
+8. Trust labels should explain ownership, not decorate every card.
+9. Empty/loading/error states must explain what the student can do next.
+10. Preserve Telegram-native navigation and safe-area behavior.
+
+## Research basis
+
+Apple's current HIG recommends tab bars for top-level navigation, keeping the number of visible destinations small, labeling tabs clearly, and avoiding overflow tabs. citeturn1search0turn1search3
+
+Discord's mobile navigation work similarly found that primary features became easier to discover when promoted into a small, consistent tab system, while secondary navigation remained within the current section. citeturn0search0turn0search2
+
+Current university-app examples also converge on a small set of primary destinations with contextual access to events, services, academics, community and profile rather than exposing every feature as a top-level destination. citeturn2search0turn2search4turn2search9
+
+The redesign also follows touch-target guidance: important custom controls should be comfortably tappable, with 44px as a strong accessibility target where practical. citeturn1search6
+
+## Current implementation status
+
+- Legacy Community duplicate surface removed.
+- Community V2 rebuilt as a feed-first experience.
+- Composer moved into a modal sheet.
+- Advanced topic filters moved into a filter sheet.
+- Community discovery moved into a secondary disclosure.
+- People remains accessible from Community/Me without becoming another primary tab.
+- Global visual hierarchy simplified.
+- Backend/API/database contracts remain unchanged.
+- No paid infrastructure introduced.
+
+## Validation
+
+Required before production deployment:
+
+- TypeScript check
+- full test suite
+- external and inline JavaScript syntax
+- duplicate-ID guard
+- Telegram Mini App narrow viewport
+- Telegram Mini App desktop viewport
+- Home → Ask → Community → Campus → Me navigation
+- Community feed/filter/search/post/reply/vote/follow/save/report/block
+- Ask → student discussion bridge
+- Me → planner/profile/tools/notifications
+- loading, empty and failure states
+- safe-area and Telegram Back/Main Button behavior
