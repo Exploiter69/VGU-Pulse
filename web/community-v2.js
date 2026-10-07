@@ -108,7 +108,7 @@
           </div>
           <div class="cv2-field"><label for="cv2-title">Title</label><input id="cv2-title" maxlength="180" placeholder="What do you want other students to know?" required></div>
           <div class="cv2-field"><label for="cv2-body">Details</label><textarea id="cv2-body" maxlength="4000" rows="5" placeholder="Give enough context to help someone respond." required></textarea></div>
-          <div class="cv2-field" id="cv2-poll-fields" hidden><label for="cv2-options">Poll options</label><input id="cv2-options" placeholder="Option 1, Option 2, Option 3"></div>
+          <div class="cv2-field" id="cv2-poll-fields" hidden><label for="cv2-options">Poll options</label><input id="cv2-options" placeholder="One option per line"></div>
           <label class="cv2-anon-toggle"><input id="cv2-anon" type="checkbox"><span>Post anonymously</span></label>
           <div class="cv2-actions-row"><span id="cv2-compose-status" class="cv2-note" aria-live="polite"></span><button class="cv2-post-btn" id="cv2-publish" type="button">Publish</button></div>
         </form>
@@ -138,7 +138,7 @@
 
     const $=s=>root.querySelector(s);
     const intentButtons=[...root.querySelectorAll("[data-intent]")];
-    intentButtons.forEach(btn=>btn.onclick=()=>{const kind=$("#cv2-kind");kind.value=btn.dataset.intent;intentButtons.forEach(x=>x.classList.toggle("active",x===btn));kind.dispatchEvent(new Event("change"))});
+    intentButtons.forEach(btn=>btn.onclick=()=>{const kind=$("#cv2-kind");kind.value=btn.dataset.intent==="question"?"discussion":btn.dataset.intent;intentButtons.forEach(x=>x.classList.toggle("active",x===btn));kind.dispatchEvent(new Event("change"))});
     intentButtons[0]?.classList.add("active");
     const tg=window.Telegram?.WebApp;
     const initData=tg?.initData||"";
@@ -205,7 +205,7 @@
       try{
         const data=await api("/api/community-v2/communities");
         const names=["campus",contextCommunity,...(data.communities||[]).map(x=>x.community_slug)].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).slice(0,16);
-        $("#cv2-communities").innerHTML=names.map(n=>`<button type="button" class="cv2-community-chip" data-community="${esc(n)}">${esc(n)}</button>`).join("");
+        $("#cv2-communities").innerHTML=names.map(n=>`<button type="button" class="cv2-community-chip" data-community="${esc(n)}">${esc(n)}</button>`).join("");const list=$("#cv2-community-options");if(list)list.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join("");
       }catch{
         $("#cv2-communities").innerHTML='<span class="cv2-note">Communities will appear when student activity is available.</span>';
       }
@@ -231,7 +231,7 @@
       const status=$("#cv2-compose-status"),button=$("#cv2-publish");
       try{
         button.disabled=true;status.textContent=editingId?"Saving…":"Publishing…";
-        const postKind=$("#cv2-kind").value,options=$("#cv2-options").value.split(",").map(x=>x.trim()).filter(Boolean);
+        const postKind=$("#cv2-kind").value,options=$("#cv2-options").value.split(/[\n,]/).map(x=>x.trim()).filter(Boolean);
         if(!$("#cv2-title").value.trim()||!$("#cv2-body").value.trim()) throw new Error("invalid_item");
         if(editingId) await api("/api/community-v2/items",{method:"PATCH",body:JSON.stringify({item_id:editingId,title:$("#cv2-title").value,body:$("#cv2-body").value})});
         else if(postKind==="discussion"&&options.length>=2) await api("/api/community-v2/polls",{method:"POST",body:JSON.stringify({kind:postKind,title:$("#cv2-title").value,body:$("#cv2-body").value,community_slug:$("#cv2-community").value,anonymous:$("#cv2-anon").checked,options})});
