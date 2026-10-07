@@ -618,6 +618,14 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
   <p id="question" class="muted">Loading today's question…</p><div id="options"></div>
   <p class="settings-note">Poll participation is student activity, not an official VGU announcement.</p>
 </section>
+<section class="card">
+  <div class="section-heading"><div><div class="eyebrow">Settings</div><h2>Pulse preferences</h2></div></div>
+  <p class="settings-note">Theme follows Telegram when opened as a Mini App. Your academic planner stays on this device.</p>
+  <div class="view-tools">
+    <button type="button" class="inline-link" id="reset-academic">Reset local planner</button>
+    <button type="button" class="inline-link" id="telegram-fullscreen">Use fullscreen</button>
+  </div>
+</section>
 </div></main></main>
 <script>
 const tg=window.Telegram?.WebApp;
@@ -665,7 +673,9 @@ function syncMainButton(target){
   button.setText("Add to my plan");
   button.color=tg.themeParams?.button_color||"#7db5ff";
   button.textColor=tg.themeParams?.button_text_color||"#07111f";
-  button.onClick?.(()=>document.querySelector("#academic-form")?.requestSubmit());
+  button.offClick?.(window.__pulseMainHandler);
+  window.__pulseMainHandler=()=>{haptic("impact");document.querySelector("#academic-form")?.requestSubmit()};
+  button.onClick?.(window.__pulseMainHandler);
   button.show();
  }
 }
@@ -924,12 +934,22 @@ async function loadProfiles(){
   const meta=document.createElement("div");meta.className="muted";meta.textContent=p.program+" • "+p.branch+" • Year "+p.year;
   const bio=document.createElement("p");bio.className="muted";bio.textContent=p.bio;
   const looking=document.createElement("p");const strong=document.createElement("strong");strong.textContent="Looking for: ";looking.append(strong,document.createTextNode(p.looking_for));
+  const reason=document.createElement("span");reason.className="match-reason";
+  const me=window.__pulseProfile;
+  const reasons=[];
+  if(me?.branch&&p.branch===me.branch)reasons.push("same branch");
+  if(me?.program&&p.program===me.program)reasons.push("same program");
+  if(me?.year&&p.year===me.year)reasons.push("same year");
+  const goals=(me?.looking_for||"").toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(x=>x.length>2);
+  if(goals.some(g=>(p.looking_for||"").toLowerCase().includes(g)))reasons.push("shared goal");
+  if(reasons.length)reason.textContent=reasons.join(" · ");
+  else reason.textContent="Opt-in student";
   const actions=document.createElement("div");
   const report=document.createElement("button");report.className="report";report.type="button";report.textContent="Report profile";
   report.onclick=async()=>{if(!initData){status.textContent="Open Pulse from Telegram to report a profile.";return}report.disabled=true;const x=await fetch("/api/student-profile/report",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({profile_public_id:p.public_id})});status.textContent=x.ok?"Profile report recorded.":"Unable to record report.";if(x.ok)await loadProfiles();else report.disabled=false};
   const block=document.createElement("button");block.className="report";block.type="button";block.textContent="Block";
   block.onclick=async()=>{if(!initData)return;block.disabled=true;const x=await fetch("/api/student-profile/block",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({public_id:p.public_id})});if(x.ok){profileStatus.textContent="Profile blocked and removed from your discovery.";await loadBlockedPeople();await loadProfiles()}else block.disabled=false};
-  actions.append(report,block);item.append(name,meta,bio,looking,actions);profiles.append(item);
+  actions.append(report,block);item.append(name,meta,bio,looking,reason,actions);profiles.append(item);
  }
 }
 async function submitProfile(e){
@@ -1132,6 +1152,7 @@ function renderPersonalAcademicPlan(){
 function renderPersonalPulse(data){
  if(!myPulseStatus)return;
  const pulse=data?.pulse;
+ window.__pulseProfile=pulse?.profile||null;
  if(!pulse){myPulseStatus.textContent="Create an opt-in profile in People to personalize your Pulse.";renderPersonalAcademicPlan();return}
  const stats=[pulse.stats?.posts||0,pulse.stats?.replies||0,pulse.stats?.votes||0,pulse.profile?"Ready":"Not set"];
  myPulseStats?.querySelectorAll(".today-stat strong").forEach((el,i)=>el.textContent=String(stats[i]));
@@ -1213,6 +1234,13 @@ document.querySelectorAll("[data-campus-category]").forEach(button=>button.addEv
  }
  if(tg?.ready)tg.ready();
 }
+document.getElementById("reset-academic")?.addEventListener("click",()=>{
+ if(!window.confirm("Reset your local academic planner? This cannot be undone."))return;
+ localStorage.removeItem(ACADEMIC_KEY);renderAcademic();renderAcademicSummary();renderPersonalAcademicPlan();toast("Local planner reset.");
+});
+document.getElementById("telegram-fullscreen")?.addEventListener("click",async()=>{
+ try{await tg?.requestFullscreen?.();toast("Fullscreen enabled.");}catch{toast("Fullscreen is unavailable here.");}
+});
 const toastNode=document.createElement("div");toastNode.id="pulse-toast";toastNode.className="toast";toastNode.setAttribute("role","status");toastNode.setAttribute("aria-live","polite");document.body.append(toastNode);
 boot().catch(()=>{status.textContent="Unable to connect to Pulse.";toast("Pulse is temporarily unavailable.")});
 </script>
