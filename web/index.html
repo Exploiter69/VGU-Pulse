@@ -623,6 +623,7 @@ async function boot(){
   try{await loadProfile()}catch{}
   try{await loadStudentPosts()}catch{}
   try{await loadProfiles()}catch{}
+  try{await loadBlockedPeople()}catch{}
  }
  if(tg?.ready)tg.ready();
 }
