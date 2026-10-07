@@ -418,6 +418,8 @@ async function loadReplies(postId,target){
   const item=document.createElement("div");item.className="reply";
   const meta=document.createElement("small");meta.className="muted";meta.textContent=reply.author_name+" • student-reported";
   const text=document.createElement("p");text.className="muted";text.textContent=reply.body;
+  const actions=document.createElement("div");actions.style.display="flex";actions.style.flexWrap="wrap";actions.style.alignItems="center";
+  voteButtons("reply",reply,actions);
   const report=document.createElement("button");report.className="report";report.type="button";report.textContent="Report";
   report.addEventListener("click",async()=>{
     if(!initData){status.textContent="Open Pulse from Telegram to report a reply.";return}
@@ -428,7 +430,7 @@ async function loadReplies(postId,target){
   });
   const deleteReply=document.createElement("button");deleteReply.className="report";deleteReply.type="button";deleteReply.textContent="Delete";deleteReply.hidden=!reply.owned;
   deleteReply.onclick=async()=>{if(deleteReply.dataset.confirming!=="1"){deleteReply.dataset.confirming="1";deleteReply.textContent="Confirm delete";status.textContent="Tap Confirm delete again to remove this reply.";return}deleteReply.disabled=true;deleteReply.textContent="Deleting…";const response=await fetch("/api/student-posts/replies?reply_id="+encodeURIComponent(reply.id),{method:"DELETE",headers:{"x-telegram-init-data":initData}});if(response.ok){await loadReplies(postId,target);status.textContent="Reply deleted."}else{status.textContent="Reply could not be deleted.";deleteReply.disabled=false;deleteReply.dataset.confirming="";deleteReply.textContent="Delete"}};
-  item.append(meta,text,report,deleteReply);target.append(item);
+  actions.append(report,deleteReply);item.append(meta,text,actions);target.append(item);
  }
 }
 async function loadProfile(){
