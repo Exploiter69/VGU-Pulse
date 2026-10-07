@@ -145,33 +145,39 @@
     const pretty=s=>{try{return new Date(s).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"})}catch{return s}};
 
     async function loadFeed(){
-      const params=new URLSearchParams({sort});
-      if(kind) params.set("kind",kind);
-      if(personalized) params.set("personalized","1");
-      if(community) params.set("community",community);
-      const q=$("#cv2-search").value.trim(); if(q) params.set("q",q);
-      const data=await api("/api/community-v2/feed?"+params);
       const feed=$("#cv2-feed");
-      if(!data.items?.length){feed.innerHTML='<div class="cv2-empty">Nothing here yet. Be the first student to start a conversation.</div>';return;}
-      feed.innerHTML=data.items.map(item=>`
-        <article class="cv2-item" data-id="${item.id}" data-following="${Number(item.following)?1:0}" data-saved="${Number(item.saved)?1:0}">
-          <div class="cv2-meta"><div class="cv2-wrap"><span class="cv2-badge">${esc(item.kind.replaceAll("_"," "))}</span>${Number(item.anonymous)?'<span class="cv2-badge anon">Anonymous</span>':''}<span class="cv2-note">${esc(item.community_slug)}</span></div><span class="cv2-note">${pretty(item.created_at)}</span></div>
-          <h3>${esc(item.title)}</h3><p class="cv2-body">${esc(item.body)}</p>
-          <div class="cv2-note">By ${esc(item.author)} · ${item.replies} replies · ${item.upvotes} helpful</div>
-          ${Number(item.poll_options)?'<button class="cv2-tool" data-action="poll">📊 Poll</button><div class="cv2-poll-options" hidden></div>':''}
-          <div class="cv2-actions">
-            <button class="cv2-tool ${Number(item.my_vote)===1?'active':''}" data-action="vote" data-value="1">▲ ${item.upvotes}</button>
-            <button class="cv2-tool ${Number(item.my_vote)===-1?'active':''}" data-action="vote" data-value="-1">▼ ${item.downvotes}</button>
-            <button class="cv2-tool" data-action="replies">💬 ${item.replies}</button>
-            <button class="cv2-tool ${item.following?'active':''}" data-action="follow">${item.following?'Following':'Follow'}</button>
-            <button class="cv2-tool ${item.saved?'active':''}" data-action="save">${item.saved?'Saved':'Save'}</button>
-            ${item.mine?'<button class="cv2-tool" data-action="delete">Delete</button>':''}
-            ${item.mine?'':'<button class="cv2-tool" data-action="report">Report</button><button class="cv2-tool" data-action="block">Block</button>'}
-          </div>
-          <div class="cv2-replies" hidden></div>
-        </article>`).join("");
-    }
+      try{
 
+        const params=new URLSearchParams({sort});
+        if(kind) params.set("kind",kind);
+        if(personalized) params.set("personalized","1");
+        if(community) params.set("community",community);
+        const q=$("#cv2-search").value.trim(); if(q) params.set("q",q);
+        const data=await api("/api/community-v2/feed?"+params);
+        const feed=$("#cv2-feed");
+        if(!data.items?.length){feed.innerHTML='<div class="cv2-empty">Nothing here yet. Be the first student to start a conversation.</div>';return;}
+        feed.innerHTML=data.items.map(item=>`
+          <article class="cv2-item" data-id="${item.id}" data-following="${Number(item.following)?1:0}" data-saved="${Number(item.saved)?1:0}">
+            <div class="cv2-meta"><div class="cv2-wrap"><span class="cv2-badge">${esc(item.kind.replaceAll("_"," "))}</span>${Number(item.anonymous)?'<span class="cv2-badge anon">Anonymous</span>':''}<span class="cv2-note">${esc(item.community_slug)}</span></div><span class="cv2-note">${pretty(item.created_at)}</span></div>
+            <h3>${esc(item.title)}</h3><p class="cv2-body">${esc(item.body)}</p>
+            <div class="cv2-note">By ${esc(item.author)} · ${item.replies} replies · ${item.upvotes} helpful</div>
+            ${Number(item.poll_options)?'<button class="cv2-tool" data-action="poll">📊 Poll</button><div class="cv2-poll-options" hidden></div>':''}
+            <div class="cv2-actions">
+              <button class="cv2-tool ${Number(item.my_vote)===1?'active':''}" data-action="vote" data-value="1">▲ ${item.upvotes}</button>
+              <button class="cv2-tool ${Number(item.my_vote)===-1?'active':''}" data-action="vote" data-value="-1">▼ ${item.downvotes}</button>
+              <button class="cv2-tool" data-action="replies">💬 ${item.replies}</button>
+              <button class="cv2-tool ${item.following?'active':''}" data-action="follow">${item.following?'Following':'Follow'}</button>
+              <button class="cv2-tool ${item.saved?'active':''}" data-action="save">${item.saved?'Saved':'Save'}</button>
+              ${item.mine?'<button class="cv2-tool" data-action="delete">Delete</button>':''}
+              ${item.mine?'':'<button class="cv2-tool" data-action="report">Report</button><button class="cv2-tool" data-action="block">Block</button>'}
+            </div>
+            <div class="cv2-replies" hidden></div>
+          </article>`).join("");
+      }catch{
+        feed.innerHTML='<div class="cv2-empty">Community could not be loaded. <button class="cv2-tool" id="cv2-feed-retry" type="button">Retry</button></div>';
+        $("#cv2-feed-retry").onclick=loadFeed;
+      }
+    }
     async function loadCommunities(){
       let contextCommunity="campus";
       try{
