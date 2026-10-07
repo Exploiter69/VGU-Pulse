@@ -7,6 +7,10 @@ export interface StudentPost {
   created_at: string;
   report_count: number;
   reply_count?: number;
+  upvotes?: number;
+  downvotes?: number;
+  score?: number;
+  viewer_vote?: -1 | 0 | 1;
   owned?: boolean;
 }
 
@@ -17,6 +21,10 @@ export interface StudentReply {
   author_name: string;
   created_at: string;
   report_count: number;
+  upvotes?: number;
+  downvotes?: number;
+  score?: number;
+  viewer_vote?: -1 | 0 | 1;
   owned?: boolean;
 }
 
@@ -260,7 +268,7 @@ export async function listStudentPosts(
   limit = 20,
   category?: StudentPost["category"],
   userId?: number,
-  sort: "newest" | "active" | "unanswered" = "newest",
+  sort: "newest" | "active" | "unanswered" | "useful" = "newest",
 ): Promise<StudentPost[]> {
   const rows = await db
     .prepare(
@@ -268,21 +276,31 @@ export async function listStudentPosts(
               COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
               p.created_at, p.report_count,
               (SELECT COUNT(*) FROM student_post_replies r WHERE r.post_id = p.id AND r.status = 'published' AND r.report_count < 3) AS reply_count,
+              (SELECT COUNT(*) FROM student_post_votes v WHERE v.post_id = p.id AND v.vote = 1) AS upvotes,
+              (SELECT COUNT(*) FROM student_post_votes v WHERE v.post_id = p.id AND v.vote = -1) AS downvotes,
+              (SELECT COALESCE(v.vote, 0) FROM student_post_votes v WHERE v.post_id = p.id AND v.telegram_user_id = ?) AS viewer_vote,
               CASE WHEN ? IS NOT NULL AND p.telegram_user_id = ? THEN 1 ELSE 0 END AS owned
        FROM student_posts p
        JOIN users u ON u.telegram_user_id = p.telegram_user_id
        WHERE p.status = 'published' AND p.report_count < 3
          AND (? IS NULL OR p.category = ?)
-       ORDER BY CASE WHEN ? = "active" THEN reply_count ELSE 0 END DESC,
-                CASE WHEN ? = "unanswered" THEN CASE WHEN reply_count = 0 THEN 0 ELSE 1 END ELSE 0 END ASC,
-                p.created_at DESC, p.id DESC
+       ORDER BY
+         CASE WHEN ? = "useful" THEN
+           ((SELECT COUNT(*) FROM student_post_votes v WHERE v.post_id = p.id AND v.vote = 1)
+           - (SELECT COUNT(*) FROM student_post_votes v WHERE v.post_id = p.id AND v.vote = -1))
+         ELSE 0 END DESC,
+         CASE WHEN ? = "active" THEN reply_count ELSE 0 END DESC,
+         CASE WHEN ? = "unanswered" THEN CASE WHEN reply_count = 0 THEN 0 ELSE 1 END ELSE 0 END ASC,
+         p.created_at DESC, p.id DESC
        LIMIT ?`,
     )
     .bind(
       userId === undefined ? null : String(userId),
       userId === undefined ? null : String(userId),
+      userId === undefined ? null : String(userId),
       category ?? null,
       category ?? null,
+      sort,
       sort,
       sort,
       Math.min(Math.max(limit, 1), 50),
@@ -291,8 +309,65 @@ export async function listStudentPosts(
   return rows.results.map((post) => ({
     ...post,
     report_count: Number(post.report_count),
+    reply_count: Number(post.reply_count ?? 0),
+    upvotes: Number(post.upvotes ?? 0),
+    downvotes: Number(post.downvotes ?? 0),
+    score: Number(post.upvotes ?? 0) - Number(post.downvotes ?? 0),
+    viewer_vote: (Number(post.viewer_vote ?? 0) as -1 | 0 | 1),
     ...(userId !== undefined ? { owned: Boolean(post.owned) } : {}),
   }));
+}
+
+export async function voteStudentPost(db: D1Database, postId: number, userId: number, vote: -1 | 1): Promise<void> {
+  const post = await db.prepare(
+    `SELECT id FROM student_posts WHERE id = ? AND status = 'published' AND report_count < 3`,
+  ).bind(postId).first<{ id: number }>();
+  if (!post) throw new Error("post_not_found");
+
+  const existing = await db.prepare(
+    `SELECT vote FROM student_post_votes WHERE post_id = ? AND telegram_user_id = ?`,
+  ).bind(postId, String(userId)).first<{ vote: number }>();
+
+  if (existing?.vote === vote) {
+    await db.prepare(
+      `DELETE FROM student_post_votes WHERE post_id = ? AND telegram_user_id = ?`,
+    ).bind(postId, String(userId)).run();
+    return;
+  }
+
+  await db.prepare(
+    `INSERT INTO student_post_votes (post_id, telegram_user_id, vote)
+     VALUES (?, ?, ?)
+     ON CONFLICT(post_id, telegram_user_id) DO UPDATE SET vote = excluded.vote, created_at = CURRENT_TIMESTAMP`,
+  ).bind(postId, String(userId), vote).run();
+}
+
+export async function findRelatedStudentPosts(
+  db: D1Database,
+  title: string,
+  body: string,
+  excludePostId?: number,
+): Promise<StudentPost[]> {
+  const candidates = await listStudentPosts(db, 50, undefined, undefined, "newest");
+  const tokenize = (value: string) =>
+    new Set(value.toLowerCase().replace(/[^a-z0-9]+/g, " ").split(/\s+/)
+      .filter((word) => word.length >= 3)
+      .filter((word) => !["the", "and", "for", "with", "from", "what", "when", "where", "how", "can", "does", "this", "that"].includes(word)));
+  const queryTokens = tokenize(title + " " + body);
+  if (!queryTokens.size) return [];
+  return candidates
+    .filter((post) => post.id !== excludePostId)
+    .map((post) => {
+      const tokens = tokenize(post.title + " " + post.body);
+      let overlap = 0;
+      for (const token of queryTokens) if (tokens.has(token)) overlap++;
+      const score = overlap / Math.max(queryTokens.size, tokens.size);
+      return { post, similarity: score };
+    })
+    .filter((item) => item.similarity >= 0.25)
+    .sort((a, b) => b.similarity - a.similarity || (b.post.score ?? 0) - (a.post.score ?? 0))
+    .slice(0, 5)
+    .map((item) => item.post);
 }
 
 export async function deleteStudentPost(db: D1Database, postId: number, userId: number): Promise<boolean> {
@@ -313,14 +388,18 @@ export async function listStudentReplies(
       `SELECT r.id, r.post_id, r.body,
               COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
               r.created_at, r.report_count,
+              (SELECT COUNT(*) FROM student_post_reply_votes v WHERE v.reply_id = r.id AND v.vote = 1) AS upvotes,
+              (SELECT COUNT(*) FROM student_post_reply_votes v WHERE v.reply_id = r.id AND v.vote = -1) AS downvotes,
+              (SELECT COALESCE(v.vote, 0) FROM student_post_reply_votes v WHERE v.reply_id = r.id AND v.telegram_user_id = ?) AS viewer_vote,
               CASE WHEN ? IS NOT NULL AND r.telegram_user_id = ? THEN 1 ELSE 0 END AS owned
        FROM student_post_replies r
        LEFT JOIN users u ON u.telegram_user_id = r.telegram_user_id
        WHERE r.post_id = ? AND r.status = 'published' AND r.report_count < 3
-       ORDER BY r.created_at ASC, r.id ASC
+       ORDER BY (upvotes - downvotes) DESC, r.created_at ASC, r.id ASC
        LIMIT ?`,
     )
     .bind(
+      userId === undefined ? null : String(userId),
       userId === undefined ? null : String(userId),
       userId === undefined ? null : String(userId),
       postId,
@@ -330,8 +409,36 @@ export async function listStudentReplies(
   return rows.results.map((reply) => ({
     ...reply,
     report_count: Number(reply.report_count),
+    upvotes: Number(reply.upvotes ?? 0),
+    downvotes: Number(reply.downvotes ?? 0),
+    score: Number(reply.upvotes ?? 0) - Number(reply.downvotes ?? 0),
+    viewer_vote: (Number(reply.viewer_vote ?? 0) as -1 | 0 | 1),
     ...(userId !== undefined ? { owned: Boolean(reply.owned) } : {}),
   }));
+}
+
+export async function voteStudentReply(db: D1Database, replyId: number, userId: number, vote: -1 | 1): Promise<void> {
+  const reply = await db.prepare(
+    `SELECT id FROM student_post_replies WHERE id = ? AND status = 'published' AND report_count < 3`,
+  ).bind(replyId).first<{ id: number }>();
+  if (!reply) throw new Error("reply_not_found");
+
+  const existing = await db.prepare(
+    `SELECT vote FROM student_post_reply_votes WHERE reply_id = ? AND telegram_user_id = ?`,
+  ).bind(replyId, String(userId)).first<{ vote: number }>();
+
+  if (existing?.vote === vote) {
+    await db.prepare(
+      `DELETE FROM student_post_reply_votes WHERE reply_id = ? AND telegram_user_id = ?`,
+    ).bind(replyId, String(userId)).run();
+    return;
+  }
+
+  await db.prepare(
+    `INSERT INTO student_post_reply_votes (reply_id, telegram_user_id, vote)
+     VALUES (?, ?, ?)
+     ON CONFLICT(reply_id, telegram_user_id) DO UPDATE SET vote = excluded.vote, created_at = CURRENT_TIMESTAMP`,
+  ).bind(replyId, String(userId), vote).run();
 }
 
 export async function createStudentReply(
