@@ -28,6 +28,16 @@ describe("community V2 contract", () => {
     ]) expect(source).toContain(`"${kind}"`);
   });
 
+  it("ships the student-facing V2 interface and Ask bridge", () => {
+    const source = readFileSync("web/community-v2.js", "utf8");
+    for (const text of [
+      "Trending","Confessions","Campus pulse","Exam survival","Senior → junior advice",
+      "Notes / resources","PYQ / exam material","Project teammate","Lost & found",
+      "Ride sharing","Room / roommate","Student exchange","Discussion alerts",
+      "Personalized alerts","Ask VGU students","Start a student discussion","See related student discussions",
+    ]) expect(source).toContain(text);
+  });
+
   it("never exposes Telegram identity for anonymous content", () => {
     const source = readFileSync("src/community-v2.ts", "utf8");
     expect(source).toContain('const { telegram_user_id: _private, ...publicRow } = row');
