@@ -6,6 +6,7 @@ export interface StudentPost {
   author_name: string;
   created_at: string;
   report_count: number;
+  reply_count?: number;
   owned?: boolean;
 }
 
@@ -165,6 +166,7 @@ export async function createStudentPost(
       `SELECT p.id, p.category, p.title, p.body,
               COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
               p.created_at, p.report_count,
+              (SELECT COUNT(*) FROM student_post_replies r WHERE r.post_id = p.id AND r.status = 'published' AND r.report_count < 3) AS reply_count,
               CASE WHEN ? IS NOT NULL AND p.telegram_user_id = ? THEN 1 ELSE 0 END AS owned
        FROM student_posts p
        JOIN users u ON u.telegram_user_id = p.telegram_user_id
@@ -303,6 +305,9 @@ export async function reportStudentReply(
   replyId: number,
   userId: number,
 ): Promise<void> {
+  const owner = await db.prepare("SELECT telegram_user_id FROM student_post_replies WHERE id = ?").bind(replyId).first<{ telegram_user_id: string }>();
+  if (!owner || owner.telegram_user_id === String(userId)) return;
+
   const result = await db
     .prepare(
       `INSERT OR IGNORE INTO student_post_reply_reports (reply_id, telegram_user_id)
@@ -329,6 +334,9 @@ export async function reportStudentPost(
   postId: number,
   userId: number,
 ): Promise<void> {
+  const owner = await db.prepare("SELECT telegram_user_id FROM student_posts WHERE id = ?").bind(postId).first<{ telegram_user_id: string }>();
+  if (!owner || owner.telegram_user_id === String(userId)) return;
+
   const result = await db
     .prepare(
       `INSERT OR IGNORE INTO student_post_reports (post_id, telegram_user_id)
