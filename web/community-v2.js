@@ -123,10 +123,10 @@
     const target = communityView.querySelector("#student-posts")?.parentElement || communityView;
     target.appendChild(root);
 
-    $("#cv2-poll-fields").hidden = $("#cv2-kind").value !== "discussion";
     const tg = window.Telegram?.WebApp;
     const initData = tg?.initData || "";
     const $ = (s) => root.querySelector(s);
+    $("#cv2-poll-fields").hidden = $("#cv2-kind").value !== "discussion";
     let sort = "trending", kind = "", personalized = false;
 
     async function api(path, options = {}) {
