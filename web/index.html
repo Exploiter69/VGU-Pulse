@@ -1311,7 +1311,6 @@ async function boot(){
  try{await loadSearch("")}catch{}
  renderCampusGuide();
  loadCommunityInsights();
-document.querySelector("#campus-search-button")?.addEventListener("click",()=>{renderCampusGuide();haptic()});
 document.querySelector("#campus-search")?.addEventListener("input",renderCampusGuide);
 document.querySelectorAll("[data-campus-category]").forEach(button=>button.addEventListener("click",()=>{
  document.querySelectorAll("[data-campus-category]").forEach(b=>b.classList.remove("active"));button.classList.add("active");renderCampusGuide();haptic();
