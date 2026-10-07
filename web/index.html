@@ -475,15 +475,6 @@ main{max-width:780px!important}
   <div id="home-community"><p class="muted">Loading student activity…</p></div>
   <button type="button" class="inline-link" data-view="community">Open Community →</button>
 </section>
-<section class="card">
-  <div class="section-heading"><div><div class="eyebrow">Shortcuts</div><h2>Go straight there</h2></div></div>
-  <div class="view-tools">
-    <button type="button" class="inline-link" data-view="campus">Campus</button>
-    <button type="button" class="inline-link" data-view="community">Community</button>
-    <button type="button" class="inline-link" data-view="people">People</button>
-    <button type="button" class="inline-link" data-view="pulse">Me</button>
-  </div>
-</section>
 </div><div class="view" data-view-panel="ask">
 <section class="hero">
   <div class="eyebrow">Ask Pulse</div>
@@ -500,14 +491,9 @@ main{max-width:780px!important}
   <div id="search-results"><p class="muted">Try “exam form”, “medical”, “transport” or “hostel”.</p></div>
   <button type="button" class="inline-link" id="trust-details">How trust works →</button>
 </section>
-<section class="card">
-  <div class="section-heading"><div><div class="eyebrow">Trust</div><h2>Know the source</h2></div></div>
-  <div class="view-tools"><span class="trust-badge official">Official</span><span class="trust-badge student">Student-reported</span></div>
-  <p class="muted">Official results come through VGU-Signal. Student posts are never presented as official VGU announcements. Private ERP/Digicampus data is not invented.</p>
-</section>
 </div><div class="view" data-view-panel="academics">
 <section class="hero">
-  <div class="eyebrow">Academics</div><h2>Your semester.</h2>
+  <div class="eyebrow">Study plan</div><h2>Keep your semester under control.</h2>
   <p class="muted">A private, browser-only planner for the deadlines you choose to track. It does not read private ERP/Digicampus data.</p>
   <div class="academic-kpis spaced">
     <div class="academic-kpi"><strong id="academic-kpi-upcoming">0</strong><span>Upcoming</span></div>
@@ -539,7 +525,7 @@ main{max-width:780px!important}
   <div id="community-v2-mount"></div>
 </div><div class="view" data-view-panel="people">
 <section class="hero">
-  <div class="eyebrow">People</div><h2>Find someone to build with.</h2>
+  <div class="eyebrow">People</div><h2>Find students to study or build with.</h2>
   <p class="muted">Discover opt-in students for study groups, projects, teams and opportunities. No unsolicited messaging and no Telegram IDs exposed.</p>
   <div class="search-shell spaced"><input id="people-search" maxlength="100" placeholder="DSA, hackathon, project partner…" aria-label="Search people"><button id="people-search-button" type="button" class="submit" aria-label="Search people">→</button></div>
 </section>
@@ -602,7 +588,7 @@ main{max-width:780px!important}
   </div>
 </section>
 </div><div class="view" data-view-panel="tools">
-<section class="hero"><div class="eyebrow">Tools</div><h2>Useful calculations, instantly.</h2><p class="muted">Private, browser-only utilities. Nothing here is saved to Pulse.</p></section>
+<section class="hero"><div class="eyebrow">Student tools</div><h2>Quick calculations when you need them.</h2><p class="muted">Private, browser-only utilities. Nothing here is saved to Pulse.</p></section>
 <section class="card"><div class="eyebrow">SGPA</div><h2>SGPA calculator</h2><p class="muted">Enter each subject's credit and grade point.</p><div id="sgpa-rows"></div><div class="wrap-row"><button id="sgpa-add" class="quick" type="button">Add subject</button><button id="sgpa-calc" class="submit auto-width" type="button">Calculate SGPA</button></div><p id="sgpa-result" class="muted" aria-live="polite">Add subjects to calculate.</p></section>
 <section class="card"><div class="eyebrow">CGPA</div><h2>CGPA calculator</h2><p class="muted">Calculate a credit-weighted CGPA from semester SGPA values.</p><div id="cgpa-rows"></div><div class="wrap-row"><button id="cgpa-add" class="quick" type="button">Add semester</button><button id="cgpa-calc" class="submit auto-width" type="button">Calculate CGPA</button></div><p id="cgpa-result" class="muted" aria-live="polite">Add semesters to calculate.</p></section>
 <section class="card"><div class="eyebrow">Attendance</div><h2>Attendance calculator</h2><div class="tool-grid"><div><label for="att-present">Classes attended</label><input id="att-present" type="number" min="0" step="1" placeholder="e.g. 32"></div><div><label for="att-total">Classes held</label><input id="att-total" type="number" min="0" step="1" placeholder="e.g. 40"></div></div><label for="att-target">Target attendance %</label><input id="att-target" type="number" min="0" max="100" step="0.1" value="75"><button id="att-calc" class="submit" type="button">Calculate attendance</button><p id="att-result" class="muted" aria-live="polite">Enter your attendance to see the result.</p></section>
