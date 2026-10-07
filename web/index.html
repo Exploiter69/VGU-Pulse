@@ -136,9 +136,14 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <section class="card">
 <div class="eyebrow">Student network</div><h2>Find people</h2>
 <p class="muted">Opt in with a small profile for study groups, projects, teams and opportunities. Only published profiles appear here. Pulse never exposes Telegram IDs or provides unsolicited messaging.</p>
+<label for="people-search" class="muted" style="display:block;margin-bottom:4px">Search people</label>
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+<input id="people-search" maxlength="100" placeholder="e.g. DSA study group, hackathon teammate" aria-label="Search people" style="margin:6px 0 10px">
+<button id="people-search-button" type="button" class="submit" style="width:auto;min-width:110px;padding:12px">Search</button>
+</div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-<input id="people-search" maxlength="100" placeholder="Search DSA, project, design, study group…" aria-label="Search people">
 <select id="people-year" aria-label="Filter by year"><option value="">Any year</option><option value="1">Year 1</option><option value="2">Year 2</option><option value="3">Year 3</option><option value="4">Year 4</option><option value="5">Year 5</option><option value="6">Year 6</option></select>
+<select id="people-looking" aria-label="Filter by what people are looking for"><option value="">Any goal</option><option value="study">Study group</option><option value="project">Project partner</option><option value="hackathon">Hackathon / competition</option><option value="team">Team / collaboration</option></select>
 </div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
 <input id="people-program" maxlength="80" placeholder="Program filter" aria-label="Filter by program">
@@ -229,7 +234,7 @@ function initTools(){
 }
 initTools();
 let initData="",poll=null;
-const profileForm=document.querySelector("#profile-form"),profileStatus=document.querySelector("#profile-status"),profiles=document.querySelector("#profiles"),profileDelete=document.querySelector("#profile-delete"),profileVisibility=document.querySelector("#profile-visibility"),blockedPeople=document.querySelector("#blocked-people"),peopleSearch=document.querySelector("#people-search"),peopleYear=document.querySelector("#people-year"),peopleProgram=document.querySelector("#people-program"),peopleBranch=document.querySelector("#people-branch");const todayStats=document.querySelector("#today-stats");const homePulse=document.querySelector("#home-pulse"),homeCommunity=document.querySelector("#home-community");const identity=document.querySelector("#identity"),status=document.querySelector("#status"),searchForm=document.querySelector("#search-form"),searchQuery=document.querySelector("#search-query"),searchQuick=document.querySelector("#search-quick"),searchResults=document.querySelector("#search-results"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status"),postFilter=document.querySelector("#post-filter");
+const profileForm=document.querySelector("#profile-form"),profileStatus=document.querySelector("#profile-status"),profiles=document.querySelector("#profiles"),profileDelete=document.querySelector("#profile-delete"),profileVisibility=document.querySelector("#profile-visibility"),blockedPeople=document.querySelector("#blocked-people"),peopleSearch=document.querySelector("#people-search"),peopleSearchButton=document.querySelector("#people-search-button"),peopleYear=document.querySelector("#people-year"),peopleLooking=document.querySelector("#people-looking"),peopleProgram=document.querySelector("#people-program"),peopleBranch=document.querySelector("#people-branch");const todayStats=document.querySelector("#today-stats");const homePulse=document.querySelector("#home-pulse"),homeCommunity=document.querySelector("#home-community");const identity=document.querySelector("#identity"),status=document.querySelector("#status"),searchForm=document.querySelector("#search-form"),searchQuery=document.querySelector("#search-query"),searchQuick=document.querySelector("#search-quick"),searchResults=document.querySelector("#search-results"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status"),postFilter=document.querySelector("#post-filter");
 
 document.addEventListener("click",(event)=>{
  const link=event.target.closest("a[href]");
@@ -467,7 +472,9 @@ profileVisibility.addEventListener("click",async()=>{
  if(response.ok){profileVisibility.textContent=hidden?"Hide my profile":"Show my profile";profileStatus.textContent=hidden?"Profile is visible again.":"Profile hidden from People discovery.";await loadProfiles()}else profileStatus.textContent="Visibility could not be changed.";
  profileVisibility.disabled=false;
 });
-[peopleSearch,peopleYear,peopleProgram,peopleBranch].forEach(el=>el?.addEventListener("input",loadProfiles));
+peopleSearch?.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();loadProfiles().catch(()=>{})}});
+peopleSearchButton?.addEventListener("click",()=>{loadProfiles().catch(()=>{})});
+[peopleYear,peopleProgram,peopleBranch].forEach(el=>el?.addEventListener("input",loadProfiles));
 peopleYear?.addEventListener("change",loadProfiles);
 
 profileDelete.addEventListener("click",async()=>{
