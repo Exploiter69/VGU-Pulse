@@ -894,7 +894,7 @@ async function boot(){
  initSearch();
  try{await loadSearch("")}catch{}
  renderCampusGuide();
- loadCommunityInsights();
+ try{if(typeof loadCommunityInsights==="function")await loadCommunityInsights()}catch{}
 document.querySelector("#campus-search")?.addEventListener("input",renderCampusGuide);
 document.querySelectorAll("[data-campus-category]").forEach(button=>{
  button.setAttribute("aria-pressed",button.classList.contains("active")?"true":"false");
@@ -976,7 +976,11 @@ document.getElementById("telegram-fullscreen")?.addEventListener("click",async()
  try{await tg?.requestFullscreen?.();toast("Fullscreen enabled.");}catch{toast("Fullscreen is unavailable here.");}
 });
 const toastNode=document.createElement("div");toastNode.id="pulse-toast";toastNode.className="toast";toastNode.setAttribute("role","status");toastNode.setAttribute("aria-live","polite");document.body.append(toastNode);
-boot().catch(()=>{status.textContent="Unable to connect to Pulse.";toast("Pulse is temporarily unavailable.")});
+window.__pulseBoot=()=>boot().catch(()=>{status.textContent="Unable to connect to Pulse.";toast("Pulse is temporarily unavailable.")});
+const communityScript=document.createElement("script");
+communityScript.src="/community-v2.js?v=20261007-4";
+communityScript.onload=()=>window.__pulseBoot?.();
+communityScript.onerror=()=>window.__pulseBoot?.();
+document.body.append(communityScript);
 </script>
-<script src="/community-v2.js?v=20261007-3"></script>
 </body></html>
