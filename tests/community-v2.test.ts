@@ -40,7 +40,7 @@ describe("community V2 contract", () => {
 
   it("keeps notifications and personal controls in the primary Me surface", () => {
     const source = readFileSync("web/index.html", "utf8");
-    for (const text of ["VGU updates","Post replies","Mark all read","Academic planner","People profile","Student tools"]) {
+    for (const text of ["VGU updates","Post replies","Mark all read","Study plan","People","Student tools"]) {
       expect(source).toContain(text);
     }
   });
