@@ -222,7 +222,7 @@
         if(action==="vote")await api("/api/community-v2/vote",{method:"POST",body:JSON.stringify({item_id:id,vote:Number(button.dataset.value)})});
         if(action==="follow")await api("/api/community-v2/follow",{method:"POST",body:JSON.stringify({item_id:id})});
         if(action==="save")await api("/api/community-v2/save",{method:"POST",body:JSON.stringify({item_id:id})});
-        if(action==="report"){await api("/api/community-v2/report",{method:"POST",body:JSON.stringify({item_id:id,reason:"student_report"}));button.textContent="Reported"}
+        if(action==="report"){await api("/api/community-v2/report",{method:"POST",body:JSON.stringify({item_id:id,reason:"student_report"})});button.textContent="Reported"}
         if(action==="block")await api("/api/community-v2/block",{method:"POST",body:JSON.stringify({item_id:id})});
         if(action==="poll"){
           const box=item.querySelector(".cv2-poll-options");
