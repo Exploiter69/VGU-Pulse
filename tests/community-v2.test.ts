@@ -31,7 +31,7 @@ describe("community V2 contract", () => {
   it("ships the student-facing V2 interface and Ask bridge", () => {
     const source = readFileSync("web/community-v2.js", "utf8");
     for (const text of [
-      "Trending","Confessions","Campus pulse","Exam survival","Senior → junior advice",
+      "Trending","Confessions","Campus help","Exam survival","Senior → junior",
       "Notes / resources","PYQ / exam material","Project teammate","Lost & found",
       "Ride sharing","Room / roommate","Student exchange","Filter","Post",
       "Ask students","Related discussions",
