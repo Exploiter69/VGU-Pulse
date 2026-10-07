@@ -546,7 +546,7 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
       <p id="profile-status" class="muted" aria-live="polite"></p>
     </form>
   </details>
-  <div id="blocked-people" class="muted" class="mt-12"></div>
+  <div id="blocked-people" class="muted mt-12"></div>
 </section>
 </div><div class="view" data-view-panel="campus">
 <section class="hero">
@@ -582,10 +582,10 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
 </section>
 </div><div class="view" data-view-panel="tools">
 <section class="hero"><div class="eyebrow">Tools</div><h2>Useful calculations, instantly.</h2><p class="muted">Private, browser-only utilities. Nothing here is saved to Pulse.</p></section>
-<section class="card"><div class="eyebrow">SGPA</div><h2>SGPA calculator</h2><p class="muted">Enter each subject's credit and grade point.</p><div id="sgpa-rows"></div><div class="wrap-row"><button id="sgpa-add" class="quick" type="button">Add subject</button><button id="sgpa-calc" class="submit" type="button" class="auto-width">Calculate SGPA</button></div><p id="sgpa-result" class="muted" aria-live="polite">Add subjects to calculate.</p></section>
-<section class="card"><div class="eyebrow">CGPA</div><h2>CGPA calculator</h2><p class="muted">Calculate a credit-weighted CGPA from semester SGPA values.</p><div id="cgpa-rows"></div><div class="wrap-row"><button id="cgpa-add" class="quick" type="button">Add semester</button><button id="cgpa-calc" class="submit" type="button" class="auto-width">Calculate CGPA</button></div><p id="cgpa-result" class="muted" aria-live="polite">Add semesters to calculate.</p></section>
+<section class="card"><div class="eyebrow">SGPA</div><h2>SGPA calculator</h2><p class="muted">Enter each subject's credit and grade point.</p><div id="sgpa-rows"></div><div class="wrap-row"><button id="sgpa-add" class="quick" type="button">Add subject</button><button id="sgpa-calc" class="submit auto-width" type="button">Calculate SGPA</button></div><p id="sgpa-result" class="muted" aria-live="polite">Add subjects to calculate.</p></section>
+<section class="card"><div class="eyebrow">CGPA</div><h2>CGPA calculator</h2><p class="muted">Calculate a credit-weighted CGPA from semester SGPA values.</p><div id="cgpa-rows"></div><div class="wrap-row"><button id="cgpa-add" class="quick" type="button">Add semester</button><button id="cgpa-calc" class="submit auto-width" type="button">Calculate CGPA</button></div><p id="cgpa-result" class="muted" aria-live="polite">Add semesters to calculate.</p></section>
 <section class="card"><div class="eyebrow">Attendance</div><h2>Attendance calculator</h2><div class="tool-grid"><div><label for="att-present">Classes attended</label><input id="att-present" type="number" min="0" step="1" placeholder="e.g. 32"></div><div><label for="att-total">Classes held</label><input id="att-total" type="number" min="0" step="1" placeholder="e.g. 40"></div></div><label for="att-target">Target attendance %</label><input id="att-target" type="number" min="0" max="100" step="0.1" value="75"><button id="att-calc" class="submit" type="button">Calculate attendance</button><p id="att-result" class="muted" aria-live="polite">Enter your attendance to see the result.</p></section>
-<section class="card"><div class="eyebrow">Marks</div><h2>Marks calculator</h2><p class="muted">Combine obtained and maximum marks. This does not assume VGU's internal/external weighting.</p><div id="marks-rows"></div><div class="wrap-row"><button id="marks-add" class="quick" type="button">Add component</button><button id="marks-calc" class="submit" type="button" class="auto-width">Calculate percentage</button></div><p id="marks-result" class="muted" aria-live="polite">Add components to calculate.</p></section>
+<section class="card"><div class="eyebrow">Marks</div><h2>Marks calculator</h2><p class="muted">Combine obtained and maximum marks. This does not assume VGU's internal/external weighting.</p><div id="marks-rows"></div><div class="wrap-row"><button id="marks-add" class="quick" type="button">Add component</button><button id="marks-calc" class="submit auto-width" type="button">Calculate percentage</button></div><p id="marks-result" class="muted" aria-live="polite">Add components to calculate.</p></section>
 </div>
 
 <div class="view" data-view-panel="pulse">
