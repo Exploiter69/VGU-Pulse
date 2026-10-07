@@ -516,6 +516,9 @@ function renderAcademicSummary(){
  target.replaceChildren();
  if(!items.length){const p=document.createElement("p");p.className="muted";p.textContent="No local deadlines yet. Add your first assignment or exam.";target.append(p);return}
  const today=new Date().toISOString().slice(0,10);
+ const deadlineCount=items.filter(item=>item.due>=today).length;
+ const statCards=todayStats?.querySelectorAll(".today-stat");
+ if(statCards?.[1])statCards[1].querySelector("strong").textContent=String(deadlineCount);
  const overdue=items.filter(item=>academicState(item,today)==="overdue").length;
  const todayCount=items.filter(item=>academicState(item,today)==="today").length;
  const next=items.filter(item=>item.due>=today).slice(0,3);
