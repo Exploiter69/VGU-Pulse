@@ -939,6 +939,7 @@ async function sharePulse(target="home",text="VGU Pulse — student information,
   haptic("impact");
  }catch{try{if(navigator.share)await navigator.share({title:"VGU Pulse",text,url:location.href})}catch{}}
 }
+window.__pulseShare=sharePulse;
 document.getElementById("pulse-share")?.addEventListener("click",()=>sharePulse());
 document.getElementById("telegram-fullscreen")?.addEventListener("click",async()=>{
  try{await tg?.requestFullscreen?.();toast("Fullscreen enabled.");}catch{toast("Fullscreen is unavailable here.");}
