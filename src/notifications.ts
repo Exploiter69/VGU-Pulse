@@ -120,14 +120,6 @@ async function queueOfficialNotifications(
   db: D1Database,
   signalService: Fetcher,
 ): Promise<number> {
-  const subscribers = await db.prepare(
-    `SELECT telegram_user_id, enabled_at
-     FROM notification_preferences
-     WHERE official_updates = 1
-     LIMIT 500`,
-  ).all<{ telegram_user_id: string; enabled_at: string }>();
-  if (!subscribers.results?.length) return 0;
-
   let response: Response;
   try {
     response = await signalService.fetch(
@@ -153,25 +145,23 @@ async function queueOfficialNotifications(
     const summary = clampText(item.summary, 650);
     const source = clampText(item.primary_source_url, 500);
     const dateValue = clampText(item.published_at || item.created_at, 80);
+    const timestamp = Date.parse(dateValue);
     const reference = clampText(item.id, 160) || source || title;
-    for (const subscriber of subscribers.results ?? []) {
-      if (dateValue) {
-        const timestamp = Date.parse(dateValue);
-        const enabledAt = Date.parse(subscriber.enabled_at);
-        if (Number.isFinite(timestamp) && Number.isFinite(enabledAt) && timestamp < enabledAt) continue;
-      }
-      const result = await db.prepare(
-        `INSERT OR IGNORE INTO student_notifications
-         (telegram_user_id, kind, title, body, reference_key)
-         VALUES (?, 'official', ?, ?, ?)`,
-      ).bind(
-        subscriber.telegram_user_id,
-        title,
-        summary || "A new verified VGU information item is available in Pulse.",
-        `official:${reference}`,
-      ).run();
-      queued += Number(result.meta.changes ?? 0);
-    }
+    if (!Number.isFinite(timestamp)) continue;
+
+    const result = await db.prepare(
+      `INSERT OR IGNORE INTO student_notifications
+       (telegram_user_id, kind, title, body, reference_key)
+       SELECT telegram_user_id, 'official', ?, ?, ?
+       FROM notification_preferences
+       WHERE official_updates = 1 AND enabled_at <= ?`,
+    ).bind(
+      title,
+      summary || "A new verified VGU information item is available in Pulse.",
+      `official:${reference}`,
+      new Date(timestamp).toISOString(),
+    ).run();
+    queued += Number(result.meta.changes ?? 0);
   }
   return queued;
 }
