@@ -48,6 +48,17 @@ describe("Phase 11 academic intelligence", () => {
     expect(item?.kind).toBe("student");
   });
 
+  it("finds official campus support services", () => {
+    const results = searchKnowledge("student cell ERP grievance");
+    expect(results[0].title).toBe("Student Cell");
+    expect(results[0].trust).toBe("official");
+  });
+
+  it("finds the Controller of Examinations for result and transcript questions", () => {
+    const results = searchKnowledge("examination results transcript");
+    expect(results.some((item) => item.title === "Controller of Examinations")).toBe(true);
+  });
+
   it("does not invent a result for an unrelated query", () => {
     expect(searchKnowledge("quantum cafeteria unicorn", []).length).toBe(0);
   });
