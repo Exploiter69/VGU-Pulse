@@ -187,6 +187,7 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
       : "i.created_at DESC";
   const sql = `SELECT i.id,i.kind,i.title,i.body,i.community_slug,i.audience_program,i.audience_branch,i.audience_year,
       i.anonymous,i.created_at,i.telegram_user_id,
+      CASE WHEN i.telegram_user_id=? THEN 1 ELSE 0 END AS mine,
       (SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=1) AS upvotes,
       (SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=-1) AS downvotes,
       (SELECT COUNT(*) FROM community_replies r WHERE r.item_id=i.id AND r.status='published') AS replies,
@@ -195,14 +196,16 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
            WHEN EXISTS(SELECT 1 FROM community_votes mv WHERE mv.item_id=i.id AND mv.telegram_user_id=? AND mv.vote=-1) THEN -1 ELSE 0 END AS my_vote,
       CASE WHEN EXISTS(SELECT 1 FROM community_follows f WHERE f.item_id=i.id AND f.telegram_user_id=?) THEN 1 ELSE 0 END AS following,
       CASE WHEN EXISTS(SELECT 1 FROM community_saves s WHERE s.item_id=i.id AND s.telegram_user_id=?) THEN 1 ELSE 0 END AS saved
-      FROM community_items i WHERE ${where.join(" AND ")} ORDER BY ${order} LIMIT 40`;
-  const result = await db.prepare(sql).bind(String(viewerId),String(viewerId),String(viewerId),String(viewerId),...args).all<Record<string, unknown>>();
+      FROM community_items i WHERE ${where.join(" AND ")}
+        AND NOT EXISTS (SELECT 1 FROM student_profile_blocks b WHERE b.blocker_telegram_user_id=? AND b.blocked_telegram_user_id=i.telegram_user_id)
+      ORDER BY ${order} LIMIT 40`;
+  const result = await db.prepare(sql).bind(String(viewerId),String(viewerId),String(viewerId),String(viewerId),String(viewerId),...args).all<Record<string, unknown>>();
   const rows = result.results ?? [];
   return Promise.all(rows.map(async row => {
     const owner = await db.prepare("SELECT display_name FROM student_profiles WHERE telegram_user_id=?").bind(String((row as any).telegram_user_id ?? "")).first<{display_name:string}>();
     const author = Number(row.anonymous) ? "Anonymous student" : (owner?.display_name || "VGU student");
     const { telegram_user_id: _private, ...publicRow } = row as Record<string, unknown>;
-    return { ...publicRow, author, trust: "student-community" };
+    return { ...publicRow, mine: Boolean(row.mine), author, trust: "student-community" };
   }));
 }
 
@@ -289,9 +292,10 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       const id=Number(url.searchParams.get("item_id"));
       if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
       const rows=await env.DB.prepare(`SELECT r.id,r.body,r.anonymous,r.created_at,
-        CASE WHEN r.anonymous=1 THEN 'Anonymous student' ELSE COALESCE(sp.display_name,'VGU student') END author
+        CASE WHEN r.anonymous=1 THEN 'Anonymous student' ELSE COALESCE(sp.display_name,'VGU student') END author,
+        CASE WHEN r.telegram_user_id=? THEN 1 ELSE 0 END AS mine
         FROM community_replies r LEFT JOIN student_profiles sp ON sp.telegram_user_id=r.telegram_user_id
-        WHERE r.item_id=? AND r.status='published' ORDER BY r.created_at ASC LIMIT 100`).bind(id).all();
+        WHERE r.item_id=? AND r.status='published' ORDER BY r.created_at ASC LIMIT 100`).bind(String(user.id),id).all();
       return json({ok:true,replies:rows.results??[]});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/poll"){
@@ -326,6 +330,26 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       const id=Number(input.item_id); const r=await reply(env.DB,user,id,clamp(input.body,LIMITS.body),Boolean(input.anonymous));
       return json({ok:true,reply:r},201);
     }
+    if(request.method==="DELETE" && url.pathname==="/api/community-v2/items"){
+      const id=Number(url.searchParams.get("item_id"));
+      if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
+      const item=await env.DB.prepare("SELECT telegram_user_id FROM community_items WHERE id=? AND status='published'").bind(id).first<{telegram_user_id:string}>();
+      if(!item)return json({ok:false,error:"item_not_found"},404);
+      if(item.telegram_user_id!==String(user.id))return json({ok:false,error:"forbidden"},403);
+      await award(env.DB,user.id,-3,"deleted_item",`delete:item:${id}`);
+      await env.DB.prepare("DELETE FROM community_items WHERE id=? AND telegram_user_id=?").bind(id,String(user.id)).run();
+      return json({ok:true,deleted:true});
+    }
+    if(request.method==="DELETE" && url.pathname==="/api/community-v2/replies"){
+      const id=Number(url.searchParams.get("reply_id"));
+      if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_reply"},400);
+      const reply=await env.DB.prepare("SELECT telegram_user_id FROM community_replies WHERE id=? AND status='published'").bind(id).first<{telegram_user_id:string}>();
+      if(!reply)return json({ok:false,error:"reply_not_found"},404);
+      if(reply.telegram_user_id!==String(user.id))return json({ok:false,error:"forbidden"},403);
+      await award(env.DB,user.id,-1,"deleted_reply",`delete:reply:${id}`);
+      await env.DB.prepare("DELETE FROM community_replies WHERE id=? AND telegram_user_id=?").bind(id,String(user.id)).run();
+      return json({ok:true,deleted:true});
+    }
     if(request.method==="POST" && url.pathname==="/api/community-v2/vote"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
       await vote(env.DB,user.id,Number(input.item_id),Number(input.vote)); return json({ok:true});
@@ -358,6 +382,9 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     if(request.method==="POST" && url.pathname==="/api/community-v2/report"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
       const id=Number(input.item_id); const reason=clamp(input.reason,LIMITS.reason)||"other";
+      const owner=await env.DB.prepare("SELECT telegram_user_id FROM community_items WHERE id=? AND status='published'").bind(id).first<{telegram_user_id:string}>();
+      if(!owner)return json({ok:false,error:"item_not_found"},404);
+      if(owner.telegram_user_id===String(user.id))return json({ok:false,error:"cannot_report_own_item"},400);
       const result=await env.DB.prepare("INSERT OR IGNORE INTO community_reports(item_id,telegram_user_id,reason) VALUES(?,?,?)").bind(id,String(user.id),reason).run();
       if(Number(result.meta.changes??0)) await env.DB.prepare(
         "UPDATE community_items SET report_count=report_count+1,status=CASE WHEN report_count+1>=3 THEN 'hidden' ELSE status END WHERE id=?",
@@ -367,6 +394,9 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     if(request.method==="POST" && url.pathname==="/api/community-v2/report-reply"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
       const id=Number(input.reply_id); if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_reply"},400);
+      const owner=await env.DB.prepare("SELECT telegram_user_id FROM community_replies WHERE id=? AND status='published'").bind(id).first<{telegram_user_id:string}>();
+      if(!owner)return json({ok:false,error:"reply_not_found"},404);
+      if(owner.telegram_user_id===String(user.id))return json({ok:false,error:"cannot_report_own_reply"},400);
       const result=await env.DB.prepare("UPDATE community_replies SET report_count=report_count+1,status=CASE WHEN report_count+1>=3 THEN 'hidden' ELSE status END WHERE id=? AND status='published'").bind(id).run();
       if(!Number(result.meta.changes??0)) return json({ok:false,error:"reply_not_found"},404);
       return json({ok:true});
