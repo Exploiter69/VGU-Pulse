@@ -36,6 +36,8 @@ describe("community V2 contract", () => {
       "Ride sharing","Room / roommate","Student exchange","Filter","Post",
       "Ask students","Related discussions",
     ]) expect(source).toContain(text);
+    expect(source).not.toContain("/api/student-posts");
+    expect(source).not.toContain("loadStudentPosts");
   });
 
   it("keeps notifications and personal controls in the primary Me surface", () => {
