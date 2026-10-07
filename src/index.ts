@@ -147,7 +147,10 @@ export default {
         const program = (url.searchParams.get("program") ?? "").trim().slice(0, 80);
         const branch = (url.searchParams.get("branch") ?? "").trim().slice(0, 80);
         const rawYear = url.searchParams.get("year");
-        const year = rawYear ? Number(rawYear) : undefined;
+        const parsedYear = rawYear ? Number(rawYear) : NaN;
+        const year = Number.isInteger(parsedYear) && parsedYear >= 1 && parsedYear <= 6
+          ? parsedYear
+          : undefined;
         let viewerId: number | undefined;
         const initData = request.headers.get("x-telegram-init-data") ?? "";
         if (initData && getBotToken(env)) {
@@ -158,7 +161,7 @@ export default {
           q,
           program,
           branch,
-          year: Number.isInteger(year) && year >= 1 && year <= 6 ? year : undefined,
+          year,
         });
         return json({ ok: true, trust: "student-reported", profiles });
       } catch { return json({ ok: false, error: "student_profiles_unavailable" }, 500); }
