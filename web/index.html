@@ -133,7 +133,16 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <div class="view" data-view-panel="people">
 <section class="card">
 <div class="eyebrow">Student network</div><h2>Find people</h2>
-<p class="muted">Opt in with a small profile for study groups, projects, teams and opportunities. Only published student profiles appear here.</p>
+<p class="muted">Opt in with a small profile for study groups, projects, teams and opportunities. Only published profiles appear here. Pulse never exposes Telegram IDs or provides unsolicited messaging.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+<input id="people-search" maxlength="100" placeholder="Search DSA, project, design, study group…" aria-label="Search people">
+<select id="people-year" aria-label="Filter by year"><option value="">Any year</option><option value="1">Year 1</option><option value="2">Year 2</option><option value="3">Year 3</option><option value="4">Year 4</option><option value="5">Year 5</option><option value="6">Year 6</option></select>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+<input id="people-program" maxlength="80" placeholder="Program filter" aria-label="Filter by program">
+<input id="people-branch" maxlength="80" placeholder="Branch filter" aria-label="Filter by branch">
+</div>
+<p class="muted">Tip: search what you need, such as “DSA study group”, “hackathon teammate”, or “project partner”.</p>
 <form id="profile-form">
 <input id="profile-name" maxlength="80" placeholder="Display name" required>
 <input id="profile-program" maxlength="80" placeholder="Program (e.g. B.Tech CSE)" required>
@@ -142,9 +151,9 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <textarea id="profile-bio" maxlength="300" rows="2" placeholder="Short intro (optional)"></textarea>
 <input id="profile-looking" maxlength="160" placeholder="Looking for (e.g. DSA study group)" required>
 <button class="submit" type="submit">Publish my profile</button>
-<button id="profile-delete" class="report" type="button" hidden>Delete my profile</button>
+<button id="profile-delete" class="report" type="button" hidden>Delete my profile</button><button id="profile-visibility" class="report" type="button" hidden>Hide my profile</button>
 <p id="profile-status" class="muted"></p>
-</form><div id="profiles"><p class="muted">Loading student profiles…</p></div>
+</form><div id="blocked-people" class="muted" style="margin-top:12px"></div><div id="profiles"><p class="muted">Loading student profiles…</p></div>
 </section>
 </div>
 
@@ -195,7 +204,7 @@ function showView(name){
 for(const item of navItems)item.addEventListener("click",()=>showView(item.dataset.view));
 tg?.BackButton?.onClick?.(()=>showView("home"));
 let initData="",poll=null;
-const profileForm=document.querySelector("#profile-form"),profileStatus=document.querySelector("#profile-status"),profiles=document.querySelector("#profiles"),profileDelete=document.querySelector("#profile-delete");const todayStats=document.querySelector("#today-stats");const homePulse=document.querySelector("#home-pulse"),homeCommunity=document.querySelector("#home-community");const identity=document.querySelector("#identity"),status=document.querySelector("#status"),searchForm=document.querySelector("#search-form"),searchQuery=document.querySelector("#search-query"),searchQuick=document.querySelector("#search-quick"),searchResults=document.querySelector("#search-results"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status"),postFilter=document.querySelector("#post-filter");
+const profileForm=document.querySelector("#profile-form"),profileStatus=document.querySelector("#profile-status"),profiles=document.querySelector("#profiles"),profileDelete=document.querySelector("#profile-delete"),profileVisibility=document.querySelector("#profile-visibility"),blockedPeople=document.querySelector("#blocked-people"),peopleSearch=document.querySelector("#people-search"),peopleYear=document.querySelector("#people-year"),peopleProgram=document.querySelector("#people-program"),peopleBranch=document.querySelector("#people-branch");const todayStats=document.querySelector("#today-stats");const homePulse=document.querySelector("#home-pulse"),homeCommunity=document.querySelector("#home-community");const identity=document.querySelector("#identity"),status=document.querySelector("#status"),searchForm=document.querySelector("#search-form"),searchQuery=document.querySelector("#search-query"),searchQuick=document.querySelector("#search-quick"),searchResults=document.querySelector("#search-results"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status"),postFilter=document.querySelector("#post-filter");
 
 document.addEventListener("click",(event)=>{
  const link=event.target.closest("a[href]");
@@ -369,21 +378,41 @@ async function loadProfile(){
  const r=await fetch("/api/student-profile",{headers:{"x-telegram-init-data":initData}});if(!r.ok)return;
  const p=(await r.json()).profile;if(!p)return;
  for(const [id,value] of [["profile-name",p.display_name],["profile-program",p.program],["profile-branch",p.branch],["profile-year",p.year],["profile-bio",p.bio],["profile-looking",p.looking_for]])document.querySelector("#"+id).value=value;
- profileDelete.hidden=false;
+ profileDelete.hidden=false;profileVisibility.hidden=false;profileVisibility.textContent=p.status==="hidden"?"Show my profile":"Hide my profile";
+}
+async function loadBlockedPeople(){
+ if(!initData||!blockedPeople)return;
+ const r=await fetch("/api/student-profile/blocks",{headers:{"x-telegram-init-data":initData}});
+ if(!r.ok)return;
+ const list=(await r.json()).profiles||[];blockedPeople.replaceChildren();
+ if(!list.length)return;
+ const label=document.createElement("strong");label.textContent="Blocked profiles";blockedPeople.append(label);
+ for(const p of list){
+  const row=document.createElement("div");row.style.marginTop="6px";
+  const name=document.createElement("span");name.textContent=p.display_name+" ";
+  const button=document.createElement("button");button.type="button";button.className="report";button.textContent="Unblock";
+  button.onclick=async()=>{button.disabled=true;const x=await fetch("/api/student-profile/unblock",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({public_id:p.public_id})});if(x.ok){profileStatus.textContent="Profile unblocked.";await loadBlockedPeople();await loadProfiles()}else button.disabled=false};
+  row.append(name,button);blockedPeople.append(row)
+ }
 }
 async function loadProfiles(){
- const r=await fetch("/api/students");if(!r.ok)throw Error("profiles_failed");
+ const params=new URLSearchParams();if(peopleSearch?.value.trim())params.set("q",peopleSearch.value.trim());if(peopleYear?.value)params.set("year",peopleYear.value);if(peopleProgram?.value.trim())params.set("program",peopleProgram.value.trim());if(peopleBranch?.value.trim())params.set("branch",peopleBranch.value.trim());
+ const headers=initData?{"x-telegram-init-data":initData}:{};
+ const r=await fetch("/api/students"+(params.toString()?"?"+params.toString():""),{headers});if(!r.ok)throw Error("profiles_failed");
  const list=(await r.json()).profiles||[];profiles.replaceChildren();
- if(!list.length){const p=document.createElement("p");p.className="muted";p.textContent="No student profiles yet.";profiles.append(p);return}
+ if(!list.length){const p=document.createElement("p");p.className="muted";p.textContent="No matching student profiles. Try a broader search or publish your own profile.";profiles.append(p);return}
  for(const p of list){
   const item=document.createElement("article");item.className="profile";
   const name=document.createElement("h3");name.textContent=p.display_name;
   const meta=document.createElement("div");meta.className="muted";meta.textContent=p.program+" • "+p.branch+" • Year "+p.year;
   const bio=document.createElement("p");bio.className="muted";bio.textContent=p.bio;
   const looking=document.createElement("p");const strong=document.createElement("strong");strong.textContent="Looking for: ";looking.append(strong,document.createTextNode(p.looking_for));
+  const actions=document.createElement("div");
   const report=document.createElement("button");report.className="report";report.type="button";report.textContent="Report profile";
   report.onclick=async()=>{if(!initData){status.textContent="Open Pulse from Telegram to report a profile.";return}report.disabled=true;const x=await fetch("/api/student-profile/report",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({profile_public_id:p.public_id})});status.textContent=x.ok?"Profile report recorded.":"Unable to record report.";if(x.ok)await loadProfiles();else report.disabled=false};
-  item.append(name,meta,bio,looking,report);profiles.append(item);
+  const block=document.createElement("button");block.className="report";block.type="button";block.textContent="Block";
+  block.onclick=async()=>{if(!initData)return;block.disabled=true;const x=await fetch("/api/student-profile/block",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({public_id:p.public_id})});if(x.ok){profileStatus.textContent="Profile blocked and removed from your discovery.";await loadBlockedPeople();await loadProfiles()}else block.disabled=false};
+  actions.append(report,block);item.append(name,meta,bio,looking,actions);profiles.append(item);
  }
 }
 async function submitProfile(e){
@@ -393,9 +422,20 @@ async function submitProfile(e){
  display_name:document.querySelector("#profile-name").value,program:document.querySelector("#profile-program").value,
  branch:document.querySelector("#profile-branch").value,year:Number(document.querySelector("#profile-year").value),
  bio:document.querySelector("#profile-bio").value,looking_for:document.querySelector("#profile-looking").value})});
- profileStatus.textContent=r.ok?"Profile published.":"Profile could not be published. Check the fields.";button.disabled=false;if(r.ok)await loadProfiles();
+ profileStatus.textContent=r.ok?"Profile published.":"Profile could not be published. Check the fields.";button.disabled=false;if(r.ok){await loadProfiles();await loadBlockedPeople();}
 }
 profileForm.addEventListener("submit",submitProfile);
+profileVisibility.addEventListener("click",async()=>{
+ if(!initData)return;
+ const hidden=profileVisibility.textContent==="Show my profile";
+ profileVisibility.disabled=true;
+ const response=await fetch("/api/student-profile/visibility",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({visible:!hidden})});
+ if(response.ok){profileVisibility.textContent=hidden?"Hide my profile":"Show my profile";profileStatus.textContent=hidden?"Profile is visible again.":"Profile hidden from People discovery.";await loadProfiles()}else profileStatus.textContent="Visibility could not be changed.";
+ profileVisibility.disabled=false;
+});
+[peopleSearch,peopleYear,peopleProgram,peopleBranch].forEach(el=>el?.addEventListener("input",loadProfiles));
+peopleYear?.addEventListener("change",loadProfiles);
+
 profileDelete.addEventListener("click",async()=>{
  if(!initData)return;
  if(profileDelete.dataset.confirming!=="1"){profileDelete.dataset.confirming="1";profileDelete.textContent="Confirm delete profile";profileStatus.textContent="Tap Confirm delete profile again to remove your profile.";return}
