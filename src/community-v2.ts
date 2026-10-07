@@ -147,6 +147,7 @@ async function getItem(db: D1Database, id: number, viewerId?: number): Promise<R
       COALESCE(SUM(CASE WHEN v.vote = 1 THEN 1 ELSE 0 END),0) AS upvotes,
       COALESCE(SUM(CASE WHEN v.vote = -1 THEN 1 ELSE 0 END),0) AS downvotes,
       (SELECT COUNT(*) FROM community_replies r WHERE r.item_id=i.id AND r.status='published') AS replies,
+      (SELECT COUNT(*) FROM community_poll_options po WHERE po.item_id=i.id) AS poll_options,
       CASE WHEN EXISTS(SELECT 1 FROM community_follows f WHERE f.item_id=i.id AND f.telegram_user_id=?) THEN 1 ELSE 0 END AS following,
       CASE WHEN EXISTS(SELECT 1 FROM community_saves s WHERE s.item_id=i.id AND s.telegram_user_id=?) THEN 1 ELSE 0 END AS saved,
       CASE WHEN i.telegram_user_id=? THEN 1 ELSE 0 END AS mine
