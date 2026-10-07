@@ -91,8 +91,6 @@ export const STUDENT_KNOWLEDGE: StudentKnowledgeItem[] = [
     keywords: ["contact vgu", "contact", "helpline", "support", "university contact"],
     category: "campus",
   },
-];
-
   {
     title: "VGU Fees & Payment Information",
     summary: "Official 2026–27 fee information and payment guidance. Private fee receipts and account status remain inside ERP.",
@@ -156,6 +154,8 @@ export const STUDENT_KNOWLEDGE: StudentKnowledgeItem[] = [
     keywords: ["coe", "exam query", "exam office", "results", "grade card", "transcript", "examination"],
     category: "academic",
   },
+];
+
 export const STUDENT_FAQ: StudentKnowledgeItem[] = [
   {
     title: "Where do I check my attendance?",
