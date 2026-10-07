@@ -541,6 +541,67 @@ export async function reportStudentPost(
   }
 }
 
+export interface PersonalPulse {
+  profile: StudentProfile | null;
+  stats: { posts: number; replies: number; votes: number };
+  recent_posts: Array<{ id: number; title: string; category: string; created_at: string; score: number }>;
+  recent_replies: Array<{ id: number; post_id: number; body: string; created_at: string }>;
+  matches: StudentProfile[];
+}
+
+export async function getPersonalPulse(db: D1Database, userId: number): Promise<PersonalPulse> {
+  const profile = await getStudentProfile(db, userId);
+  const uid = String(userId);
+  const [statsRow, posts, replies, profiles] = await Promise.all([
+    db.prepare(
+      'SELECT (SELECT COUNT(*) FROM student_posts WHERE telegram_user_id = ? AND status = \'published\') AS posts, ' +
+      '(SELECT COUNT(*) FROM student_post_replies WHERE telegram_user_id = ? AND status = \'published\') AS replies, ' +
+      '(SELECT COUNT(*) FROM student_post_votes WHERE telegram_user_id = ?) + ' +
+      '(SELECT COUNT(*) FROM student_post_reply_votes WHERE telegram_user_id = ?) AS votes',
+    ).bind(uid, uid, uid, uid).first<{ posts: number; replies: number; votes: number }>(),
+    db.prepare(
+      'SELECT p.id, p.title, p.category, p.created_at, ' +
+      'COALESCE((SELECT SUM(v.vote) FROM student_post_votes v WHERE v.post_id = p.id), 0) AS score ' +
+      'FROM student_posts p WHERE p.telegram_user_id = ? AND p.status = \'published\' ' +
+      'ORDER BY p.created_at DESC, p.id DESC LIMIT 5',
+    ).bind(uid).all<{ id: number; title: string; category: string; created_at: string; score: number }>(),
+    db.prepare(
+      'SELECT r.id, r.post_id, r.body, r.created_at ' +
+      'FROM student_post_replies r WHERE r.telegram_user_id = ? AND r.status = \'published\' ' +
+      'ORDER BY r.created_at DESC, r.id DESC LIMIT 5',
+    ).bind(uid).all<{ id: number; post_id: number; body: string; created_at: string }>(),
+    listStudentProfiles(db, 50, userId),
+  ]);
+
+  const matches = profile
+    ? profiles.filter((item) => item.public_id !== profile.public_id)
+        .map((item) => ({
+          item,
+          score:
+            (item.branch.toLowerCase() === profile.branch.toLowerCase() ? 4 : 0) +
+            (item.program.toLowerCase() === profile.program.toLowerCase() ? 3 : 0) +
+            (item.year === profile.year ? 2 : 0) +
+            (item.looking_for.toLowerCase().includes(profile.looking_for.toLowerCase()) ||
+             profile.looking_for.toLowerCase().includes(item.looking_for.toLowerCase()) ? 1 : 0),
+        }))
+        .sort((a, b) => b.score - a.score || a.item.display_name.localeCompare(b.item.display_name))
+        .slice(0, 5)
+        .map(({ item }) => item)
+    : [];
+
+  return {
+    profile,
+    stats: {
+      posts: Number(statsRow?.posts ?? 0),
+      replies: Number(statsRow?.replies ?? 0),
+      votes: Number(statsRow?.votes ?? 0),
+    },
+    recent_posts: posts.results.map((post) => ({ ...post, score: Number(post.score ?? 0) })),
+    recent_replies: replies.results,
+    matches,
+  };
+}
+
 export async function upsertTelegramUser(
   db: D1Database,
   user: {
