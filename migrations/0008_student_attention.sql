@@ -1,7 +1,8 @@
 CREATE TABLE IF NOT EXISTS notification_preferences (
   telegram_user_id TEXT PRIMARY KEY REFERENCES users(telegram_user_id) ON DELETE CASCADE,
   official_updates INTEGER NOT NULL DEFAULT 0 CHECK (official_updates IN (0, 1)),
-  community_replies INTEGER NOT NULL DEFAULT 1 CHECK (community_replies IN (0, 1)),
+  community_replies INTEGER NOT NULL DEFAULT 0 CHECK (community_replies IN (0, 1)),
+  enabled_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
