@@ -30,6 +30,13 @@ import {
 import { sendMessage } from "./telegram-bot";
 import { validateInitData } from "./telegram";
 import { analyzeAcademicQuery, searchKnowledge } from "./intelligence";
+import {
+  getNotificationPreferences,
+  listStudentNotifications,
+  markStudentNotificationsRead,
+  runNotificationSweep,
+  setNotificationPreferences,
+} from "./notifications";
 
 interface Env {
   DB: D1Database;
@@ -125,6 +132,18 @@ async function handleTelegramUpdate(request: Request, env: Env): Promise<Respons
 }
 
 export default {
+  async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
+    try {
+      const result = await runNotificationSweep(env.DB, env.SIGNAL_SERVICE, getBotToken(env), env.TELEGRAM_WEBAPP_URL);
+      console.log(JSON.stringify({ event: "notification_sweep", ...result }));
+    } catch (error) {
+      console.error(JSON.stringify({
+        event: "notification_sweep_failed",
+        error: error instanceof Error ? error.message : "unknown",
+      }));
+    }
+  },
+
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
@@ -138,7 +157,7 @@ export default {
       } catch {
         dbOk = false;
       }
-      return json({ service: "vgu-pulse", status: "ok", database: dbOk });
+      return json({ service: "vgu-pulse", status: dbOk ? "ok" : "degraded", database: dbOk }, dbOk ? 200 : 503);
     }
 
     if (request.method === "POST" && url.pathname === "/telegram/webhook") {
@@ -222,6 +241,75 @@ export default {
       const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       return json({ ok: true, profiles: await listBlockedProfiles(env.DB, validated.user.id) });
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/me/notifications") {
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
+      if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+      try {
+        const [preferences, notifications] = await Promise.all([
+          getNotificationPreferences(env.DB, validated.user.id),
+          listStudentNotifications(env.DB, validated.user.id, 30),
+        ]);
+        return json({ ok: true, preferences, notifications });
+      } catch {
+        return json({ ok: false, error: "notifications_unavailable" }, 500);
+      }
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/me/notifications") {
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
+      if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+      const body = await readJson<{ official_updates?: unknown; community_replies?: unknown }>(request);
+      if (!body) return json({ ok: false, error: "invalid_json" }, 400);
+      if (body.official_updates !== undefined && typeof body.official_updates !== "boolean") return json({ ok: false, error: "invalid_official_updates" }, 400);
+      if (body.community_replies !== undefined && typeof body.community_replies !== "boolean") return json({ ok: false, error: "invalid_community_replies" }, 400);
+      try {
+        const preferences = await setNotificationPreferences(env.DB, validated.user.id, {
+          official_updates: body.official_updates as boolean | undefined,
+          community_replies: body.community_replies as boolean | undefined,
+        });
+        return json({ ok: true, preferences });
+      } catch {
+        return json({ ok: false, error: "notification_preferences_failed" }, 500);
+      }
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/me/notifications/read") {
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
+      if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+      try {
+        await markStudentNotificationsRead(env.DB, validated.user.id);
+        return json({ ok: true });
+      } catch {
+        return json({ ok: false, error: "notification_read_failed" }, 500);
+      }
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/community/insights") {
+      try {
+        const [newest, useful, unanswered] = await Promise.all([
+          listStudentPosts(env.DB, 8, undefined, undefined, "newest"),
+          listStudentPosts(env.DB, 8, undefined, undefined, "useful"),
+          listStudentPosts(env.DB, 8, undefined, undefined, "unanswered"),
+        ]);
+        const seen = new Set<number>();
+        const topics = [...useful, ...unanswered, ...newest].filter((post) => {
+          if (seen.has(post.id)) return false;
+          seen.add(post.id);
+          return true;
+        }).slice(0, 12);
+        return json({
+          ok: true,
+          trust: "student-reported",
+          insights: { unanswered: unanswered.slice(0, 5), useful: useful.slice(0, 5), recent: newest.slice(0, 5), topics },
+        });
+      } catch {
+        return json({ ok: false, error: "community_insights_unavailable" }, 500);
+      }
     }
 
     if (request.method === "GET" && url.pathname === "/api/me/pulse") {
