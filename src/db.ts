@@ -197,6 +197,7 @@ export async function listStudentPosts(
       `SELECT p.id, p.category, p.title, p.body,
               COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
               p.created_at, p.report_count,
+              (SELECT COUNT(*) FROM student_post_replies r WHERE r.post_id = p.id AND r.status = 'published' AND r.report_count < 3) AS reply_count,
               CASE WHEN ? IS NOT NULL AND p.telegram_user_id = ? THEN 1 ELSE 0 END AS owned
        FROM student_posts p
        JOIN users u ON u.telegram_user_id = p.telegram_user_id
