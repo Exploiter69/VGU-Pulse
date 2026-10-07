@@ -199,7 +199,7 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
       FROM community_items i WHERE ${where.join(" AND ")}
         AND NOT EXISTS (SELECT 1 FROM student_profile_blocks b WHERE b.blocker_telegram_user_id=? AND b.blocked_telegram_user_id=i.telegram_user_id)
       ORDER BY ${order} LIMIT 40`;
-  const result = await db.prepare(sql).bind(String(viewerId),String(viewerId),String(viewerId),String(viewerId),String(viewerId),...args).all<Record<string, unknown>>();
+  const result = await db.prepare(sql).bind(String(viewerId),String(viewerId),String(viewerId),String(viewerId),String(viewerId),...args,String(viewerId)).all<Record<string, unknown>>();
   const rows = result.results ?? [];
   return Promise.all(rows.map(async row => {
     const owner = await db.prepare("SELECT display_name FROM student_profiles WHERE telegram_user_id=?").bind(String((row as any).telegram_user_id ?? "")).first<{display_name:string}>();
