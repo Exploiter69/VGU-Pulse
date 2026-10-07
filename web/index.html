@@ -193,7 +193,7 @@ label{font-size:13px;color:var(--muted);font-weight:650}
   border:1px solid var(--border);border-radius:999px;
   padding:4px 8px;font-size:11px;font-weight:750;letter-spacing:.02em;
 }
-.trust-badge.official{color:var(--success);background:rgba(115,214,162,.07);border-color:rgba(115,214,162,.2)}
+.trust-badge.official{color:var(--success);background:rgba(115,214,162,.07);border-color:rgba(115,214,162,.2)}.trust-badge.product{color:var(--accent);background:rgba(125,181,255,.07);border-color:rgba(125,181,255,.2)}.field-label{display:block;margin:7px 0 2px;font-size:12px;color:var(--muted);font-weight:700}.inline-link{min-height:44px;display:inline-flex;align-items:center;padding:7px 10px}.reply-toggle{min-height:44px}.compact-select{width:auto;margin:0}.wide-select{width:auto;min-width:120px;margin:0}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:8px}.three-col{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.spaced{margin-top:16px!important}.mt-12{margin-top:12px!important}.wrap-row{display:flex;gap:8px;flex-wrap:wrap}.auto-width{width:auto}.compose-note{font-size:12px}
 .trust-badge.student{color:var(--warning);background:rgba(242,196,109,.07);border-color:rgba(242,196,109,.2)}
 .section-heading{display:flex;justify-content:space-between;align-items:end;gap:12px;margin:22px 0 8px}
 .section-heading:first-child{margin-top:0}
@@ -294,7 +294,7 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
 .home-item a,.post a{color:var(--accent);font-weight:700;text-decoration:none}
 .home-summary{margin:4px 0}
 .trust-badge{white-space:nowrap}
-.trust-badge.official:before{content:"✓";font-size:10px}
+.trust-badge.official:before{content:"✓";font-size:10px}.trust-badge.product:before{content:"•";font-size:14px}
 .trust-badge.student:before{content:"•";font-size:14px}
 .nav{border-radius:18px}
 .nav-item{border-radius:12px}
@@ -350,7 +350,7 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
 .me-links .quick{min-height:66px}
 .settings-note{font-size:12px;color:var(--muted)}
 .toast{position:fixed;left:50%;bottom:calc(78px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(10px);background:var(--surface-3);border:1px solid var(--border-strong);color:var(--text);padding:9px 13px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:50}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.toast-action{margin-left:8px;border:0;background:transparent;color:var(--accent);font:inherit;font-weight:800;cursor:pointer;padding:4px 6px}
 .pulse-sheet{width:min(680px,calc(100% - 24px));margin:auto;background:var(--surface);color:var(--text);border:1px solid var(--border-strong);border-radius:18px;padding:20px}
 .pulse-sheet::backdrop{background:rgba(0,0,0,.58);backdrop-filter:blur(4px)}
 .pulse-sheet h3{font-size:20px;margin:0 0 8px}
@@ -383,7 +383,7 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
 <header class="app-header">
   <div class="app-header-top">
     <div class="brand-mark"><span class="brand-dot" aria-hidden="true"></span><h1 class="app-title">VGU Pulse</h1></div>
-    <span class="trust-badge official">VGU • student OS</span>
+    <span class="trust-badge product">Student OS</span>
   </div>
   <p class="app-subtitle">Know what's happening. Know what to do. Find who can help.</p>
 </header>
@@ -409,7 +409,7 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
 </section>
 <section class="card">
   <div class="section-heading"><div><div class="eyebrow">Today</div><h2>What matters now</h2></div></div>
-  <div class="today-grid" id="today-stats"><div class="today-stat"><strong>—</strong><span>Official updates</span></div><div class="today-stat"><strong>—</strong><span>Deadlines</span></div><div class="today-stat"><strong>—</strong><span>Student posts</span></div><div class="today-stat"><strong>—</strong><span>Campus poll</span></div></div>
+  <div class="today-grid" id="today-stats"><div class="today-stat"><strong>—</strong><span>Official updates today</span></div><div class="today-stat"><strong>—</strong><span>Due today</span></div><div class="today-stat"><strong>—</strong><span>Student posts today</span></div><div class="today-stat"><strong>—</strong><span>Campus poll</span></div></div>
 </section>
 <section class="card">
   <div class="section-heading"><div><div class="eyebrow">Verified VGU</div><h2>Important information</h2></div><span class="trust-badge official">Official</span></div>
@@ -464,7 +464,7 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
 <section class="hero">
   <div class="eyebrow">Academics</div><h2>Your semester.</h2>
   <p class="muted">A private, browser-only planner for the deadlines you choose to track. It does not read private ERP/Digicampus data.</p>
-  <div class="academic-kpis" style="margin-top:16px">
+  <div class="academic-kpis spaced">
     <div class="academic-kpi"><strong id="academic-kpi-upcoming">0</strong><span>Upcoming</span></div>
     <div class="academic-kpi"><strong id="academic-kpi-today">0</strong><span>Today</span></div>
     <div class="academic-kpi"><strong id="academic-kpi-overdue">0</strong><span>Overdue</span></div>
@@ -472,20 +472,14 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
 </section>
 <section class="card">
   <div class="section-heading"><div><div class="eyebrow">Add</div><h2>What needs doing?</h2></div></div>
-  <form id="academic-form">
-    <input id="academic-title" maxlength="120" placeholder="DBMS assignment" required>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <input id="academic-subject" maxlength="80" placeholder="Subject" required>
-      <input id="academic-due" type="date" required>
-    </div>
-    <select id="academic-kind" aria-label="Academic item type"><option value="assignment">Assignment</option><option value="exam">Exam</option><option value="project">Project</option><option value="other">Other</option></select>
+  <form id="academic-form"><label class="field-label" for="academic-title">Task title</label><input id="academic-title" maxlength="120" placeholder="DBMS assignment" required><div class="two-col"><div><label class="field-label" for="academic-subject">Subject</label><input id="academic-subject" maxlength="80" placeholder="Subject" required></div><div><label class="field-label" for="academic-due">Due date</label><input id="academic-due" type="date" required></div></div><label class="field-label" for="academic-kind">Type</label><select id="academic-kind"><option value="assignment">Assignment</option><option value="exam">Exam</option><option value="project">Project</option><option value="other">Other</option></select>
     <button class="submit" type="submit">Add to my plan</button>
   </form>
   <p id="academic-status" class="muted" aria-live="polite"></p>
 </section>
 <section class="card">
   <div class="section-heading"><div><div class="eyebrow">Plan</div><h2>Everything you added</h2></div>
-    <select id="academic-filter" aria-label="Filter academic plan" style="width:auto;margin:0"><option value="all">All</option><option value="today">Today</option><option value="upcoming">Upcoming</option><option value="overdue">Overdue</option></select>
+    <select id="academic-filter" aria-label="Filter academic plan" class="compact-select"><option value="all">All</option><option value="today">Today</option><option value="upcoming">Upcoming</option><option value="overdue">Overdue</option></select>
   </div>
   <div id="academic-list" class="academic-list"></div>
 </section>
@@ -505,10 +499,7 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
 <section class="card">
   <div class="community-compose">
     <form id="post-form">
-      <select id="post-category" aria-label="Post type"><option value="question">Question</option><option value="info">Campus information</option><option value="opportunity">Opportunity</option><option value="request">Request</option></select>
-      <input id="post-title" maxlength="120" placeholder="What do you need to say?" required>
-      <textarea id="post-body" maxlength="2000" rows="3" placeholder="Give other students enough context…" required></textarea>
-      <div class="compose-row"><span class="muted" style="font-size:12px">Keep it useful. No private data.</span><button class="submit" type="submit">Post</button></div>
+      <label class="field-label" for="post-category">Category</label><select id="post-category"><option value="question">Question</option><option value="info">Campus information</option><option value="opportunity">Opportunity</option><option value="request">Request</option></select><label class="field-label" for="post-title">Title</label><input id="post-title" maxlength="120" placeholder="What do you need to say?" required><label class="field-label" for="post-body">Details</label><textarea id="post-body" maxlength="2000" rows="3" placeholder="Give other students enough context…" required></textarea><div class="compose-row"><span class="muted compose-note">Keep it useful. No private data.</span><button class="submit" type="submit">Post</button></div>
       <p id="post-status" class="muted" aria-live="polite"></p>
     </form>
   </div>
@@ -520,8 +511,8 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
 </section>
 <section class="card">
   <div class="chips" role="group" aria-label="Community filters">
-    <select id="post-filter" aria-label="Filter student posts" style="width:auto;min-width:120px;margin:0"><option value="">For everyone</option><option value="question">Questions</option><option value="info">Campus info</option><option value="opportunity">Opportunities</option><option value="request">Requests</option></select>
-    <select id="post-sort" aria-label="Sort student posts" style="width:auto;min-width:120px;margin:0"><option value="newest">New</option><option value="useful">Most useful</option><option value="active">Most discussed</option><option value="unanswered">Unanswered</option></select>
+    <select id="post-filter" aria-label="Filter student posts" class="wide-select"><option value="">For everyone</option><option value="question">Questions</option><option value="info">Campus info</option><option value="opportunity">Opportunities</option><option value="request">Requests</option></select>
+    <select id="post-sort" aria-label="Sort student posts" class="wide-select"><option value="newest">New</option><option value="useful">Most useful</option><option value="active">Most discussed</option><option value="unanswered">Unanswered</option></select>
   </div>
   <div id="student-posts"><p class="muted">Loading student posts…</p></div>
 </section>
@@ -529,11 +520,11 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
 <section class="hero">
   <div class="eyebrow">People</div><h2>Find someone to build with.</h2>
   <p class="muted">Discover opt-in students for study groups, projects, teams and opportunities. No unsolicited messaging and no Telegram IDs exposed.</p>
-  <div class="search-shell" style="margin-top:16px"><input id="people-search" maxlength="100" placeholder="DSA, hackathon, project partner…" aria-label="Search people"><button id="people-search-button" type="button" class="submit" aria-label="Search people">→</button></div>
+  <div class="search-shell spaced"><input id="people-search" maxlength="100" placeholder="DSA, hackathon, project partner…" aria-label="Search people"><button id="people-search-button" type="button" class="submit" aria-label="Search people">→</button></div>
 </section>
 <section class="card">
   <div class="section-heading"><div><div class="eyebrow">Filters</div><h2>Narrow the match</h2></div></div>
-  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px">
+  <div class="three-col">
     <select id="people-year" aria-label="Filter by year"><option value="">Any year</option><option value="1">Year 1</option><option value="2">Year 2</option><option value="3">Year 3</option><option value="4">Year 4</option><option value="5">Year 5</option><option value="6">Year 6</option></select>
     <input id="people-program" maxlength="80" placeholder="Program" aria-label="Filter by program">
     <input id="people-branch" maxlength="80" placeholder="Branch" aria-label="Filter by branch">
@@ -548,24 +539,20 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
     <summary>My opt-in profile</summary>
     <p class="muted">Publish only what you're comfortable sharing. You can hide or delete it any time.</p>
     <form id="profile-form">
-      <input id="profile-name" maxlength="80" placeholder="Display name" required>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input id="profile-program" maxlength="80" placeholder="Program" required><input id="profile-branch" maxlength="80" placeholder="Branch" required></div>
-      <input id="profile-year" type="number" min="1" max="6" placeholder="Year" required>
-      <textarea id="profile-bio" maxlength="300" rows="2" placeholder="Short intro (optional)"></textarea>
-      <input id="profile-looking" maxlength="160" placeholder="Looking for — e.g. DSA study group" required>
+      <label class="field-label" for="profile-name">Display name</label><input id="profile-name" maxlength="80" placeholder="Display name" required><div class="two-col"><div><label class="field-label" for="profile-program">Program</label><input id="profile-program" maxlength="80" placeholder="Program" required></div><div><label class="field-label" for="profile-branch">Branch</label><input id="profile-branch" maxlength="80" placeholder="Branch" required></div></div><label class="field-label" for="profile-year">Year</label><input id="profile-year" type="number" min="1" max="6" placeholder="Year" required><label class="field-label" for="profile-bio">Short intro</label><textarea id="profile-bio" maxlength="300" rows="2" placeholder="Short intro (optional)"></textarea><label class="field-label" for="profile-looking">Looking for</label><input id="profile-looking" maxlength="160" placeholder="Looking for — e.g. DSA study group" required>
       <button class="submit" type="submit">Save my profile</button>
       <button id="profile-delete" class="report" type="button" hidden>Delete my profile</button>
       <button id="profile-visibility" class="report" type="button" hidden>Hide my profile</button>
       <p id="profile-status" class="muted" aria-live="polite"></p>
     </form>
   </details>
-  <div id="blocked-people" class="muted" style="margin-top:12px"></div>
+  <div id="blocked-people" class="muted mt-12"></div>
 </section>
 </div><div class="view" data-view-panel="campus">
 <section class="hero">
   <div class="eyebrow">Campus</div><h2>Get where you need to go.</h2>
   <p class="muted">A practical directory of services VGU publishes for students.</p>
-  <div class="search-shell" style="margin-top:16px"><input id="campus-search" type="search" placeholder="Search library, medical, hostel, transport…" aria-label="Search campus"><button type="button" id="campus-search-button" class="submit" aria-label="Search campus">→</button></div>
+  <div class="search-shell spaced"><input id="campus-search" type="search" placeholder="Search library, medical, hostel, transport…" aria-label="Search campus"></div>
 </section>
 <section class="card">
   <div class="section-heading"><div><div class="eyebrow">Services</div><h2>Start with a need</h2></div></div>
@@ -595,10 +582,10 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
 </section>
 </div><div class="view" data-view-panel="tools">
 <section class="hero"><div class="eyebrow">Tools</div><h2>Useful calculations, instantly.</h2><p class="muted">Private, browser-only utilities. Nothing here is saved to Pulse.</p></section>
-<section class="card"><div class="eyebrow">SGPA</div><h2>SGPA calculator</h2><p class="muted">Enter each subject's credit and grade point.</p><div id="sgpa-rows"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="sgpa-add" class="quick" type="button">Add subject</button><button id="sgpa-calc" class="submit" type="button" style="width:auto">Calculate SGPA</button></div><p id="sgpa-result" class="muted" aria-live="polite">Add subjects to calculate.</p></section>
-<section class="card"><div class="eyebrow">CGPA</div><h2>CGPA calculator</h2><p class="muted">Calculate a credit-weighted CGPA from semester SGPA values.</p><div id="cgpa-rows"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="cgpa-add" class="quick" type="button">Add semester</button><button id="cgpa-calc" class="submit" type="button" style="width:auto">Calculate CGPA</button></div><p id="cgpa-result" class="muted" aria-live="polite">Add semesters to calculate.</p></section>
+<section class="card"><div class="eyebrow">SGPA</div><h2>SGPA calculator</h2><p class="muted">Enter each subject's credit and grade point.</p><div id="sgpa-rows"></div><div class="wrap-row"><button id="sgpa-add" class="quick" type="button">Add subject</button><button id="sgpa-calc" class="submit auto-width" type="button">Calculate SGPA</button></div><p id="sgpa-result" class="muted" aria-live="polite">Add subjects to calculate.</p></section>
+<section class="card"><div class="eyebrow">CGPA</div><h2>CGPA calculator</h2><p class="muted">Calculate a credit-weighted CGPA from semester SGPA values.</p><div id="cgpa-rows"></div><div class="wrap-row"><button id="cgpa-add" class="quick" type="button">Add semester</button><button id="cgpa-calc" class="submit auto-width" type="button">Calculate CGPA</button></div><p id="cgpa-result" class="muted" aria-live="polite">Add semesters to calculate.</p></section>
 <section class="card"><div class="eyebrow">Attendance</div><h2>Attendance calculator</h2><div class="tool-grid"><div><label for="att-present">Classes attended</label><input id="att-present" type="number" min="0" step="1" placeholder="e.g. 32"></div><div><label for="att-total">Classes held</label><input id="att-total" type="number" min="0" step="1" placeholder="e.g. 40"></div></div><label for="att-target">Target attendance %</label><input id="att-target" type="number" min="0" max="100" step="0.1" value="75"><button id="att-calc" class="submit" type="button">Calculate attendance</button><p id="att-result" class="muted" aria-live="polite">Enter your attendance to see the result.</p></section>
-<section class="card"><div class="eyebrow">Marks</div><h2>Marks calculator</h2><p class="muted">Combine obtained and maximum marks. This does not assume VGU's internal/external weighting.</p><div id="marks-rows"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="marks-add" class="quick" type="button">Add component</button><button id="marks-calc" class="submit" type="button" style="width:auto">Calculate percentage</button></div><p id="marks-result" class="muted" aria-live="polite">Add components to calculate.</p></section>
+<section class="card"><div class="eyebrow">Marks</div><h2>Marks calculator</h2><p class="muted">Combine obtained and maximum marks. This does not assume VGU's internal/external weighting.</p><div id="marks-rows"></div><div class="wrap-row"><button id="marks-add" class="quick" type="button">Add component</button><button id="marks-calc" class="submit auto-width" type="button">Calculate percentage</button></div><p id="marks-result" class="muted" aria-live="polite">Add components to calculate.</p></section>
 </div>
 
 <div class="view" data-view-panel="pulse">
@@ -703,11 +690,7 @@ document.getElementById("trust-details")?.addEventListener("click",()=>{
  openPulseSheet("How Pulse decides what to show","Official VGU information comes through VGU-Signal and keeps its official label. Community posts and votes are student-reported and are never presented as official VGU information. Private ERP/Digicampus data is not fetched or invented.");
  haptic();
 });
-function toast(message){
- const node=document.getElementById("pulse-toast");if(!node)return;
- node.textContent=message;node.classList.add("show");clearTimeout(window.__pulseToast);
- window.__pulseToast=setTimeout(()=>node.classList.remove("show"),2200);
-}
+function toast(message,actionLabel,action){const node=document.getElementById("pulse-toast");if(!node)return;node.replaceChildren();const textNode=document.createElement("span");textNode.textContent=message;node.append(textNode);if(actionLabel&&typeof action==="function"){const button=document.createElement("button");button.type="button";button.className="toast-action";button.textContent=actionLabel;button.addEventListener("click",()=>{action();node.classList.remove("show")},{once:true});node.append(button)}node.classList.add("show");clearTimeout(window.__pulseToast);window.__pulseToast=setTimeout(()=>node.classList.remove("show"),4000)}
 const navItems=[...document.querySelectorAll("[data-view]")];
 const viewPanels=[...document.querySelectorAll("[data-view-panel]")];
 const navigationStack=["home"];
@@ -803,7 +786,7 @@ function renderSearchResults(results,meta={}){
   const title=document.createElement("h3");title.textContent=String(item.title||"Pulse result");
   const summary=document.createElement("p");summary.className="muted";summary.textContent=String(item.summary||"");
   article.append(meta,title,summary);
-  if(item.url){const link=document.createElement("a");link.href=String(item.url);link.target="_blank";link.rel="noopener noreferrer";link.textContent="Open source";link.style.display="inline-block";link.style.marginTop="4px";article.append(link)}
+  if(item.url){const link=document.createElement("a");link.href=String(item.url);link.target="_blank";link.rel="noopener noreferrer";link.textContent="View official source ↗";link.style.display="inline-block";link.style.marginTop="4px";article.append(link)}
   searchResults.append(article);
  }
 }
@@ -847,17 +830,20 @@ function renderItems(target,items,emptyText){
   const title=document.createElement("h3");title.style.margin="0 0 6px";title.textContent=String(item.title||"VGU update");
   const summary=document.createElement("p");summary.className="muted home-summary";summary.textContent=String(item.summary||"");
   article.append(title,summary);
-  if(item.published_at){const date=document.createElement("small");date.className="muted home-meta";date.textContent=String(item.published_at);article.append(date)}
+  if(item.published_at){const date=document.createElement("small");date.className="muted home-meta";date.textContent=formatPulseDate(item.published_at);article.append(date)}
   if(item.primary_source_url){
-   const link=document.createElement("a");link.href=String(item.primary_source_url);link.target="_blank";link.rel="noopener noreferrer";link.textContent="Open source";link.style.display="inline-block";link.style.marginTop="8px";article.append(link)
+   const link=document.createElement("a");link.href=String(item.primary_source_url);link.target="_blank";link.rel="noopener noreferrer";link.textContent="View official source ↗";link.style.display="inline-block";link.style.marginTop="8px";article.append(link)
   }
   target.append(article);
  }
 }
-function renderTodayStats(noticeItems,postItems,pollData){
+function pulseDateKey(value){const date=value instanceof Date?value:new Date(String(value));if(!Number.isFinite(date.getTime()))return "";const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(date);const map=Object.fromEntries(parts.filter(p=>p.type!=="literal").map(p=>[p.type,p.value]));return map.year+"-"+map.month+"-"+map.day}function formatPulseDate(value){const raw=String(value??"");if(!raw)return "";const key=/^\d{4}-\d{2}-\d{2}/.test(raw)?raw.slice(0,10):pulseDateKey(raw);if(!/^\d{4}-\d{2}-\d{2}$/.test(key))return raw;const [year,month,day]=key.split("-").map(Number);const date=new Date(Date.UTC(year,month-1,day,12));return new Intl.DateTimeFormat("en-IN",{day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}).format(date)}function renderTodayStats(noticeItems,postItems,pollData){
  if(!todayStats)return;
- const deadlines=academicItems().filter(item=>item.due>=new Date().toISOString().slice(0,10));
- const values=[noticeItems.length,deadlines.length,postItems.length,pollData?1:0];
+ const today=pulseDateKey(new Date());
+ const noticesToday=noticeItems.filter(item=>pulseDateKey(item.published_at||item.created_at)===today);
+ const postsToday=postItems.filter(item=>pulseDateKey(item.created_at)===today);
+ const deadlinesToday=academicItems().filter(item=>item.due===today);
+ const values=[noticesToday.length,deadlinesToday.length,postsToday.length,pollData?1:0];
  [...todayStats.querySelectorAll(".today-stat")].forEach((card,index)=>{const strong=card.querySelector("strong");if(strong)strong.textContent=String(values[index])});
 }
 function renderHomePulse(next){
@@ -918,8 +904,7 @@ function renderStudentPosts(posts){
   const report=document.createElement("button");report.className="report";report.type="button";report.textContent="Report";report.addEventListener("click",()=>reportPost(post.id,report));
   actions.append(report);
   const related=document.createElement("div");related.className="muted";related.style.marginTop="10px";
-  const replies=document.createElement("div");replies.className="replies";
-  const repliesStatus=document.createElement("p");repliesStatus.className="muted";repliesStatus.textContent="Loading replies…";replies.append(repliesStatus);
+  const replyToggle=document.createElement("button");replyToggle.type="button";replyToggle.className="inline-link reply-toggle";replyToggle.textContent="View replies ("+String(post.reply_count||0)+")";replyToggle.setAttribute("aria-expanded","false");const replies=document.createElement("div");replies.className="replies";replies.hidden=true;let repliesLoaded=false;const loadExpandedReplies=async()=>{if(repliesLoaded)return;repliesLoaded=true;try{await loadReplies(post.id,replies)}catch{replies.replaceChildren();const p=document.createElement("p");p.className="muted";p.textContent="Replies unavailable.";replies.append(p)}};replyToggle.addEventListener("click",async()=>{const expanded=!replies.hidden;replies.hidden=expanded;replyToggle.setAttribute("aria-expanded",String(!expanded));replyToggle.textContent=expanded?"View replies ("+String(post.reply_count||0)+")":"Hide replies";if(!expanded)await loadExpandedReplies()});
   const replyForm=document.createElement("form");replyForm.className="reply-form";
   const replyInput=document.createElement("textarea");replyInput.rows=2;replyInput.maxLength=1000;replyInput.placeholder="Reply to this post…";replyInput.required=true;
   const replySubmit=document.createElement("button");replySubmit.className="reply-submit";replySubmit.type="submit";replySubmit.textContent="Reply";
@@ -933,7 +918,7 @@ function renderStudentPosts(posts){
     const response=await fetch("/api/student-posts/replies",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({post_id:post.id,body})});
     let data={};try{data=await response.json()}catch{}
     if(!response.ok){status.textContent=data.error==="unauthorized"?"Telegram session expired. Reopen Pulse from Telegram.":data.error==="invalid_reply"?"Reply must contain 1–1000 characters.":data.error==="post_not_found"?"That post is no longer available.":"Reply could not be posted. Try again.";return}
-    replyInput.value="";await loadReplies(post.id,replies);status.textContent="Reply posted.";
+    replyInput.value="";replies.hidden=false;replyToggle.setAttribute("aria-expanded","true");replyToggle.textContent="Hide replies";repliesLoaded=false;await loadExpandedReplies();status.textContent="Reply posted.";
    }catch{status.textContent="Network error while posting reply. Try again."}
    finally{replySubmit.disabled=false;replySubmit.textContent="Reply"}
   });
@@ -945,9 +930,8 @@ function renderStudentPosts(posts){
    if(response.ok){await loadStudentPosts();status.textContent="Post deleted."}else{status.textContent="Post could not be deleted.";deletePost.disabled=false;deletePost.dataset.confirming="";deletePost.textContent="Delete"}
   });
   actions.append(deletePost);
-  article.append(meta,title,body,actions,related,replies,replyForm);studentPosts.append(article);
+  article.append(meta,title,body,actions,related,replyToggle,replies,replyForm);studentPosts.append(article);
   fetch("/api/student-posts/related?post_id="+encodeURIComponent(post.id)).then(r=>r.ok?r.json():null).then(data=>{if(data?.posts)renderRelatedPosts(related,data.posts)}).catch(()=>{});
-  loadReplies(post.id,replies).catch(()=>{repliesStatus.textContent="Replies unavailable.";});
  }
 }
 async function loadReplies(postId,target){
@@ -1045,9 +1029,7 @@ profileVisibility.addEventListener("click",async()=>{
  if(response.ok){profileVisibility.textContent=hidden?"Hide my profile":"Show my profile";profileStatus.textContent=hidden?"Profile is visible again.":"Profile hidden from People discovery.";await loadProfiles()}else profileStatus.textContent="Visibility could not be changed.";
  profileVisibility.disabled=false;
 });
-peopleSearch?.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();loadProfiles().catch(()=>{})}});
-peopleSearchButton?.addEventListener("click",()=>{loadProfiles().catch(()=>{})});
-[peopleYear,peopleProgram,peopleBranch].forEach(el=>el?.addEventListener("input",loadProfiles));
+let peopleSearchTimer=0;peopleSearch?.addEventListener("input",()=>{clearTimeout(peopleSearchTimer);peopleSearchTimer=window.setTimeout(()=>loadProfiles().catch(()=>{}),300)});peopleSearch?.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();clearTimeout(peopleSearchTimer);loadProfiles().catch(()=>{})}});peopleSearchButton?.addEventListener("click",()=>{clearTimeout(peopleSearchTimer);loadProfiles().catch(()=>{})});[peopleYear,peopleProgram,peopleBranch].forEach(el=>el?.addEventListener("input",loadProfiles));
 peopleYear?.addEventListener("change",loadProfiles);
 
 profileDelete.addEventListener("click",async()=>{
@@ -1161,7 +1143,7 @@ function renderAcademic(){
  const target=document.querySelector("#academic-list");if(!target)return;
  const items=academicItems().sort((a,b)=>a.due.localeCompare(b.due));
  const filter=document.querySelector("#academic-filter")?.value||"all";
- const today=new Date().toISOString().slice(0,10);
+ const today=pulseDateKey(new Date());
  const visible=items.filter(item=>filter==="all"||academicState(item,today)===filter);
  target.replaceChildren();
  if(!items.length){const p=document.createElement("p");p.className="muted";p.textContent="Your academic plan is empty.";target.append(p);renderAcademicSummary();return}
@@ -1171,7 +1153,7 @@ function renderAcademic(){
   const meta=document.createElement("small");meta.className="muted";meta.textContent=item.kind+" • "+item.subject+" • due "+item.due;
   const title=document.createElement("strong");title.textContent=item.title;
   const del=document.createElement("button");del.type="button";del.className="report";del.textContent="Remove";
-  del.addEventListener("click",()=>{saveAcademicItems(academicItems().filter(x=>x.id!==item.id));renderAcademic();});
+  del.addEventListener("click",()=>{const previous=academicItems(),removed=previous.find(x=>x.id===item.id);if(!removed)return;saveAcademicItems(previous.filter(x=>x.id!==item.id));renderAcademic();toast("Task removed.","Undo",()=>{saveAcademicItems([...academicItems(),removed]);renderAcademic();renderAcademicSummary();renderPersonalAcademicPlan()})});
   const state=document.createElement("span");state.className="muted";state.style.marginLeft="10px";state.textContent=academicState(item,today)==="overdue"?"Overdue":academicState(item,today)==="today"?"Due today":"Upcoming";
   row.append(meta,document.createElement("br"),title,state,del);target.append(row);
  }
@@ -1182,7 +1164,7 @@ function renderAcademicSummary(){
  const items=academicItems().sort((a,b)=>a.due.localeCompare(b.due));
  target.replaceChildren();
  if(!items.length){const p=document.createElement("p");p.className="muted";p.textContent="No local deadlines yet. Add your first assignment or exam.";target.append(p);return}
- const today=new Date().toISOString().slice(0,10);
+ const today=pulseDateKey(new Date());
  const deadlineCount=items.filter(item=>item.due>=today).length;
  const statCards=todayStats?.querySelectorAll(".today-stat");
  if(statCards?.[1])statCards[1].querySelector("strong").textContent=String(deadlineCount);
@@ -1196,7 +1178,7 @@ function renderAcademicSummary(){
  if(overdue){const p=document.createElement("p");p.textContent=overdue+" overdue task"+(overdue===1?"":"s")+" need attention.";target.append(p)}
  if(todayCount){const p=document.createElement("p");p.textContent=todayCount+" task"+(todayCount===1?" is":"s are")+" due today.";target.append(p)}
  if(next.length){
-  for(const item of next){const row=document.createElement("p");row.className="muted";row.textContent=item.due+" • "+item.subject+" • "+item.title;target.append(row)}
+  for(const item of next){const row=document.createElement("p");row.className="muted";row.textContent=formatPulseDate(item.due)+" • "+item.subject+" • "+item.title;target.append(row)}
  }else if(!overdue&&!todayCount){const p=document.createElement("p");p.className="muted";p.textContent="No upcoming deadlines in your local plan.";target.append(p)}
 }
 const academicFilter=document.querySelector("#academic-filter");
@@ -1217,12 +1199,12 @@ function renderPersonalAcademicPlan(){
  if(!myPulseAcademics)return;
  const items=academicItems().sort((a,b)=>a.due.localeCompare(b.due));
  myPulseAcademics.replaceChildren();
- const today=new Date().toISOString().slice(0,10);
+ const today=pulseDateKey(new Date());
  const next=items.filter(item=>item.due>=today).slice(0,4);
  const overdue=items.filter(item=>item.due<today).length;
  if(overdue){const p=document.createElement("p");p.textContent=overdue+" overdue task"+(overdue===1?" needs":"s need")+" attention.";myPulseAcademics.append(p)}
  if(!next.length){const p=document.createElement("p");p.className="muted";p.textContent=overdue?"No upcoming deadlines in your local plan.":"Your local academic plan is empty.";myPulseAcademics.append(p);return}
- for(const item of next){const row=document.createElement("p");row.className="muted";row.textContent=item.due+" • "+item.subject+" • "+item.title;myPulseAcademics.append(row)}
+ for(const item of next){const row=document.createElement("p");row.className="muted";row.textContent=formatPulseDate(item.due)+" • "+item.subject+" • "+item.title;myPulseAcademics.append(row)}
 }
 function renderPersonalPulse(data){
  if(!myPulseStatus)return;
@@ -1329,7 +1311,6 @@ async function boot(){
  try{await loadSearch("")}catch{}
  renderCampusGuide();
  loadCommunityInsights();
-document.querySelector("#campus-search-button")?.addEventListener("click",()=>{renderCampusGuide();haptic()});
 document.querySelector("#campus-search")?.addEventListener("input",renderCampusGuide);
 document.querySelectorAll("[data-campus-category]").forEach(button=>button.addEventListener("click",()=>{
  document.querySelectorAll("[data-campus-category]").forEach(b=>b.classList.remove("active"));button.classList.add("active");renderCampusGuide();haptic();
@@ -1389,8 +1370,7 @@ document.getElementById("notify-community")?.addEventListener("change",event=>up
 document.getElementById("notifications-read")?.addEventListener("click",markNotificationsRead);
 document.getElementById("pulse-share")?.addEventListener("click",()=>{
  const url=location.href, text="VGU Pulse — student information, campus tools and community.";
- const shareUrl="https://t.me/share/url?url="+encodeURIComponent(url)+"&text="+encodeURIComponent(text);
- try{tg?.openTelegramLink?.(shareUrl);haptic()}catch{window.open(shareUrl,"_blank","noopener,noreferrer")}
+ const shareUrl="https://t.me/share/url?url="+encodeURIComponent(url)+"&text="+encodeURIComponent(text);try{if(tg?.openTelegramLink){tg.openTelegramLink(shareUrl);haptic();return}if(navigator.share){navigator.share({title:"VGU Pulse",text,url}).catch(()=>{})}else window.open(shareUrl,"_blank","noopener,noreferrer")}catch{window.open(shareUrl,"_blank","noopener,noreferrer")}
 });
 document.getElementById("telegram-fullscreen")?.addEventListener("click",async()=>{
  try{await tg?.requestFullscreen?.();toast("Fullscreen enabled.");}catch{toast("Fullscreen is unavailable here.");}
