@@ -46,6 +46,30 @@ describe("community V2 contract", () => {
   });
 
 
+  it("keeps saved, editing, moderation and reputation surfaces wired", () => {
+    const backend = readFileSync("src/community-v2.ts", "utf8");
+    const web = readFileSync("web/community-v2.js", "utf8");
+    const index = readFileSync("web/index.html", "utf8");
+    expect(backend).toContain('params.get("saved") === "1"');
+    expect(backend).toContain('request.method==="PATCH" && url.pathname==="/api/community-v2/items"');
+    expect(backend).toContain('UPDATE community_items SET title=?,body=?,updated_at=CURRENT_TIMESTAMP');
+    expect(backend).toContain('/api/community-v2/reputation');
+    expect(backend).toContain('/api/community-v2/preferences');
+    expect(web).toContain('data-special="saved"');
+    expect(web).toContain('window.__pulseCommunitySaved');
+    expect(web).toContain('data-action="edit"');
+    expect(web).toContain('method:"PATCH"');
+    expect(web).toContain('data-action="moderate"');
+    expect(web).toContain('cv2-more-report');
+    expect(index).toContain('data-community-mode="saved"');
+    expect(index).toContain('community-reputation-points');
+    expect(index).toContain('notify-community-activity');
+    expect(index).toContain('notify-personalized');
+    expect(index).toContain('loadCommunityAccount');
+    expect(index).not.toContain('function renderStudentPosts');
+    expect(index).not.toContain('/api/student-posts",{method:"POST"');
+  });
+
   it("keeps ownership, deletion, toggle and blocking contracts wired", () => {
     const backend = readFileSync("src/community-v2.ts", "utf8");
     const web = readFileSync("web/community-v2.js", "utf8");
