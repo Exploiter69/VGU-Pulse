@@ -1235,8 +1235,9 @@ document.querySelectorAll("[data-campus-category]").forEach(button=>button.addEv
  if(tg?.ready)tg.ready();
 }
 document.getElementById("reset-academic")?.addEventListener("click",()=>{
- if(!window.confirm("Reset your local academic planner? This cannot be undone."))return;
- localStorage.removeItem(ACADEMIC_KEY);renderAcademic();renderAcademicSummary();renderPersonalAcademicPlan();toast("Local planner reset.");
+ const button=document.getElementById("reset-academic");if(!button)return;
+ if(button.dataset.confirming!=="1"){button.dataset.confirming="1";button.textContent="Tap again to reset";toast("Tap again to clear your local planner.");return}
+ localStorage.removeItem(ACADEMIC_KEY);button.dataset.confirming="";button.textContent="Reset local planner";renderAcademic();renderAcademicSummary();renderPersonalAcademicPlan();toast("Local planner reset.");
 });
 document.getElementById("telegram-fullscreen")?.addEventListener("click",async()=>{
  try{await tg?.requestFullscreen?.();toast("Fullscreen enabled.");}catch{toast("Fullscreen is unavailable here.");}
