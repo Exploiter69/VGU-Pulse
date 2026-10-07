@@ -49,8 +49,23 @@ function getBotToken(env: Env): string {
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8" },
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    },
   });
+}
+
+async function readJson<T>(request: Request, maxBytes = 32_768): Promise<T | null> {
+  const length = Number(request.headers.get("content-length") ?? "0");
+  if (Number.isFinite(length) && length > maxBytes) return null;
+  try {
+    const body = (await request.json()) as T;
+    return body && typeof body === "object" ? body : null;
+  } catch {
+    return null;
+  }
 }
 
 function html(): Response {
@@ -68,13 +83,14 @@ async function handleTelegramUpdate(request: Request, env: Env): Promise<Respons
   if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
 
   const expected = env.TELEGRAM_WEBHOOK_SECRET;
-  if (expected && request.headers.get("x-telegram-bot-api-secret-token") !== expected) {
+  if (!expected || request.headers.get("x-telegram-bot-api-secret-token") !== expected) {
     return json({ ok: false, error: "forbidden" }, 403);
   }
 
-  const update = (await request.json()) as {
+  const update = await readJson<{
     message?: { chat?: { id?: number }; text?: string };
-  };
+  }>(request);
+  if (!update) return json({ ok: false, error: "invalid_json" }, 400);
 
   const message = update.message;
   const chatId = message?.chat?.id;
@@ -335,12 +351,8 @@ export default {
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       await upsertTelegramUser(env.DB, validated.user);
 
-      let body: { category?: unknown; title?: unknown; body?: unknown };
-      try {
-        body = (await request.json()) as { category?: unknown; title?: unknown; body?: unknown };
-      } catch {
-        return json({ ok: false, error: "invalid_json" }, 400);
-      }
+      const body = await readJson<{ category?: unknown; title?: unknown; body?: unknown }>(request);
+      if (!body) return json({ ok: false, error: "invalid_json" }, 400);
 
       const input = validateStudentPostInput(body);
       if (!input) return json({ ok: false, error: "invalid_post" }, 400);
@@ -618,12 +630,8 @@ export default {
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
       await upsertTelegramUser(env.DB, validated.user);
 
-      let body: { poll_id?: number; option_id?: number };
-      try {
-        body = (await request.json()) as { poll_id?: number; option_id?: number };
-      } catch {
-        return json({ ok: false, error: "invalid_json" }, 400);
-      }
+      const body = await readJson<{ poll_id?: unknown; option_id?: unknown }>(request);
+      if (!body) return json({ ok: false, error: "invalid_json" }, 400);
 
       if (!Number.isSafeInteger(body.poll_id) || !Number.isSafeInteger(body.option_id)) {
         return json({ ok: false, error: "invalid_vote" }, 400);
@@ -647,8 +655,11 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/auth/telegram") {
       if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
 
-      const body = (await request.json()) as { initData?: string };
-      const validated = await validateInitData(body.initData ?? "", getBotToken(env));
+      const body = await readJson<{ initData?: unknown }>(request);
+      if (!body || typeof body.initData !== "string" || body.initData.length > 8192) {
+        return json({ ok: false, error: "invalid_init_data" }, 400);
+      }
+      const validated = await validateInitData(body.initData, getBotToken(env));
       if (!validated) return json({ ok: false, error: "invalid_init_data" }, 401);
 
       await upsertTelegramUser(env.DB, validated.user);
