@@ -123,7 +123,7 @@ describe("personal contribution compatibility", () => {
     const index = readFileSync("web/index.html", "utf8");
     expect(community).toContain("/api/community-v2/legacy-item");
     expect(web).toContain('source==="legacy"');
-    expect(index).toContain("data-activity-source");
+    expect(index).toContain("button.dataset.activitySource=");
     expect(index).toContain("item.dataset.activitySource||\"v2\"");
   });
 });
