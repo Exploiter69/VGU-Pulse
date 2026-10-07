@@ -84,7 +84,7 @@ export async function validateInitData(
     const parsed: unknown = JSON.parse(userRaw);
     if (!parsed || typeof parsed !== "object") return null;
     const value = parsed as Record<string, unknown>;
-    if (!Number.isSafeInteger(value.id)) return null;
+    if (typeof value.id !== "number" || !Number.isSafeInteger(value.id)) return null;
     if (value.username !== undefined && typeof value.username !== "string") return null;
     if (value.first_name !== undefined && typeof value.first_name !== "string") return null;
     if (value.last_name !== undefined && typeof value.last_name !== "string") return null;
