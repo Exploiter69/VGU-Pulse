@@ -272,8 +272,8 @@
           await api("/api/community-v2/save"+(saved?"?item_id="+encodeURIComponent(id):""),saved?{method:"DELETE"}:{method:"POST",body:JSON.stringify({item_id:id})});
         }
         if(action==="edit"){
-          const data=await api("/api/community-v2/feed?sort=new");
-          const current=(data.items||[]).find(x=>Number(x.id)===id);
+          const data=await api("/api/community-v2/items?item_id="+encodeURIComponent(id));
+          const current=data.item;
           if(!current)throw new Error("item_not_found");
           editingId=id;$("#cv2-compose-heading").textContent="Edit your post";$("#cv2-publish").textContent="Save changes";$("#cv2-title").value=current.title;$("#cv2-body").value=current.body;$("#cv2-kind").value=current.kind;$("#cv2-community").value=current.community_slug;$("#cv2-anon").checked=Boolean(current.anonymous);$("#cv2-options").value="";$("#cv2-compose-status").textContent="";$("#cv2-compose-dialog").showModal();return;
         }
