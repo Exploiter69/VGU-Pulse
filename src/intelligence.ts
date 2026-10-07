@@ -1,3 +1,5 @@
+import { knowledgeItems } from "./student-knowledge";
+
 export type IntelligenceItem = {
   kind: "official" | "tool" | "campus" | "student";
   title: string;
@@ -166,7 +168,15 @@ export function searchKnowledge(
 ): IntelligenceItem[] {
   const normalized = query.trim().slice(0, 160);
   const analysis = analyzeAcademicQuery(normalized);
-  const items = [...officialItems(official), ...TOOLKIT, ...CAMPUS, ...studentItems(student)];
+  const knowledge: IntelligenceItem[] = knowledgeItems().map((item) => ({
+    kind: item.category === "campus" ? "campus" : "tool",
+    title: item.title,
+    summary: item.summary,
+    url: item.url,
+    trust: "official",
+    source: "VGU official student knowledge",
+  }));
+  const items = [...officialItems(official), ...TOOLKIT, ...CAMPUS, ...knowledge, ...studentItems(student)];
   return items
     .map((item, index) => ({ item, score: score(item, normalized, analysis), index }))
     .filter(({score}) => !normalized || score > 0)
