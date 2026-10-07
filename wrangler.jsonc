@@ -20,7 +20,7 @@
       "service": "vgu-signal-worker"
     }
   ],
-  "vars": {
+  "triggers": {\n    "crons": ["*/15 * * * *"]\n  },\n  "vars": {
     "APP_NAME": "VGU Pulse"
   }
 }
