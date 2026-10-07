@@ -514,6 +514,11 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
   </div>
 </section>
 <section class="card">
+  <div class="section-heading"><div><div class="eyebrow">Community intelligence</div><h2>What students are asking</h2></div><span class="trust-badge student">Student-reported</span></div>
+  <p class="muted">Deterministic signals from recent community activity — not official VGU information.</p>
+  <div id="community-insights"><p class="muted">Loading community signals…</p></div>
+</section>
+<section class="card">
   <div class="chips" role="group" aria-label="Community filters">
     <select id="post-filter" aria-label="Filter student posts" style="width:auto;min-width:120px;margin:0"><option value="">For everyone</option><option value="question">Questions</option><option value="info">Campus info</option><option value="opportunity">Opportunities</option><option value="request">Requests</option></select>
     <select id="post-sort" aria-label="Sort student posts" style="width:auto;min-width:120px;margin:0"><option value="newest">New</option><option value="useful">Most useful</option><option value="active">Most discussed</option><option value="unanswered">Unanswered</option></select>
@@ -629,6 +634,17 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
   </div>
 </section>
 <section class="card">
+  <div class="section-heading"><div><div class="eyebrow">Attention</div><h2>Notifications</h2></div><span id="notification-count" class="muted"></span></div>
+  <p class="settings-note">Opt in to verified VGU updates and replies to your community posts. Telegram delivery uses the same bot and existing $0 Worker infrastructure.</p>
+  <div class="view-tools">
+    <label class="chip"><input id="notify-official" type="checkbox"> VGU updates</label>
+    <label class="chip"><input id="notify-community" type="checkbox"> Post replies</label>
+    <button type="button" class="inline-link" id="notifications-read">Mark all read</button>
+  </div>
+  <p id="notification-status" class="muted" aria-live="polite"></p>
+  <div id="notifications"><p class="muted">Open Pulse from Telegram to manage notifications.</p></div>
+</section>
+<section class="card">
   <div class="section-heading"><div><div class="eyebrow">Campus signal</div><h2>Today's question</h2></div><span id="vote-total" class="muted"></span></div>
   <p id="question" class="muted">Loading today's question…</p><div id="options"></div>
   <p class="settings-note">Poll participation is student activity, not an official VGU announcement.</p>
@@ -638,7 +654,7 @@ main{width:min(760px,calc(100% - 28px));padding:24px 0 104px}
   <p class="settings-note">Theme follows Telegram when opened as a Mini App. Your academic planner stays on this device.</p>
   <div class="view-tools">
     <button type="button" class="inline-link" id="reset-academic">Reset local planner</button>
-    <button type="button" class="inline-link" id="telegram-fullscreen">Use fullscreen</button>
+    <button type="button" class="inline-link" id="telegram-fullscreen">Use fullscreen</button><button type="button" class="inline-link" id="pulse-share">Share Pulse</button>
   </div>
 </section>
 </div></main><dialog id="pulse-sheet" class="pulse-sheet">
@@ -1217,10 +1233,76 @@ async function loadPersonalPulse(){
  try{const r=await fetch("/api/me/pulse",{headers:{"x-telegram-init-data":initData}});if(!r.ok)throw Error("personal_pulse_failed");renderPersonalPulse(await r.json())}
  catch{myPulseStatus.textContent="Personal Pulse is temporarily unavailable. Your local academic plan still works.";renderPersonalAcademicPlan()}
 }
+async function loadCommunityInsights(){
+ const target=document.querySelector("#community-insights");if(!target)return;
+ try{
+  const response=await fetch("/api/community/insights");if(!response.ok)throw Error("community_insights_failed");
+  const data=await response.json();target.replaceChildren();
+  const unanswered=data.insights?.unanswered||[],useful=data.insights?.useful||[];
+  if(!unanswered.length&&!useful.length){const p=document.createElement("p");p.className="muted";p.textContent="No strong community signal yet. Ask a question or share something useful.";target.append(p);return}
+  if(unanswered.length){
+   const h=document.createElement("strong");h.textContent="Needs answers";target.append(h);
+   for(const post of unanswered.slice(0,3)){const p=document.createElement("p");p.className="muted";p.textContent="• "+post.title+" · "+(post.reply_count||0)+" replies";target.append(p)}
+  }
+  if(useful.length){
+   const h=document.createElement("strong");h.style.display="block";h.style.marginTop="12px";h.textContent="Useful right now";target.append(h);
+   for(const post of useful.slice(0,3)){const p=document.createElement("p");p.className="muted";p.textContent="• "+post.title+" · score "+(post.score??0);target.append(p)}
+  }
+ }catch{target.replaceChildren();const p=document.createElement("p");p.className="muted";p.textContent="Community signals are temporarily unavailable.";target.append(p)}
+}
+
+function renderNotifications(data){
+ const target=document.querySelector("#notifications");if(!target)return;
+ const notifications=data?.notifications||[];
+ const unread=notifications.filter(n=>!n.read_at).length;
+ const count=document.querySelector("#notification-count");if(count)count.textContent=unread?String(unread)+" unread":"All caught up";
+ const official=document.querySelector("#notify-official");if(official)official.checked=Boolean(data?.preferences?.official_updates);
+ const community=document.querySelector("#notify-community");if(community)community.checked=Boolean(data?.preferences?.community_replies);
+ target.replaceChildren();
+ if(!notifications.length){const p=document.createElement("p");p.className="muted";p.textContent="No notifications yet.";target.append(p);return}
+ for(const item of notifications.slice(0,8)){
+  const row=document.createElement("article");row.className="post";
+  const title=document.createElement("strong");title.textContent=item.title;
+  const body=document.createElement("p");body.className="muted";body.textContent=item.body;
+  const meta=document.createElement("div");meta.className="muted";meta.textContent=(item.kind==="official"?"Official VGU":"Community")+" · "+new Date(item.created_at).toLocaleString();
+  row.append(title,body,meta);if(!item.read_at)row.style.borderColor="var(--accent)";target.append(row);
+ }
+}
+
+async function loadNotifications(){
+ if(!initData)return;
+ const statusNode=document.querySelector("#notification-status");
+ try{
+  const response=await fetch("/api/me/notifications",{headers:{"x-telegram-init-data":initData}});
+  if(!response.ok)throw Error("notifications_failed");
+  renderNotifications(await response.json());
+  if(statusNode)statusNode.textContent="";
+ }catch{if(statusNode)statusNode.textContent="Notifications are temporarily unavailable."}
+}
+async function updateNotificationPreference(field,value){
+ if(!initData)return;
+ const statusNode=document.querySelector("#notification-status");
+ try{
+  const response=await fetch("/api/me/notifications",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({[field]:value})});
+  if(!response.ok)throw Error("notification_preference_failed");
+  renderNotifications(await response.json());haptic();
+  if(statusNode)statusNode.textContent=value?"Notification preference enabled.":"Notification preference disabled.";
+ }catch{if(statusNode)statusNode.textContent="Could not update notification preference.";loadNotifications()}
+}
+async function markNotificationsRead(){
+ if(!initData)return;
+ try{
+  const response=await fetch("/api/me/notifications/read",{method:"POST",headers:{"x-telegram-init-data":initData}});
+  if(!response.ok)throw Error("notification_read_failed");
+  await loadNotifications();haptic();
+ }catch{const node=document.querySelector("#notification-status");if(node)node.textContent="Could not mark notifications as read."}
+}
+
 async function boot(){
  initSearch();
  try{await loadSearch("")}catch{}
  renderCampusGuide();
+ loadCommunityInsights();
 document.querySelector("#campus-search-button")?.addEventListener("click",()=>{renderCampusGuide();haptic()});
 document.querySelector("#campus-search")?.addEventListener("input",renderCampusGuide);
 document.querySelectorAll("[data-campus-category]").forEach(button=>button.addEventListener("click",()=>{
@@ -1266,6 +1348,7 @@ document.querySelectorAll("[data-campus-category]").forEach(button=>button.addEv
   try{await loadProfile()}catch{}
   try{await loadStudentPosts()}catch{}
   try{await loadPersonalPulse()}catch{}
+  try{await loadNotifications()}catch{}
   try{await loadBlockedPeople()}catch{}
  }
  if(tg?.ready)tg.ready();
@@ -1274,6 +1357,14 @@ document.getElementById("reset-academic")?.addEventListener("click",()=>{
  const button=document.getElementById("reset-academic");if(!button)return;
  if(button.dataset.confirming!=="1"){button.dataset.confirming="1";button.textContent="Tap again to reset";toast("Tap again to clear your local planner.");return}
  localStorage.removeItem(ACADEMIC_KEY);button.dataset.confirming="";button.textContent="Reset local planner";renderAcademic();renderAcademicSummary();renderPersonalAcademicPlan();toast("Local planner reset.");
+});
+document.getElementById("notify-official")?.addEventListener("change",event=>updateNotificationPreference("official_updates",event.target.checked));
+document.getElementById("notify-community")?.addEventListener("change",event=>updateNotificationPreference("community_replies",event.target.checked));
+document.getElementById("notifications-read")?.addEventListener("click",markNotificationsRead);
+document.getElementById("pulse-share")?.addEventListener("click",()=>{
+ const url=location.href, text="VGU Pulse — student information, campus tools and community.";
+ const shareUrl="https://t.me/share/url?url="+encodeURIComponent(url)+"&text="+encodeURIComponent(text);
+ try{tg?.openTelegramLink?.(shareUrl);haptic()}catch{window.open(shareUrl,"_blank","noopener,noreferrer")}
 });
 document.getElementById("telegram-fullscreen")?.addEventListener("click",async()=>{
  try{await tg?.requestFullscreen?.();toast("Fullscreen enabled.");}catch{toast("Fullscreen is unavailable here.");}
