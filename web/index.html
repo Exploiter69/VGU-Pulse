@@ -617,12 +617,12 @@ async function boot(){
  }
 
  try{await loadHome()}catch{status.textContent="Pulse information is temporarily unavailable."}
+ try{await loadProfiles()}catch{profiles.replaceChildren();const p=document.createElement("p");p.className="muted";p.textContent="Student profiles are temporarily unavailable. Try again later.";profiles.append(p)}
 
  if(initData){
   await authPromise;
   try{await loadProfile()}catch{}
   try{await loadStudentPosts()}catch{}
-  try{await loadProfiles()}catch{}
   try{await loadBlockedPeople()}catch{}
  }
  if(tg?.ready)tg.ready();
