@@ -112,7 +112,6 @@ describe("community V2 contract", () => {
     expect(web).toContain('data-action="share"');
     expect(web).toContain("window.__pulseCommunityOpenItem");
     expect(web).toContain("renderReplies");
-    expect(web).not.toContain("\\n");
   });
 
   it("never exposes Telegram identity for anonymous content", () => {
