@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
-const indexSource = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
-const webSource = readFileSync(new URL("../web/index.html", import.meta.url), "utf8");
-const wranglerSource = readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8");
+const indexSource = readFileSync("src/index.ts", "utf8");
+const webSource = readFileSync("web/index.html", "utf8");
+const wranglerSource = readFileSync("wrangler.jsonc", "utf8");
 
 describe("final Student OS production contract", () => {
   it("has the attention APIs and scheduled sweep", () => {
