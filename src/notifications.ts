@@ -154,7 +154,7 @@ async function queueOfficialNotifications(
        (telegram_user_id, kind, title, body, reference_key)
        SELECT telegram_user_id, 'official', ?, ?, ?
        FROM notification_preferences
-       WHERE official_updates = 1 AND enabled_at <= ?`,
+       WHERE official_updates = 1 AND datetime(enabled_at) <= datetime(?)`,
     ).bind(
       title,
       summary || "A new verified VGU information item is available in Pulse.",
