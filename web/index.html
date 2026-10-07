@@ -1385,5 +1385,6 @@ document.getElementById("telegram-fullscreen")?.addEventListener("click",async()
 const toastNode=document.createElement("div");toastNode.id="pulse-toast";toastNode.className="toast";toastNode.setAttribute("role","status");toastNode.setAttribute("aria-live","polite");document.body.append(toastNode);
 boot().catch(()=>{status.textContent="Unable to connect to Pulse.";toast("Pulse is temporarily unavailable.")});
 </script>
+<script src="/community-v2.js"></script>
 </body>
 </html>
