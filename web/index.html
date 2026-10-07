@@ -666,116 +666,13 @@ function renderCampusGuide(){
  for(const item of items){
   const card=document.createElement("article");card.className="tool";
   const cat=document.createElement("small");cat.className="muted";cat.textContent="Official • "+item.category;
-  const title=document.createElement("strong");title.textContent=item.title;
-  const body=document.createElement("span");body.textContent=item.body;
-  card.append(cat,title,body);
-  if(item.contact){const contact=document.createElement("small");contact.className="muted";contact.style.display="block";contact.style.marginTop="8px";contact.textContent="Contact: "+item.contact;card.append(contact)}
-  const link=document.createElement("a");link.href=item.link;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Open official VGU source ↗";link.style.display="inline-block";link.style.marginTop="8px";card.append(link);
-  target.append(card);
- }
-}
-function profileHeaders(){return initData?{"x-telegram-init-data":initData}:{}}
-function renderProfiles(items){
- if(!profiles)return;
- profiles.replaceChildren();
- if(!items.length){const p=document.createElement("p");p.className="muted";p.textContent="No matching opt-in profiles yet.";profiles.append(p);return}
- for(const person of items){
-  const card=document.createElement("article");card.className="post";
-  const name=document.createElement("strong");name.textContent=person.display_name||"VGU student";
-  const meta=document.createElement("div");meta.className="muted";meta.textContent=[person.program,person.branch,person.year?"Year "+person.year:""].filter(Boolean).join(" • ");
-  const bio=document.createElement("p");bio.className="muted";bio.textContent=person.bio||"";
-  const looking=document.createElement("p");looking.className="muted";looking.textContent=person.looking_for?"Looking for: "+person.looking_for:"";
-  const actions=document.createElement("div");actions.className="wrap-row";
-  if(person.public_id&&person.mine!==true){
-   const block=document.createElement("button");block.type="button";block.className="report";block.textContent="Block";block.onclick=async()=>{if(block.dataset.confirming!=="1"){block.dataset.confirming="1";block.textContent="Confirm block";return}block.disabled=true;try{await fetch("/api/student-profile/block",{method:"POST",headers:{"content-type":"application/json",...profileHeaders()},body:JSON.stringify({public_id:person.public_id})});card.remove();await loadBlockedPeople();toast("Student blocked.");}catch{block.disabled=false;block.textContent="Try again"}};
-   const report=document.createElement("button");report.type="button";report.className="report";report.textContent="Report";report.onclick=async()=>{report.disabled=true;try{const response=await fetch("/api/student-profile/report",{method:"POST",headers:{"content-type":"application/json",...profileHeaders()},body:JSON.stringify({profile_public_id:person.public_id})});if(!response.ok)throw Error();report.textContent="Reported";}catch{report.disabled=false;report.textContent="Try again"}};
-   actions.append(block,report);
-  }
-  card.append(name,meta,bio,looking,actions);profiles.append(card);
- }
-}
-async function loadProfiles(){
- if(!profiles)return;
- const params=new URLSearchParams();
- const q=peopleSearch?.value.trim();if(q)params.set("q",q);
- if(peopleYear?.value)params.set("year",peopleYear.value);
- if(peopleProgram?.value.trim())params.set("program",peopleProgram.value.trim());
- if(peopleBranch?.value.trim())params.set("branch",peopleBranch.value.trim());
- const response=await fetch("/api/students?"+params);if(!response.ok)throw Error("profiles_failed");
- const data=await response.json();renderProfiles(data.profiles||[]);
-}
-async function loadProfile(){
- if(!initData)return;
- const response=await fetch("/api/student-profile",{headers:profileHeaders()});if(!response.ok)throw Error("profile_failed");
- const data=await response.json(),p=data.profile;
- if(!p){profileDelete.hidden=true;profileVisibility.hidden=true;profileStatus.textContent="No published profile yet.";return}
- document.querySelector("#profile-name").value=p.display_name||"";
- document.querySelector("#profile-program").value=p.program||"";
- document.querySelector("#profile-branch").value=p.branch||"";
- document.querySelector("#profile-year").value=p.year||"";
- document.querySelector("#profile-bio").value=p.bio||"";
- document.querySelector("#profile-looking").value=p.looking_for||"";
- profileDelete.hidden=false;profileVisibility.hidden=false;profileVisibility.textContent=p.status==="published"?"Hide my profile":"Publish my profile";profileVisibility.dataset.visible=p.status==="published"?"1":"0";profileStatus.textContent=p.status==="published"?"Your profile is visible to opted-in students.":"Your profile is hidden.";
-}
-async function loadBlockedPeople(){
- if(!blockedPeople||!initData)return;
- const response=await fetch("/api/student-profile/blocks",{headers:profileHeaders()});if(!response.ok)throw Error("blocked_failed");
- const data=await response.json(),items=data.profiles||[];blockedPeople.replaceChildren();
- if(!items.length){blockedPeople.textContent="No blocked students.";return}
- const title=document.createElement("strong");title.textContent="Blocked students";blockedPeople.append(title);
- for(const person of items){const row=document.createElement("div");row.className="wrap-row";row.style.marginTop="8px";const name=document.createElement("span");name.textContent=person.display_name||"VGU student";const button=document.createElement("button");button.type="button";button.className="report";button.textContent="Unblock";button.onclick=async()=>{button.disabled=true;try{const response=await fetch("/api/student-profile/unblock",{method:"POST",headers:{"content-type":"application/json",...profileHeaders()},body:JSON.stringify({public_id:person.public_id})});if(!response.ok)throw Error();await loadBlockedPeople();await loadProfiles()}catch{button.disabled=false;button.textContent="Try again"}};row.append(name,button);blockedPeople.append(row)}
-}
-function initPeopleUi(){
- const reload=()=>loadProfiles().catch(()=>{profiles.replaceChildren();const p=document.createElement("p");p.className="muted";p.textContent="Student profiles are temporarily unavailable. Try again later.";profiles.append(p)});
- peopleSearchButton?.addEventListener("click",reload);peopleSearch?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();reload()}});peopleYear?.addEventListener("change",reload);peopleProgram?.addEventListener("input",()=>{clearTimeout(window.__peopleTimer);window.__peopleTimer=setTimeout(reload,250)});peopleBranch?.addEventListener("input",()=>{clearTimeout(window.__peopleBranchTimer);window.__peopleBranchTimer=setTimeout(reload,250)});
- profileForm?.addEventListener("submit",async event=>{event.preventDefault();if(!initData){profileStatus.textContent="Open Pulse from Telegram to publish a profile.";return}const payload={display_name:document.querySelector("#profile-name").value.trim(),program:document.querySelector("#profile-program").value.trim(),branch:document.querySelector("#profile-branch").value.trim(),year:Number(document.querySelector("#profile-year").value),bio:document.querySelector("#profile-bio").value.trim(),looking_for:document.querySelector("#profile-looking").value.trim()};profileStatus.textContent="Saving…";try{const response=await fetch("/api/student-profile",{method:"POST",headers:{"content-type":"application/json",...profileHeaders()},body:JSON.stringify(payload)});const data=await response.json();if(!response.ok)throw Error(data.error||"profile_save_failed");profileStatus.textContent="Profile saved.";await loadProfile();await loadProfiles();await loadPersonalPulse()}catch(e){profileStatus.textContent=e.message==="invalid_profile"?"Please check the profile fields.":"Could not save your profile. Try again."}});
- profileDelete?.addEventListener("click",async()=>{profileDelete.disabled=true;try{const response=await fetch("/api/student-profile",{method:"DELETE",headers:profileHeaders()});if(!response.ok)throw Error();profileForm.reset();profileDelete.hidden=true;profileVisibility.hidden=true;profileStatus.textContent="Profile deleted.";await loadProfiles();}catch{profileStatus.textContent="Could not delete your profile."}finally{profileDelete.disabled=false}});
- profileVisibility?.addEventListener("click",async()=>{const visible=profileVisibility.dataset.visible!=="1";profileVisibility.disabled=true;try{const response=await fetch("/api/student-profile/visibility",{method:"POST",headers:{"content-type":"application/json",...profileHeaders()},body:JSON.stringify({visible})});if(!response.ok)throw Error();profileVisibility.dataset.visible=visible?"1":"0";profileVisibility.textContent=visible?"Hide my profile":"Publish my profile";profileStatus.textContent=visible?"Profile published.":"Profile hidden.";await loadProfiles()}catch{profileStatus.textContent="Could not update profile visibility."}finally{profileVisibility.disabled=false}});
-}
-async function loadHome(){
- const response=await fetch("/api/home");if(!response.ok)throw Error("home_failed");
- const data=await response.json();
- renderItems(notices,data.sections?.find(s=>s.type==="notice")?.items||[],"No verified VGU information is available right now.");
- renderItems(events,data.sections?.find(s=>s.type==="events")?.items||[],"No verified events or opportunities are available right now.");
- renderPoll(data.poll);
- renderHomePulse(data.poll);
- const homePosts=data.sections?.find(s=>s.type==="student-posts")?.items||[];
- renderHomeCommunity(homePosts);
- renderTodayStats(data.sections?.find(s=>s.type==="notice")?.items||[],homePosts,data.poll);
- renderStudentPosts(homePosts);
-}
-async function vote(optionId){
- if(!initData||!poll)return;
- options.querySelectorAll("button").forEach(b=>b.disabled=true);status.textContent="Recording your vote…";
- const response=await fetch("/api/polls/vote",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({poll_id:poll.id,option_id:optionId})});
- const data=await response.json();if(!response.ok){status.textContent="Your vote could not be recorded. Try again.";renderPoll(poll);return}
- renderPoll(data.poll);status.textContent="Vote recorded. Your campus signal is now counted.";
-}
-const ACADEMIC_KEY="vgu-pulse-academic-v1";
-function academicItems(){
- try{const value=JSON.parse(localStorage.getItem(ACADEMIC_KEY)||"[]");return Array.isArray(value)?value.filter(item=>item&&typeof item.title==="string"&&typeof item.subject==="string"&&typeof item.due==="string"):[]}catch{return[]}
-}
-function saveAcademicItems(items){localStorage.setItem(ACADEMIC_KEY,JSON.stringify(items.slice(0,100)))}
-function academicState(item,today){
- return item.due<today?"overdue":item.due===today?"today":"upcoming";
-}
-function renderAcademic(){
- const target=document.querySelector("#academic-list");if(!target)return;
- const items=academicItems().sort((a,b)=>a.due.localeCompare(b.due));
- const filter=document.querySelector("#academic-filter")?.value||"all";
- const today=pulseDateKey(new Date());
- const visible=items.filter(item=>filter==="all"||academicState(item,today)===filter);
- target.replaceChildren();
- if(!items.length){const p=document.createElement("p");p.className="muted";p.textContent="Your academic plan is empty.";target.append(p);renderAcademicSummary();return}
- if(!visible.length){const p=document.createElement("p");p.className="muted";p.textContent="No tasks match this filter.";target.append(p);renderAcademicSummary();return}
- for(const item of visible){
-  const row=document.createElement("article");row.className="post";
-  const meta=document.createElement("small");meta.className="muted";meta.textContent=item.kind+" • "+item.subject+" • due "+item.due;
-  const title=document.createElement("strong");title.textContent=item.title;
+  const title=document.createElement("strong");title.textContent=item.title;if(item.done){title.style.textDecoration="line-through";title.style.opacity=".65"}
+  const done=document.createElement("button");done.type="button";done.className="report";done.textContent=item.done?"Done":"Mark done";done.addEventListener("click",()=>{const next=academicItems().map(x=>x.id===item.id?{...x,done:!x.done}:x);saveAcademicItems(next);renderAcademic();renderAcademicSummary();renderPersonalAcademicPlan()});
+  const edit=document.createElement("button");edit.type="button";edit.className="report";edit.textContent="Edit";edit.addEventListener("click",()=>{academicEditingId=item.id;document.querySelector("#academic-title").value=item.title;document.querySelector("#academic-subject").value=item.subject;document.querySelector("#academic-due").value=item.due;document.querySelector("#academic-kind").value=item.kind||"other";document.querySelector("#academic-form .submit").textContent="Save changes";document.querySelector("#academic-status").textContent="Editing this task."});
   const del=document.createElement("button");del.type="button";del.className="report";del.textContent="Remove";
-  del.addEventListener("click",()=>{const previous=academicItems(),removed=previous.find(x=>x.id===item.id);if(!removed)return;saveAcademicItems(previous.filter(x=>x.id!==item.id));renderAcademic();toast("Task removed.","Undo",()=>{saveAcademicItems([...academicItems(),removed]);renderAcademic();renderAcademicSummary();renderPersonalAcademicPlan()})});
+  del.addEventListener("click",()=>{const previous=academicItems(),removed=previous.find(x=>x.id===item.id);if(!removed)return;saveAcademicItems(previous.filter(x=>x.id!==item.id));renderAcademic();renderAcademicSummary();renderPersonalAcademicPlan();toast("Task removed.","Undo",()=>{saveAcademicItems([...academicItems(),removed]);renderAcademic();renderAcademicSummary();renderPersonalAcademicPlan()})});
   const state=document.createElement("span");state.className="muted";state.style.marginLeft="10px";state.textContent=academicState(item,today)==="overdue"?"Overdue":academicState(item,today)==="today"?"Due today":"Upcoming";
-  row.append(meta,document.createElement("br"),title,state,del);target.append(row);
+  row.append(meta,document.createElement("br"),title,state,done,edit,del);target.append(row);  row.append(meta,document.createElement("br"),title,state,del);target.append(row);
  }
  renderAcademicSummary();
 }
@@ -801,20 +698,19 @@ function renderAcademicSummary(){
   for(const item of next){const row=document.createElement("p");row.className="muted";row.textContent=formatPulseDate(item.due)+" • "+item.subject+" • "+item.title;target.append(row)}
  }else if(!overdue&&!todayCount){const p=document.createElement("p");p.className="muted";p.textContent="No upcoming deadlines in your local plan.";target.append(p)}
 }
+let academicEditingId=null;
 const academicFilter=document.querySelector("#academic-filter");
 academicFilter?.addEventListener("change",renderAcademic);
 const academicForm=document.querySelector("#academic-form");
 academicForm?.addEventListener("submit",(event)=>{
  event.preventDefault();
- const title=document.querySelector("#academic-title").value.trim(),subject=document.querySelector("#academic-subject").value.trim(),due=document.querySelector("#academic-due").value,kind=document.querySelector("#academic-kind").value;
- const status=document.querySelector("#academic-status");
+ const title=document.querySelector("#academic-title").value.trim(),subject=document.querySelector("#academic-subject").value.trim(),due=document.querySelector("#academic-due").value,kind=document.querySelector("#academic-kind").value,status=document.querySelector("#academic-status");
  if(title.length<2||subject.length<2||!/^\d{4}-\d{2}-\d{2}$/.test(due)){status.textContent="Enter a task, subject and valid due date.";return}
- const items=academicItems();items.push({id:crypto.randomUUID(),title,subject,due,kind,created_at:new Date().toISOString()});saveAcademicItems(items);
- academicForm.reset();status.textContent="Added to your academic plan.";renderAcademic();
+ let items=academicItems();
+ if(academicEditingId){items=items.map(item=>item.id===academicEditingId?{...item,title,subject,due,kind}:item);academicEditingId=null;status.textContent="Task updated."}else{items.push({id:crypto.randomUUID(),title,subject,due,kind,done:false,created_at:new Date().toISOString()});status.textContent="Added to your academic plan."}
+ saveAcademicItems(items);academicForm.reset();academicForm.querySelector(".submit").textContent="Add to my plan";renderAcademic();renderAcademicSummary();renderPersonalAcademicPlan();
 });
-renderAcademic();
-renderAcademicSummary();
-renderTodayStats([],[],null);
+
 function renderPersonalAcademicPlan(){
  if(!myPulseAcademics)return;
  const items=academicItems().sort((a,b)=>a.due.localeCompare(b.due));
@@ -1015,6 +911,8 @@ document.querySelectorAll("[data-campus-category]").forEach(button=>{
 
  if(initData){
   await authPromise;
+  await hydrateAcademicPlan();
+  renderAcademic();renderAcademicSummary();
   try{await loadProfile()}catch{}
 
   try{await loadPersonalPulse()}catch{}
@@ -1028,8 +926,8 @@ document.getElementById("notify-community-activity")?.addEventListener("change",
 document.getElementById("notify-personalized")?.addEventListener("change",e=>updateCommunityPreference("personalized_alerts",e.target.checked));
 document.getElementById("reset-academic")?.addEventListener("click",()=>{
  const button=document.getElementById("reset-academic");if(!button)return;
- if(button.dataset.confirming!=="1"){button.dataset.confirming="1";button.textContent="Tap again to reset";toast("Tap again to clear your local planner.");return}
- localStorage.removeItem(ACADEMIC_KEY);button.dataset.confirming="";button.textContent="Reset local planner";renderAcademic();renderAcademicSummary();renderPersonalAcademicPlan();toast("Local planner reset.");
+ if(button.dataset.confirming!=="1"){button.dataset.confirming="1";button.textContent="Tap again to reset";toast("Tap again to clear your local planner.");setTimeout(()=>{if(button.dataset.confirming==="1"){button.dataset.confirming="";button.textContent="Reset study plan"}},3500);return}
+ localStorage.removeItem(ACADEMIC_KEY);try{tg?.CloudStorage?.removeItem?.(ACADEMIC_KEY,()=>{})}catch{}academicEditingId=null;button.dataset.confirming="";button.textContent="Reset local planner";renderAcademic();renderAcademicSummary();renderPersonalAcademicPlan();toast("Local planner reset.");
 });
 document.getElementById("notify-official")?.addEventListener("change",event=>updateNotificationPreference("official_updates",event.target.checked));
 document.getElementById("notify-community")?.addEventListener("change",event=>updateNotificationPreference("community_replies",event.target.checked));
