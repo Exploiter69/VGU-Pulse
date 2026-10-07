@@ -530,6 +530,30 @@ function initSearch(){
  }
  searchForm.addEventListener("submit",(event)=>{event.preventDefault();loadSearch(searchQuery.value.trim()).catch(()=>{searchResults.textContent="Search is temporarily unavailable. Try again."})});
 }
+async function vote(optionId){
+ if(!initData)throw Error("unauthorized");
+ if(!poll || !Number.isSafeInteger(Number(poll.id)) || !Number.isSafeInteger(Number(optionId))){
+  throw Error("invalid_vote");
+ }
+ const response=await fetch("/api/polls/vote",{
+  method:"POST",
+  headers:{
+   "content-type":"application/json",
+   "x-telegram-init-data":initData
+  },
+  body:JSON.stringify({
+   poll_id:Number(poll.id),
+   option_id:Number(optionId)
+  })
+ });
+ let data=null;
+ try{data=await response.json()}catch{}
+ if(!response.ok){
+  throw Error(data?.error||"vote_failed");
+ }
+ if(data?.poll)renderPoll(data.poll);
+ return data;
+}
 function renderPoll(next){
  poll=next;
  if(!poll){question.textContent="No open poll right now.";options.replaceChildren();voteTotal.textContent="";return}
@@ -971,7 +995,7 @@ document.querySelectorAll("[data-campus-category]").forEach(button=>{
      const displayName=data.user.first_name||data.user.username||"student";
      const avatar=document.querySelector("#me-avatar");if(avatar)avatar.textContent=displayName.slice(0,1).toUpperCase();
      const greeting=document.querySelector("#home-greeting"); if(greeting) greeting.textContent="Good to see you, "+displayName+".";
-     status.textContent="Telegram identity verified.";
+     status.textContent="Participation features are ready.";
      return true;
     }
     identity.textContent="Telegram authentication unavailable. Public Pulse information is still available.";

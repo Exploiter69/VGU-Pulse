@@ -39,6 +39,15 @@ describe("final Student OS production contract", () => {
   });
 
 
+  it("keeps Campus Pulse voting wired to the authenticated poll API", () => {
+    expect(webSource).toContain("async function vote(optionId)");
+    expect(webSource).toContain('fetch("/api/polls/vote"');
+    expect(webSource).toContain('"x-telegram-init-data":initData');
+    expect(webSource).toContain("poll_id:Number(poll.id)");
+    expect(webSource).toContain("option_id:Number(optionId)");
+    expect(webSource).toContain('status.textContent="Participation features are ready."');
+  });
+
   it("keeps the campus renderer isolated from the academic planner", () => {
     const start = webSource.indexOf("function renderCampusGuide()");
     const end = webSource.indexOf("function renderAcademicSummary()", start);
