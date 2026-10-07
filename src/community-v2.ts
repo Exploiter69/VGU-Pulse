@@ -190,6 +190,7 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
       (SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=1) AS upvotes,
       (SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=-1) AS downvotes,
       (SELECT COUNT(*) FROM community_replies r WHERE r.item_id=i.id AND r.status='published') AS replies,
+      (SELECT COUNT(*) FROM community_poll_options po WHERE po.item_id=i.id) AS poll_options,
       CASE WHEN EXISTS(SELECT 1 FROM community_votes mv WHERE mv.item_id=i.id AND mv.telegram_user_id=? AND mv.vote=1) THEN 1
            WHEN EXISTS(SELECT 1 FROM community_votes mv WHERE mv.item_id=i.id AND mv.telegram_user_id=? AND mv.vote=-1) THEN -1 ELSE 0 END AS my_vote,
       CASE WHEN EXISTS(SELECT 1 FROM community_follows f WHERE f.item_id=i.id AND f.telegram_user_id=?) THEN 1 ELSE 0 END AS following,
