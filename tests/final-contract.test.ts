@@ -11,6 +11,9 @@ describe("final Student OS production contract", () => {
     expect(indexSource).toContain('/api/me/notifications/read');
     expect(indexSource).toContain('/api/community/insights');
     expect(indexSource).toContain('async scheduled');
+    expect(indexSource).toContain('LIMIT 18');
+    expect(indexSource).toContain('official_updates = 1 AND enabled_at <= ?');
+    expect(indexSource).toContain('DELETE FROM student_notifications');
     expect(indexSource).toContain('status: dbOk ? "ok" : "degraded"');
   });
 
@@ -26,6 +29,9 @@ describe("final Student OS production contract", () => {
     expect(webSource).toContain('BackButton');
     expect(webSource).toContain('MainButton');
     expect(webSource).toContain('requestFullscreen');
+    expect(webSource).toContain('safeAreaChanged');
+    expect(webSource).toContain('contentSafeAreaChanged');
+    expect(webSource).toContain('navigationStack');
     expect(webSource).not.toMatch(/\bconfirm\s*\(/);
   });
 
