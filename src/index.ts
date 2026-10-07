@@ -9,6 +9,7 @@ import {
   blockStudentProfile,
   unblockStudentProfile,
   setStudentProfileVisibility,
+  listBlockedProfiles,
   upsertStudentProfile,
   validateStudentProfileInput,
   createStudentReply,
@@ -191,6 +192,13 @@ export default {
       try { body = (await request.json()) as { public_id?: unknown }; } catch { return json({ ok: false, error: "invalid_json" }, 400); }
       if (typeof body.public_id !== "string" || body.public_id.length > 100) return json({ ok: false, error: "invalid_profile" }, 400);
       return json({ ok: true, unblocked: await unblockStudentProfile(env.DB, validated.user.id, body.public_id) });
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/student-profile/blocks") {
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
+      if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+      return json({ ok: true, profiles: await listBlockedProfiles(env.DB, validated.user.id) });
     }
 
     if (request.method === "GET" && url.pathname === "/api/student-profile") {
