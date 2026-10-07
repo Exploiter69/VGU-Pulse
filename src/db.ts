@@ -350,7 +350,7 @@ export async function findRelatedStudentPosts(
 ): Promise<StudentPost[]> {
   const candidates = await listStudentPosts(db, 50, undefined, undefined, "newest");
   const tokenize = (value: string) =>
-    new Set(value.toLowerCase().replace(/[^a-z0-9]+/g, " ").split(/\s+/)
+    new Set(value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").split(/\s+/)
       .filter((word) => word.length >= 3)
       .filter((word) => !["the", "and", "for", "with", "from", "what", "when", "where", "how", "can", "does", "this", "that"].includes(word)));
   const queryTokens = tokenize(title + " " + body);
