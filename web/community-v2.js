@@ -242,7 +242,10 @@
         status.textContent=messages[e.message]||"Could not save this post. Please try again.";
       }finally{button.disabled=false}
     };
-    root.querySelectorAll(".cv2-tab").forEach(tab=>tab.onclick=async()=>{sort=tab.dataset.sort||"new";kind=tab.dataset.kind||"";syncTabs();await loadFeed()});
+    root.querySelectorAll(".cv2-tab").forEach(tab=>tab.onclick=async()=>{
+      if(tab.dataset.special==="saved"){savedOnly=true;sort="new";kind="";personalized=false;syncTabs();await loadFeed();return}
+      savedOnly=false;sort=tab.dataset.sort||"new";kind=tab.dataset.kind||"";syncTabs();await loadFeed()
+    });
 
     root.addEventListener("click",async e=>{
       const chip=e.target.closest("[data-community]");
@@ -268,9 +271,17 @@
           const saved=item.dataset.saved==="1";
           await api("/api/community-v2/save"+(saved?"?item_id="+encodeURIComponent(id):""),saved?{method:"DELETE"}:{method:"POST",body:JSON.stringify({item_id:id})});
         }
-        if(action==="delete")await api("/api/community-v2/items?item_id="+encodeURIComponent(id),{method:"DELETE"});
-        if(action==="report"){await api("/api/community-v2/report",{method:"POST",body:JSON.stringify({item_id:id,reason:"student_report"})});button.textContent="Reported"}
-        if(action==="block")await api("/api/community-v2/block",{method:"POST",body:JSON.stringify({item_id:id})});
+        if(action==="edit"){
+          const data=await api("/api/community-v2/feed?sort=new");
+          const current=(data.items||[]).find(x=>Number(x.id)===id);
+          if(!current)throw new Error("item_not_found");
+          editingId=id;$("#cv2-compose-heading").textContent="Edit your post";$("#cv2-publish").textContent="Save changes";$("#cv2-title").value=current.title;$("#cv2-body").value=current.body;$("#cv2-kind").value=current.kind;$("#cv2-community").value=current.community_slug;$("#cv2-anon").checked=Boolean(current.anonymous);$("#cv2-options").value="";$("#cv2-compose-status").textContent="";$("#cv2-compose-dialog").showModal();return;
+        }
+        if(action==="delete"){
+          if(button.dataset.confirming!=="1"){button.dataset.confirming="1";button.textContent="Confirm delete";return}
+          button.disabled=true;await api("/api/community-v2/items?item_id="+encodeURIComponent(id),{method:"DELETE"});
+        }
+        if(action==="moderate"){moderationItemId=id;$("#cv2-more-status").textContent="";$("#cv2-report-reason").value="spam";$("#cv2-more-dialog").showModal();return}
         if(action==="poll"){
           const box=item.querySelector(".cv2-poll-options");
           if(!box.hidden){box.hidden=true;return}
