@@ -304,7 +304,7 @@ input:focus,textarea:focus,select:focus,.quick:focus-visible,.nav-item:focus-vis
       <button type="button" class="quick" data-view="academics"><strong>Study plan</strong><span>Deadlines, exams and tasks</span></button>
       <button type="button" class="quick" data-view="people"><strong>People</strong><span>Your opt-in profile & matches</span></button>
       <button type="button" class="quick" data-view="tools"><strong>Student tools</strong><span>SGPA, CGPA, marks, attendance</span></button>
-      <button type="button" class="quick" data-view="community"><strong>Saved & community</strong><span>Continue your student activity</span></button>
+      <button type="button" class="quick" data-view="community" data-community-mode="saved"><strong>Saved posts</strong><span>Posts you kept for later</span></button>
     </div>
   </section>
   <section class="section">
@@ -321,11 +321,18 @@ input:focus,textarea:focus,select:focus,.quick:focus-visible,.nav-item:focus-vis
     <div id="my-pulse-activity"><p class="muted">Your posts and replies will appear here.</p></div>
   </section>
   <section class="section">
+    <div class="section-heading"><div><div class="eyebrow">Community identity</div><h2>Reputation</h2></div><span id="community-reputation-points" class="muted">— points</span></div>
+    <div id="community-badges" class="chips"><span class="muted">Build reputation by being helpful.</span></div>
+    <p id="community-account-status" class="muted" aria-live="polite"></p>
+  </section>
+  <section class="section">
     <div class="section-heading"><div><div class="eyebrow">Attention</div><h2>Notifications</h2></div><span id="notification-count" class="muted"></span></div>
     <p class="settings-note">Choose which Pulse activity should reach you through Telegram.</p>
     <div class="notification-tools">
       <label class="notify-option"><input id="notify-official" type="checkbox"><span>VGU updates</span></label>
       <label class="notify-option"><input id="notify-community" type="checkbox"><span>Post replies</span></label>
+      <label class="notify-option"><input id="notify-community-activity" type="checkbox"><span>Community activity</span></label>
+      <label class="notify-option"><input id="notify-personalized" type="checkbox"><span>Personalized community posts</span></label>
       <button type="button" class="action-link" id="notifications-read">Mark all read</button>
     </div>
     <p id="notification-status" class="muted" aria-live="polite"></p>
@@ -447,7 +454,7 @@ function goBack(){
     showView(navigationStack[navigationStack.length-1],{replaceHistory:true});
   }else showView("home",{replaceHistory:true});
 }
-for(const item of navItems)item.addEventListener("click",()=>{haptic();showView(item.dataset.view)});
+for(const item of navItems)item.addEventListener("click",()=>{haptic();showView(item.dataset.view);if(item.dataset.view==="community"){if(item.dataset.communityMode==="saved")window.__pulseCommunitySaved?.();else window.__pulseCommunityAll?.()}});
 document.querySelectorAll("[data-community-tab]").forEach(button=>button.addEventListener("click",()=>{
  document.querySelector("#post-title")?.focus();haptic();
 }));
@@ -1035,6 +1042,44 @@ async function markNotificationsRead(){
   await loadNotifications();haptic();
  }catch{const node=document.querySelector("#notification-status");if(node)node.textContent="Could not mark notifications as read."}
 }
+async function loadCommunityAccount(){
+ if(!initData)return;
+ const statusNode=document.querySelector("#community-account-status");
+ try{
+  const headers={"x-telegram-init-data":initData};
+  const [repResponse,prefResponse]=await Promise.all([
+   fetch("/api/community-v2/reputation",{headers}),
+   fetch("/api/community-v2/preferences",{headers})
+  ]);
+  if(!repResponse.ok||!prefResponse.ok)throw Error("community_account_failed");
+  const repData=await repResponse.json(),prefData=await prefResponse.json();
+  const points=document.querySelector("#community-reputation-points");
+  if(points)points.textContent=String(repData.reputation?.points??0)+" points";
+  const badges=document.querySelector("#community-badges");
+  if(badges){
+   badges.replaceChildren();
+   const values=repData.reputation?.badges||[];
+   if(!values.length){const node=document.createElement("span");node.className="muted";node.textContent="No badges yet. Helpful answers earn them.";badges.append(node)}
+   else for(const badge of values){const node=document.createElement("span");node.className="trust-badge student";node.textContent=badge;badges.append(node)}
+  }
+  const activity=document.querySelector("#notify-community-activity");if(activity)activity.checked=Boolean(prefData.preferences?.community_activity);
+  const personalized=document.querySelector("#notify-personalized");if(personalized)personalized.checked=Boolean(prefData.preferences?.personalized_alerts);
+  if(statusNode)statusNode.textContent="";
+ }catch{if(statusNode)statusNode.textContent="Community account settings are temporarily unavailable."}
+}
+async function updateCommunityPreference(field,value){
+ if(!initData)return;
+ const statusNode=document.querySelector("#community-account-status");
+ try{
+  const response=await fetch("/api/community-v2/preferences",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({[field]:value})});
+  if(!response.ok)throw Error("community_preference_failed");
+  const data=await response.json();
+  const activity=document.querySelector("#notify-community-activity");if(activity)activity.checked=Boolean(data.preferences?.community_activity);
+  const personalized=document.querySelector("#notify-personalized");if(personalized)personalized.checked=Boolean(data.preferences?.personalized_alerts);
+  if(statusNode)statusNode.textContent="Community notification preferences updated.";
+  haptic();
+ }catch{if(statusNode)statusNode.textContent="Could not update community notification preference.";loadCommunityAccount()}
+}
 
 async function boot(){
  initSearch();
@@ -1091,10 +1136,13 @@ document.querySelectorAll("[data-campus-category]").forEach(button=>{
   try{await loadStudentPosts()}catch{}
   try{await loadPersonalPulse()}catch{}
   try{await loadNotifications()}catch{}
+  try{await loadCommunityAccount()}catch{}
   try{await loadBlockedPeople()}catch{}
  }
  if(tg?.ready)tg.ready();
 }
+document.getElementById("notify-community-activity")?.addEventListener("change",e=>updateCommunityPreference("community_activity",e.target.checked));
+document.getElementById("notify-personalized")?.addEventListener("change",e=>updateCommunityPreference("personalized_alerts",e.target.checked));
 document.getElementById("reset-academic")?.addEventListener("click",()=>{
  const button=document.getElementById("reset-academic");if(!button)return;
  if(button.dataset.confirming!=="1"){button.dataset.confirming="1";button.textContent="Tap again to reset";toast("Tap again to clear your local planner.");return}
