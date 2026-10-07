@@ -147,7 +147,13 @@ export default {
         const branch = (url.searchParams.get("branch") ?? "").trim().slice(0, 80);
         const rawYear = url.searchParams.get("year");
         const year = rawYear ? Number(rawYear) : undefined;
-        const profiles = await listStudentProfiles(env.DB, 30, undefined, {
+        let viewerId: number | undefined;
+        const initData = request.headers.get("x-telegram-init-data") ?? "";
+        if (initData && getBotToken(env)) {
+          const validated = await validateInitData(initData, getBotToken(env));
+          if (validated) viewerId = validated.user.id;
+        }
+        const profiles = await listStudentProfiles(env.DB, 30, viewerId, {
           q,
           program,
           branch,
