@@ -176,7 +176,7 @@ input:focus,textarea:focus,select:focus,.quick:focus-visible,.nav-item:focus-vis
     <div class="brand"><div class="brand-mark" aria-hidden="true">P</div><div><h1 class="app-title">VGU Pulse</h1><p class="app-subtitle">Your VGU student layer</p></div></div>
   </div>
   <div class="header-actions">
-    <button type="button" class="icon-button" data-view="pulse" aria-label="Open notifications">🔔<span id="header-notification-badge" hidden aria-label="Unread notifications"></span></button>
+    <button type="button" class="icon-button" id="header-notifications" data-view="pulse" aria-label="Open notifications">🔔<span id="header-notification-badge" hidden aria-label="Unread notifications"></span></button>
     <button type="button" class="avatar" data-view="pulse" aria-label="Open your profile" id="header-avatar">V</button>
   </div>
 </header>
@@ -457,6 +457,7 @@ function goBack(){
   }else showView("home",{replaceHistory:true});
 }
 for(const item of navItems)item.addEventListener("click",()=>{const current=viewPanels.find(panel=>panel.classList.contains("active"))?.dataset.viewPanel||"home";haptic();showView(item.dataset.view);if(item.dataset.view==="community"&&current!=="community"){if(item.dataset.communityMode==="saved")window.__pulseCommunitySaved?.();else window.__pulseCommunityAll?.()}});
+document.getElementById("header-notifications")?.addEventListener("click",()=>setTimeout(()=>document.getElementById("notifications")?.scrollIntoView({block:"start",behavior:"smooth"}),80));
 document.querySelectorAll("[data-community-tab]").forEach(button=>button.addEventListener("click",()=>{
  document.querySelector("#post-title")?.focus();haptic();
 }));
