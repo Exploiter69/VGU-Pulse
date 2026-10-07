@@ -304,7 +304,7 @@ input:focus,textarea:focus,select:focus,.quick:focus-visible,.nav-item:focus-vis
       <button type="button" class="quick" data-view="academics"><strong>Study plan</strong><span>Deadlines, exams and tasks</span></button>
       <button type="button" class="quick" data-view="people"><strong>People</strong><span>Your opt-in profile & matches</span></button>
       <button type="button" class="quick" data-view="tools"><strong>Student tools</strong><span>SGPA, CGPA, marks, attendance</span></button>
-      <button type="button" class="quick" data-view="community"><strong>Saved & community</strong><span>Continue your student activity</span></button>
+      <button type="button" class="quick" data-view="community" data-community-mode="saved"><strong>Saved posts</strong><span>Posts you kept for later</span></button>
     </div>
   </section>
   <section class="section">
@@ -321,11 +321,18 @@ input:focus,textarea:focus,select:focus,.quick:focus-visible,.nav-item:focus-vis
     <div id="my-pulse-activity"><p class="muted">Your posts and replies will appear here.</p></div>
   </section>
   <section class="section">
+    <div class="section-heading"><div><div class="eyebrow">Community identity</div><h2>Reputation</h2></div><span id="community-reputation-points" class="muted">— points</span></div>
+    <div id="community-badges" class="chips"><span class="muted">Build reputation by being helpful.</span></div>
+    <p id="community-account-status" class="muted" aria-live="polite"></p>
+  </section>
+  <section class="section">
     <div class="section-heading"><div><div class="eyebrow">Attention</div><h2>Notifications</h2></div><span id="notification-count" class="muted"></span></div>
     <p class="settings-note">Choose which Pulse activity should reach you through Telegram.</p>
     <div class="notification-tools">
       <label class="notify-option"><input id="notify-official" type="checkbox"><span>VGU updates</span></label>
       <label class="notify-option"><input id="notify-community" type="checkbox"><span>Post replies</span></label>
+      <label class="notify-option"><input id="notify-community-activity" type="checkbox"><span>Community activity</span></label>
+      <label class="notify-option"><input id="notify-personalized" type="checkbox"><span>Personalized community posts</span></label>
       <button type="button" class="action-link" id="notifications-read">Mark all read</button>
     </div>
     <p id="notification-status" class="muted" aria-live="polite"></p>
@@ -447,7 +454,7 @@ function goBack(){
     showView(navigationStack[navigationStack.length-1],{replaceHistory:true});
   }else showView("home",{replaceHistory:true});
 }
-for(const item of navItems)item.addEventListener("click",()=>{haptic();showView(item.dataset.view)});
+for(const item of navItems)item.addEventListener("click",()=>{haptic();showView(item.dataset.view);if(item.dataset.view==="community"){if(item.dataset.communityMode==="saved")window.__pulseCommunitySaved?.();else window.__pulseCommunityAll?.()}});
 document.querySelectorAll("[data-community-tab]").forEach(button=>button.addEventListener("click",()=>{
  document.querySelector("#post-title")?.focus();haptic();
 }));
@@ -485,7 +492,7 @@ function initTools(){
 }
 initTools();
 let initData="",poll=null;
-const profileForm=document.querySelector("#profile-form"),profileStatus=document.querySelector("#profile-status"),profiles=document.querySelector("#profiles"),profileDelete=document.querySelector("#profile-delete"),profileVisibility=document.querySelector("#profile-visibility"),blockedPeople=document.querySelector("#blocked-people"),peopleSearch=document.querySelector("#people-search"),peopleSearchButton=document.querySelector("#people-search-button"),peopleYear=document.querySelector("#people-year"),peopleProgram=document.querySelector("#people-program"),peopleBranch=document.querySelector("#people-branch");const todayStats=document.querySelector("#today-stats");const myPulseStatus=document.querySelector("#my-pulse-status"),myPulseStats=document.querySelector("#my-pulse-stats"),myPulseAcademics=document.querySelector("#my-pulse-academics"),myPulseMatches=document.querySelector("#my-pulse-matches"),myPulseActivity=document.querySelector("#my-pulse-activity");const homePulse=document.querySelector("#home-pulse"),homeCommunity=document.querySelector("#home-community");const identity=document.querySelector("#identity"),status=document.querySelector("#status"),searchForm=document.querySelector("#search-form"),searchQuery=document.querySelector("#search-query"),searchQuick=document.querySelector("#search-quick"),searchResults=document.querySelector("#search-results"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status"),postFilter=document.querySelector("#post-filter");
+const profileForm=document.querySelector("#profile-form"),profileStatus=document.querySelector("#profile-status"),profiles=document.querySelector("#profiles"),profileDelete=document.querySelector("#profile-delete"),profileVisibility=document.querySelector("#profile-visibility"),blockedPeople=document.querySelector("#blocked-people"),peopleSearch=document.querySelector("#people-search"),peopleSearchButton=document.querySelector("#people-search-button"),peopleYear=document.querySelector("#people-year"),peopleProgram=document.querySelector("#people-program"),peopleBranch=document.querySelector("#people-branch");const todayStats=document.querySelector("#today-stats");const myPulseStatus=document.querySelector("#my-pulse-status"),myPulseStats=document.querySelector("#my-pulse-stats"),myPulseAcademics=document.querySelector("#my-pulse-academics"),myPulseMatches=document.querySelector("#my-pulse-matches"),myPulseActivity=document.querySelector("#my-pulse-activity");const homePulse=document.querySelector("#home-pulse"),homeCommunity=document.querySelector("#home-community");const identity=document.querySelector("#identity"),status=document.querySelector("#status"),searchForm=document.querySelector("#search-form"),searchQuery=document.querySelector("#search-query"),searchQuick=document.querySelector("#search-quick"),searchResults=document.querySelector("#search-results"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events");
 
 document.addEventListener("click",(event)=>{
  const link=event.target.closest("a[href]");
@@ -619,180 +626,6 @@ function renderRelatedPosts(target,posts){
   target.append(row);
  }
 }
-function renderStudentPosts(posts){
- studentPosts.replaceChildren();
- if(!posts.length){const p=document.createElement("p");p.className="muted";p.textContent="No student posts yet. Be the first to share something useful.";studentPosts.append(p);return}
- for(const post of posts){
-  const article=document.createElement("article");article.className="post";
-  const meta=document.createElement("small");meta.className="muted";meta.textContent=post.category+" • student-reported • "+post.author_name+" • "+(post.reply_count||0)+" repl"+((post.reply_count||0)===1?"y":"ies");
-  const title=document.createElement("h3");title.textContent=post.title;
-  const body=document.createElement("p");body.className="muted";body.textContent=post.body;
-  const actions=document.createElement("div");actions.className="action-group";
-  voteButtons("post",post,actions);
-  const report=document.createElement("button");report.className="report";report.type="button";report.textContent="Report";report.addEventListener("click",()=>reportPost(post.id,report));
-  actions.append(report);
-  const related=document.createElement("div");related.className="muted";related.style.marginTop="10px";
-  const replyToggle=document.createElement("button");replyToggle.type="button";replyToggle.className="inline-link reply-toggle";replyToggle.textContent="View replies ("+String(post.reply_count||0)+")";replyToggle.setAttribute("aria-expanded","false");const replies=document.createElement("div");replies.className="replies";replies.hidden=true;let repliesLoaded=false;const loadExpandedReplies=async()=>{if(repliesLoaded)return;repliesLoaded=true;try{await loadReplies(post.id,replies)}catch{replies.replaceChildren();const p=document.createElement("p");p.className="muted";p.textContent="Replies unavailable.";replies.append(p)}};replyToggle.addEventListener("click",async()=>{const expanded=!replies.hidden;replies.hidden=expanded;replyToggle.setAttribute("aria-expanded",String(!expanded));replyToggle.textContent=expanded?"View replies ("+String(post.reply_count||0)+")":"Hide replies";if(!expanded)await loadExpandedReplies()});
-  const replyForm=document.createElement("form");replyForm.className="reply-form";
-  const replyInput=document.createElement("textarea");replyInput.rows=2;replyInput.maxLength=1000;replyInput.placeholder="Reply to this post…";replyInput.required=true;
-  const replySubmit=document.createElement("button");replySubmit.className="reply-submit";replySubmit.type="submit";replySubmit.textContent="Reply";
-  replyForm.append(replyInput,replySubmit);
-  replyForm.addEventListener("submit",async(event)=>{
-   event.preventDefault();
-   if(!initData){status.textContent="Open Pulse from Telegram to reply.";return}
-   const body=replyInput.value.trim();if(!body){replyInput.focus();return}
-   replySubmit.disabled=true;replySubmit.textContent="Posting…";
-   try{
-    const response=await fetch("/api/student-posts/replies",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({post_id:post.id,body})});
-    let data={};try{data=await response.json()}catch{}
-    if(!response.ok){status.textContent=data.error==="unauthorized"?"Telegram session expired. Reopen Pulse from Telegram.":data.error==="invalid_reply"?"Reply must contain 1–1000 characters.":data.error==="post_not_found"?"That post is no longer available.":"Reply could not be posted. Try again.";return}
-    replyInput.value="";replies.hidden=false;replyToggle.setAttribute("aria-expanded","true");replyToggle.textContent="Hide replies";repliesLoaded=false;await loadExpandedReplies();status.textContent="Reply posted.";
-   }catch{status.textContent="Network error while posting reply. Try again."}
-   finally{replySubmit.disabled=false;replySubmit.textContent="Reply"}
-  });
-  const deletePost=document.createElement("button");deletePost.className="report";deletePost.type="button";deletePost.textContent="Delete";deletePost.hidden=!post.owned;
-  deletePost.addEventListener("click",async()=>{
-   if(deletePost.dataset.confirming!=="1"){deletePost.dataset.confirming="1";deletePost.textContent="Confirm delete";status.textContent="Tap Confirm delete again to remove this post and its replies.";return}
-   deletePost.disabled=true;deletePost.textContent="Deleting…";
-   const response=await fetch("/api/student-posts?post_id="+encodeURIComponent(post.id),{method:"DELETE",headers:{"x-telegram-init-data":initData}});
-   if(response.ok){await loadStudentPosts();status.textContent="Post deleted."}else{status.textContent="Post could not be deleted.";deletePost.disabled=false;deletePost.dataset.confirming="";deletePost.textContent="Delete"}
-  });
-  actions.append(deletePost);
-  article.append(meta,title,body,actions,related,replyToggle,replies,replyForm);studentPosts.append(article);
-  fetch("/api/student-posts/related?post_id="+encodeURIComponent(post.id)).then(r=>r.ok?r.json():null).then(data=>{if(data?.posts)renderRelatedPosts(related,data.posts)}).catch(()=>{});
- }
-}
-async function loadReplies(postId,target){
- const response=await fetch("/api/student-posts/replies?post_id="+encodeURIComponent(postId),{headers:initData?{"x-telegram-init-data":initData}:{}});
- if(!response.ok)throw Error("replies_failed");
- const data=await response.json();target.replaceChildren();
- const replies=data.replies||[];
- if(!replies.length){const p=document.createElement("p");p.className="muted";p.textContent="No replies yet.";target.append(p);return}
- for(const reply of replies){
-  const item=document.createElement("div");item.className="reply";
-  const meta=document.createElement("small");meta.className="muted";meta.textContent=reply.author_name+" • student-reported";
-  const text=document.createElement("p");text.className="muted";text.textContent=reply.body;
-  const actions=document.createElement("div");actions.className="action-group";
-  voteButtons("reply",reply,actions);
-  const report=document.createElement("button");report.className="report";report.type="button";report.textContent="Report";
-  report.addEventListener("click",async()=>{
-    if(!initData){status.textContent="Open Pulse from Telegram to report a reply.";return}
-    report.disabled=true;
-    const response=await fetch("/api/student-posts/replies/report",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({reply_id:reply.id})});
-    status.textContent=response.ok?"Reply report recorded.":"Unable to record reply report.";
-    if(response.ok) await loadReplies(postId,target); else report.disabled=false;
-  });
-  const deleteReply=document.createElement("button");deleteReply.className="report";deleteReply.type="button";deleteReply.textContent="Delete";deleteReply.hidden=!reply.owned;
-  deleteReply.onclick=async()=>{if(deleteReply.dataset.confirming!=="1"){deleteReply.dataset.confirming="1";deleteReply.textContent="Confirm delete";status.textContent="Tap Confirm delete again to remove this reply.";return}deleteReply.disabled=true;deleteReply.textContent="Deleting…";const response=await fetch("/api/student-posts/replies?reply_id="+encodeURIComponent(reply.id),{method:"DELETE",headers:{"x-telegram-init-data":initData}});if(response.ok){await loadReplies(postId,target);status.textContent="Reply deleted."}else{status.textContent="Reply could not be deleted.";deleteReply.disabled=false;deleteReply.dataset.confirming="";deleteReply.textContent="Delete"}};
-  actions.append(report,deleteReply);item.append(meta,text,actions);target.append(item);
- }
-}
-async function loadProfile(){
- if(!initData)return;
- const r=await fetch("/api/student-profile",{headers:{"x-telegram-init-data":initData}});if(!r.ok)return;
- const p=(await r.json()).profile;if(!p)return;
- for(const [id,value] of [["profile-name",p.display_name],["profile-program",p.program],["profile-branch",p.branch],["profile-year",p.year],["profile-bio",p.bio],["profile-looking",p.looking_for]])document.querySelector("#"+id).value=value;
- profileDelete.hidden=false;profileVisibility.hidden=false;profileVisibility.textContent=p.status==="hidden"?"Show my profile":"Hide my profile";
-}
-async function loadBlockedPeople(){
- if(!initData||!blockedPeople)return;
- const r=await fetch("/api/student-profile/blocks",{headers:{"x-telegram-init-data":initData}});
- if(!r.ok)return;
- const list=(await r.json()).profiles||[];blockedPeople.replaceChildren();
- if(!list.length)return;
- const label=document.createElement("strong");label.textContent="Blocked profiles";blockedPeople.append(label);
- for(const p of list){
-  const row=document.createElement("div");row.className="inline-action-row";
-  const name=document.createElement("span");name.textContent=p.display_name+" ";
-  const button=document.createElement("button");button.type="button";button.className="report";button.textContent="Unblock";
-  button.onclick=async()=>{button.disabled=true;const x=await fetch("/api/student-profile/unblock",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({public_id:p.public_id})});if(x.ok){profileStatus.textContent="Profile unblocked.";await loadBlockedPeople();await loadProfiles()}else button.disabled=false};
-  row.append(name,button);blockedPeople.append(row)
- }
-}
-async function loadProfiles(){
- const params=new URLSearchParams();if(peopleSearch?.value.trim())params.set("q",peopleSearch.value.trim());if(peopleYear?.value)params.set("year",peopleYear.value);if(peopleProgram?.value.trim())params.set("program",peopleProgram.value.trim());if(peopleBranch?.value.trim())params.set("branch",peopleBranch.value.trim());
- const headers=initData?{"x-telegram-init-data":initData}:{};
- const r=await fetch("/api/students"+(params.toString()?"?"+params.toString():""),{headers});if(!r.ok)throw Error("profiles_failed");
- const list=(await r.json()).profiles||[];profiles.replaceChildren();
- if(!list.length){const p=document.createElement("p");p.className="muted";p.textContent="No matching student profiles. Try a broader search or publish your own profile.";profiles.append(p);return}
- for(const p of list){
-  const item=document.createElement("article");item.className="profile";
-  const name=document.createElement("h3");name.textContent=p.display_name;
-  const meta=document.createElement("div");meta.className="muted";meta.textContent=p.program+" • "+p.branch+" • Year "+p.year;
-  const bio=document.createElement("p");bio.className="muted";bio.textContent=p.bio;
-  const looking=document.createElement("p");const strong=document.createElement("strong");strong.textContent="Looking for: ";looking.append(strong,document.createTextNode(p.looking_for));
-  const reason=document.createElement("span");reason.className="match-reason";
-  const me=window.__pulseProfile;
-  const reasons=[];
-  if(me?.branch&&p.branch===me.branch)reasons.push("same branch");
-  if(me?.program&&p.program===me.program)reasons.push("same program");
-  if(me?.year&&p.year===me.year)reasons.push("same year");
-  const goals=(me?.looking_for||"").toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(x=>x.length>2);
-  if(goals.some(g=>(p.looking_for||"").toLowerCase().includes(g)))reasons.push("shared goal");
-  if(reasons.length)reason.textContent=reasons.join(" · ");
-  else reason.textContent="Opt-in student";
-  const actions=document.createElement("div");actions.className="action-group";
-  const report=document.createElement("button");report.className="report";report.type="button";report.textContent="Report profile";
-  report.onclick=async()=>{if(!initData){status.textContent="Open Pulse from Telegram to report a profile.";return}report.disabled=true;const x=await fetch("/api/student-profile/report",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({profile_public_id:p.public_id})});status.textContent=x.ok?"Profile report recorded.":"Unable to record report.";if(x.ok)await loadProfiles();else report.disabled=false};
-  const block=document.createElement("button");block.className="report";block.type="button";block.textContent="Block";
-  block.onclick=async()=>{if(!initData)return;block.disabled=true;const x=await fetch("/api/student-profile/block",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({public_id:p.public_id})});if(x.ok){profileStatus.textContent="Profile blocked and removed from your discovery.";await loadBlockedPeople();await loadProfiles()}else block.disabled=false};
-  actions.append(report,block);item.append(name,meta,bio,looking,reason,actions);profiles.append(item);
- }
-}
-async function submitProfile(e){
- e.preventDefault();if(!initData){profileStatus.textContent="Open Pulse from Telegram to publish a profile.";return}
- const button=profileForm.querySelector("button");button.disabled=true;profileStatus.textContent="Publishing…";
- const r=await fetch("/api/student-profile",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({
- display_name:document.querySelector("#profile-name").value,program:document.querySelector("#profile-program").value,
- branch:document.querySelector("#profile-branch").value,year:Number(document.querySelector("#profile-year").value),
- bio:document.querySelector("#profile-bio").value,looking_for:document.querySelector("#profile-looking").value})});
- profileStatus.textContent=r.ok?"Profile published.":"Profile could not be published. Check the fields.";button.disabled=false;if(r.ok){await loadProfiles();await loadBlockedPeople();}
-}
-profileForm.addEventListener("submit",submitProfile);
-profileVisibility.addEventListener("click",async()=>{
- if(!initData)return;
- const hidden=profileVisibility.textContent==="Show my profile";
- profileVisibility.disabled=true;
- const response=await fetch("/api/student-profile/visibility",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({visible:!hidden})});
- if(response.ok){profileVisibility.textContent=hidden?"Hide my profile":"Show my profile";profileStatus.textContent=hidden?"Profile is visible again.":"Profile hidden from People discovery.";await loadProfiles()}else profileStatus.textContent="Visibility could not be changed.";
- profileVisibility.disabled=false;
-});
-let peopleSearchTimer=0;peopleSearch?.addEventListener("input",()=>{clearTimeout(peopleSearchTimer);peopleSearchTimer=window.setTimeout(()=>loadProfiles().catch(()=>{}),300)});peopleSearch?.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();clearTimeout(peopleSearchTimer);loadProfiles().catch(()=>{})}});peopleSearchButton?.addEventListener("click",()=>{clearTimeout(peopleSearchTimer);loadProfiles().catch(()=>{})});[peopleYear,peopleProgram,peopleBranch].forEach(el=>el?.addEventListener("input",loadProfiles));
-peopleYear?.addEventListener("change",loadProfiles);
-
-profileDelete.addEventListener("click",async()=>{
- if(!initData)return;
- if(profileDelete.dataset.confirming!=="1"){profileDelete.dataset.confirming="1";profileDelete.textContent="Confirm delete profile";profileStatus.textContent="Tap Confirm delete profile again to remove your profile.";return}
- profileDelete.disabled=true;profileStatus.textContent="Deleting…";
- const response=await fetch("/api/student-profile",{method:"DELETE",headers:{"x-telegram-init-data":initData}});
- if(response.ok){profileForm.reset();profileDelete.hidden=true;profileDelete.dataset.confirming="";profileDelete.textContent="Delete my profile";profileStatus.textContent="Profile deleted.";await loadProfiles()}else{profileStatus.textContent="Profile could not be deleted.";profileDelete.disabled=false;profileDelete.dataset.confirming="";profileDelete.textContent="Delete my profile"}
-});
-async function loadStudentPosts(){
- const category=postFilter.value,sort=postSort?.value||"newest";
- const params=new URLSearchParams();if(category)params.set("category",category);if(sort!=="newest")params.set("sort",sort);
- const response=await fetch("/api/student-posts"+(params.toString()?"?"+params.toString():""),{headers:initData?{"x-telegram-init-data":initData}:{}});
- if(!response.ok)throw Error("student_posts_failed");
- const data=await response.json();renderStudentPosts(data.posts||[]);
-}
-async function reportPost(postId,button){
- if(!initData){status.textContent="Open Pulse from Telegram to report a post.";return}
- button.disabled=true;
- const response=await fetch("/api/student-posts/report",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({post_id:postId})});
- status.textContent=response.ok?"Report recorded.":"Unable to record report.";
- if(response.ok) await loadStudentPosts(); else button.disabled=false;
-}
-async function submitPost(event){
- event.preventDefault();
- if(!initData){postStatus.textContent="Open Pulse from Telegram to share a post.";return}
- const button=postForm.querySelector("button[type=submit]");button.disabled=true;postStatus.textContent="Sharing…";
- const response=await fetch("/api/student-posts",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({category:document.querySelector("#post-category").value,title:document.querySelector("#post-title").value,body:document.querySelector("#post-body").value})});
- const data=await response.json();
- if(!response.ok){postStatus.textContent="Post could not be shared. Check the title and body.";button.disabled=false;return}
- postForm.reset();postStatus.textContent="Shared with students. It is labelled student-reported.";
- button.disabled=false;await loadStudentPosts();
-}
-postForm.addEventListener("submit",submitPost);
-postFilter.addEventListener("change",()=>loadStudentPosts().catch(()=>{status.textContent="Unable to load that student-post filter."}));
 document.querySelector("#campus-search")?.addEventListener("input",renderCampusGuide);
 const campusFacilities=[
  {title:"Student Cell",category:"Student support",body:"Primary student-support office for records, certificates, ERP-related issues, scholarships and grievances.",contact:"studentcell@vgu.ac.in",link:"https://vgu.ac.in/centers-and-cells/student-cell"},
@@ -1033,6 +866,44 @@ async function markNotificationsRead(){
   await loadNotifications();haptic();
  }catch{const node=document.querySelector("#notification-status");if(node)node.textContent="Could not mark notifications as read."}
 }
+async function loadCommunityAccount(){
+ if(!initData)return;
+ const statusNode=document.querySelector("#community-account-status");
+ try{
+  const headers={"x-telegram-init-data":initData};
+  const [repResponse,prefResponse]=await Promise.all([
+   fetch("/api/community-v2/reputation",{headers}),
+   fetch("/api/community-v2/preferences",{headers})
+  ]);
+  if(!repResponse.ok||!prefResponse.ok)throw Error("community_account_failed");
+  const repData=await repResponse.json(),prefData=await prefResponse.json();
+  const points=document.querySelector("#community-reputation-points");
+  if(points)points.textContent=String(repData.reputation?.points??0)+" points";
+  const badges=document.querySelector("#community-badges");
+  if(badges){
+   badges.replaceChildren();
+   const values=repData.reputation?.badges||[];
+   if(!values.length){const node=document.createElement("span");node.className="muted";node.textContent="No badges yet. Helpful answers earn them.";badges.append(node)}
+   else for(const badge of values){const node=document.createElement("span");node.className="trust-badge student";node.textContent=badge;badges.append(node)}
+  }
+  const activity=document.querySelector("#notify-community-activity");if(activity)activity.checked=Boolean(prefData.preferences?.community_activity);
+  const personalized=document.querySelector("#notify-personalized");if(personalized)personalized.checked=Boolean(prefData.preferences?.personalized_alerts);
+  if(statusNode)statusNode.textContent="";
+ }catch{if(statusNode)statusNode.textContent="Community account settings are temporarily unavailable."}
+}
+async function updateCommunityPreference(field,value){
+ if(!initData)return;
+ const statusNode=document.querySelector("#community-account-status");
+ try{
+  const response=await fetch("/api/community-v2/preferences",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({[field]:value})});
+  if(!response.ok)throw Error("community_preference_failed");
+  const data=await response.json();
+  const activity=document.querySelector("#notify-community-activity");if(activity)activity.checked=Boolean(data.preferences?.community_activity);
+  const personalized=document.querySelector("#notify-personalized");if(personalized)personalized.checked=Boolean(data.preferences?.personalized_alerts);
+  if(statusNode)statusNode.textContent="Community notification preferences updated.";
+  haptic();
+ }catch{if(statusNode)statusNode.textContent="Could not update community notification preference.";loadCommunityAccount()}
+}
 
 async function boot(){
  initSearch();
@@ -1089,10 +960,13 @@ document.querySelectorAll("[data-campus-category]").forEach(button=>{
   try{await loadStudentPosts()}catch{}
   try{await loadPersonalPulse()}catch{}
   try{await loadNotifications()}catch{}
+  try{await loadCommunityAccount()}catch{}
   try{await loadBlockedPeople()}catch{}
  }
  if(tg?.ready)tg.ready();
 }
+document.getElementById("notify-community-activity")?.addEventListener("change",e=>updateCommunityPreference("community_activity",e.target.checked));
+document.getElementById("notify-personalized")?.addEventListener("change",e=>updateCommunityPreference("personalized_alerts",e.target.checked));
 document.getElementById("reset-academic")?.addEventListener("click",()=>{
  const button=document.getElementById("reset-academic");if(!button)return;
  if(button.dataset.confirming!=="1"){button.dataset.confirming="1";button.textContent="Tap again to reset";toast("Tap again to clear your local planner.");return}
