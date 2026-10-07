@@ -25,7 +25,7 @@ import {
 } from "./db";
 import { sendMessage } from "./telegram-bot";
 import { validateInitData } from "./telegram";
-import { searchKnowledge } from "./intelligence";
+import { analyzeAcademicQuery, searchKnowledge } from "./intelligence";
 
 interface Env {
   DB: D1Database;
@@ -463,9 +463,13 @@ export default {
           }
         } catch {}
         const student = await listStudentPosts(env.DB, 20);
+        const analysis = analyzeAcademicQuery(query);
         return json({
           ok: true,
           query,
+          intent: analysis.intent,
+          intent_label: analysis.label,
+          boundary: analysis.boundary,
           results: searchKnowledge(query, official, student),
         });
       } catch {
