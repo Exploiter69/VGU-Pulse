@@ -7,6 +7,22 @@ export type IntelligenceItem = {
   source?: string;
 };
 
+export type AcademicIntent =
+  | "exam"
+  | "academic-calendar"
+  | "exam-form"
+  | "backlog"
+  | "re-registration"
+  | "erp-private-data"
+  | "academic-facilities"
+  | "general";
+
+export type AcademicAnalysis = {
+  intent: AcademicIntent;
+  label: string;
+  boundary?: string;
+};
+
 type RawItem = Record<string, unknown>;
 
 const TOOLKIT: IntelligenceItem[] = [
@@ -45,6 +61,41 @@ function text(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+function termsMatch(query: string, terms: string[]): boolean {
+  return terms.some((term) => query.includes(term));
+}
+
+export function analyzeAcademicQuery(query: string): AcademicAnalysis {
+  const q = query.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+  if (termsMatch(q, ["backlog", "back paper", "supplementary", "arrear"])) {
+    return { intent: "backlog", label: "Backlog exams and forms" };
+  }
+  if (termsMatch(q, ["re registration", "reregistration", "re register", "semester registration"])) {
+    return { intent: "re-registration", label: "Re-registration" };
+  }
+  if (termsMatch(q, ["exam form", "exam form", "examination form", "fill exam"])) {
+    return { intent: "exam-form", label: "Exam forms" };
+  }
+  if (termsMatch(q, ["academic calendar", "semester calendar", "calendar", "academic schedule"])) {
+    return { intent: "academic-calendar", label: "Academic calendar" };
+  }
+  if (termsMatch(q, ["attendance", "attendence", "internal marks", "internal mark", "my marks", "my result", "result", "cgpa", "sgpa", "my timetable", "my time table", "my schedule"])) {
+    return {
+      intent: "erp-private-data",
+      label: "Private academic student data",
+      boundary: "Pulse cannot access private ERP/Digicampus attendance, marks, results or personal timetable data. Open the official Student ERP instead.",
+    };
+  }
+  if (termsMatch(q, ["exam", "exams", "examination", "end semester", "mid term", "midterm", "date sheet", "datesheet", "timetable"])) {
+    return { intent: "exam", label: "Exams" };
+  }
+  if (termsMatch(q, ["academic block", "library", "krc", "lab", "labs", "academic facility"])) {
+    return { intent: "academic-facilities", label: "Academic facilities" };
+  }
+  return { intent: "general", label: "General Pulse search" };
+}
+
 function officialItems(items: RawItem[]): IntelligenceItem[] {
   return items.map((item) => ({
     kind: "official",
@@ -66,18 +117,35 @@ function studentItems(items: RawItem[]): IntelligenceItem[] {
   }));
 }
 
-function score(item: IntelligenceItem, query: string): number {
+function score(item: IntelligenceItem, query: string, analysis: AcademicAnalysis): number {
   const q = query.toLowerCase().trim();
   if (!q) return item.kind === "official" ? 20 : item.kind === "campus" ? 10 : 5;
-  const haystack = [item.title, item.summary, item.source].join(" ").toLowerCase();
+  const title = item.title.toLowerCase();
+  const summary = item.summary.toLowerCase();
+  const haystack = [title, summary, item.source].join(" ").toLowerCase();
   const terms = q.split(/\s+/).filter(Boolean);
   let points = 0;
+
   for (const term of terms) {
-    if (item.title.toLowerCase().includes(term)) points += 8;
-    if (item.summary.toLowerCase().includes(term)) points += 4;
+    if (title.includes(term)) points += 8;
+    if (summary.includes(term)) points += 4;
     if (haystack.includes(term)) points += 2;
   }
   if (haystack.includes(q)) points += 10;
+
+  const intentBoosts: Record<AcademicIntent, string[]> = {
+    exam: ["Exam", "Academic calendar", "Student Handbook"],
+    "academic-calendar": ["Academic calendar", "calendar", "Exam"],
+    "exam-form": ["Exam Form", "Exam"],
+    backlog: ["Backlog Exam Form", "Exam Form"],
+    "re-registration": ["Re-registration", "Exam Form"],
+    "erp-private-data": ["Student ERP"],
+    "academic-facilities": ["Academic facilities", "Academic Block", "Knowledge Resource Centres"],
+    general: [],
+  };
+
+  if (intentBoosts[analysis.intent].some((term) => title.includes(term.toLowerCase()))) points += 30;
+  if (analysis.intent === "erp-private-data" && item.title === "Student ERP") points += 50;
   return points;
 }
 
@@ -88,9 +156,10 @@ export function searchKnowledge(
   limit = 20,
 ): IntelligenceItem[] {
   const normalized = query.trim().slice(0, 160);
+  const analysis = analyzeAcademicQuery(normalized);
   const items = [...officialItems(official), ...TOOLKIT, ...CAMPUS, ...studentItems(student)];
   return items
-    .map((item, index) => ({ item, score: score(item, normalized), index }))
+    .map((item, index) => ({ item, score: score(item, normalized, analysis), index }))
     .filter(({score}) => !normalized || score > 0)
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .slice(0, Math.min(Math.max(limit, 1), 20))
