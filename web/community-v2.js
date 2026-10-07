@@ -170,13 +170,24 @@
     }
 
     async function loadCommunities(){
-      const [data,context]=await Promise.all([api("/api/community-v2/communities"),api("/api/community-v2/context")]);
-      community=context.community||"campus";
+      let contextCommunity="campus";
+      try{
+        const context=await api("/api/community-v2/context");
+        contextCommunity=context.community||"campus";
+      }catch{
+        contextCommunity="campus";
+      }
+      community=contextCommunity;
       $("#cv2-community").value=community;
       $("#cv2-community-filter").value=community;
       $("#cv2-current-community").textContent=community==="campus"?"VGU campus":community;
-      const names=["campus",context.community,...(data.communities||[]).map(x=>x.community_slug)].filter((x,i,a)=>a.indexOf(x)===i).slice(0,16);
-      $("#cv2-communities").innerHTML=names.map(n=>`<button class="cv2-community-chip" data-community="${esc(n)}">${esc(n)}</button>`).join("");
+      try{
+        const data=await api("/api/community-v2/communities");
+        const names=["campus",contextCommunity,...(data.communities||[]).map(x=>x.community_slug)].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).slice(0,16);
+        $("#cv2-communities").innerHTML=names.map(n=>`<button class="cv2-community-chip" data-community="${esc(n)}">${esc(n)}</button>`).join("");
+      }catch{
+        $("#cv2-communities").innerHTML='<span class="cv2-note">Communities will appear when student activity is available.</span>';
+      }
     }
 
     function syncTabs(){
@@ -204,7 +215,10 @@
         else await api("/api/community-v2/items",{method:"POST",body:JSON.stringify({kind:postKind,title:$("#cv2-title").value,body:$("#cv2-body").value,community_slug:$("#cv2-community").value,anonymous:$("#cv2-anon").checked})});
         $("#cv2-title").value="";$("#cv2-body").value="";$("#cv2-options").value="";status.textContent="Published.";
         $("#cv2-compose-dialog").close();await loadFeed();
-      }catch(e){status.textContent=e.message==="unsafe_content"?"That content needs editing before it can be published.":"Could not publish. Please try again."}
+      }catch(e){
+        const messages={unsafe_content:"That content needs editing before it can be published.",invalid_item:"Add a title and a little more detail.",invalid_poll:"A poll needs at least two options.",rate_limited:"You have posted a lot recently. Try again later.",unauthorized:"Open Pulse from Telegram to post."};
+        status.textContent=messages[e.message]||"Could not publish. Please try again.";
+      }
       finally{button.disabled=false}
     };
 
@@ -254,7 +268,8 @@
       askQuestion.parentElement?.appendChild(bridge);
     }
 
-    Promise.all([loadFeed(),loadCommunities()]).catch(()=>{$("#cv2-feed").innerHTML='<div class="cv2-empty">Community is temporarily unavailable. Try again in a moment.</div>'});
+    loadCommunities();
+    loadFeed().catch(()=>{$("#cv2-feed").innerHTML='<div class="cv2-empty">Community is temporarily unavailable. Try again in a moment.</div>'});
   };
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else boot();
 })();
