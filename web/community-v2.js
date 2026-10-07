@@ -297,7 +297,7 @@
 
     $("#cv2-more-close").onclick=()=>$("#cv2-more-dialog")?.close?.();
     $("#cv2-more-report").onclick=async()=>{if(!moderationItemId)return;try{await api("/api/community-v2/report",{method:"POST",body:JSON.stringify({item_id:moderationItemId,reason:$("#cv2-report-reason").value})});$("#cv2-more-status").textContent="Reported. Thank you.";setTimeout(()=>$("#cv2-more-dialog")?.close?.(),500)}catch(e){$("#cv2-more-status").textContent=e.message==="cannot_report_own_item"?"You cannot report your own post.":"Could not report this post."}};
-    $("#cv2-more-block").onclick=async()=>{if(!moderationItemId)return;try{await api("/api/community-v2/block",{method:"POST",body:JSON.stringify({item_id:moderationItemId}));$("#cv2-more-status").textContent="Author blocked.";setTimeout(async()=>{$("#cv2-more-dialog")?.close?.();await loadFeed()},500)}catch{$("#cv2-more-status").textContent="Could not block this author."}};
+    $("#cv2-more-block").onclick=async()=>{if(!moderationItemId)return;try{await api("/api/community-v2/block",{method:"POST",body:JSON.stringify({item_id:moderationItemId})})$("#cv2-more-status").textContent="Author blocked.";setTimeout(async()=>{$("#cv2-more-dialog")?.close?.();await loadFeed()},500)}catch{$("#cv2-more-status").textContent="Could not block this author."}};
     const askView=document.querySelector('[data-view-panel="ask"]'),askQuestion=document.querySelector("#search-query");
     if(askView&&askQuestion){
       const bridge=document.createElement("div");bridge.className="cv2-ask-bridge";
