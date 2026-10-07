@@ -37,6 +37,16 @@ describe("final Student OS production contract", () => {
     expect(webSource).not.toMatch(/\bconfirm\s*\(/);
   });
 
+
+  it("keeps campus discovery controls wired", () => {
+    expect(webSource).toContain('id="campus-search"');
+    expect(webSource).toContain('data-campus-category="all"');
+    expect(webSource).toContain('data-campus-category="Academics"');
+    expect(webSource).toContain('data-campus-category="Health"');
+    expect(webSource).toContain('renderCampusGuide();');
+    expect(webSource).toContain('button.setAttribute("aria-pressed","true")');
+  });
+
   it("keeps private academic data out of the public client contract", () => {
     expect(webSource).toContain("private ERP/Digicampus");
     expect(webSource).toContain("student-reported");
