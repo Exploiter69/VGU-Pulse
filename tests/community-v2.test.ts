@@ -53,6 +53,7 @@ describe("community V2 contract", () => {
     expect(backend).toContain('request.method==="DELETE" && url.pathname==="/api/community-v2/replies"');
     expect(backend).toContain('item.telegram_user_id!==String(user.id)');
     expect(backend).toContain('blocked_telegram_user_id=i.telegram_user_id');
+    expect(backend).toContain('blocked_telegram_user_id=r.telegram_user_id');
     expect(backend).toContain('cannot_report_own_item');
     expect(backend).toContain('cannot_report_own_reply');
     expect(web).toContain('data-action="delete"');
@@ -61,6 +62,7 @@ describe("community V2 contract", () => {
     expect(web).toContain('following?"?item_id="');
     expect(web).toContain('saved?"?item_id="');
     expect(web).toContain('data-reply-delete');
+    expect(web).toContain('Community could not be loaded.');
   });
 
   it("keeps critical community controls explicitly wired", () => {
