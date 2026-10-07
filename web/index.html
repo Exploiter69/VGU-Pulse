@@ -462,19 +462,7 @@ document.querySelectorAll("[data-community-tab]").forEach(button=>button.addEven
  document.querySelector("#post-title")?.focus();haptic();
 }));
 tg?.BackButton?.onClick?.(goBack);
-function syncMainButton(target){
- const button=tg?.MainButton;if(!button)return;
- button.hide();
- if(target==="academics"){
-  button.setText("Add to my plan");
-  button.color=tg.themeParams?.button_color||"#7db5ff";
-  button.textColor=tg.themeParams?.button_text_color||"#07111f";
-  button.offClick?.(window.__pulseMainHandler);
-  window.__pulseMainHandler=()=>{haptic("impact");document.querySelector("#academic-form")?.requestSubmit()};
-  button.onClick?.(window.__pulseMainHandler);
-  button.show();
- }
-}
+function syncMainButton(){tg?.MainButton?.hide?.()}
 document.addEventListener("click",event=>{
  const el=event.target instanceof Element?event.target.closest("button,a"):null;
  if(el&&el.closest("main"))haptic("selection");
