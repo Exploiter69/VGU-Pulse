@@ -114,9 +114,9 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <section class="card">
 <div class="eyebrow">Student-reported</div><h2>Campus community</h2>
 <p class="muted">Ask a question, share useful campus information, or find people for an opportunity. These posts are student-reported, not official VGU announcements.</p>
-<select id="post-filter" aria-label="Filter student posts">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><select id="post-filter" aria-label="Filter student posts">
 <option value="">All student posts</option><option value="question">Questions</option><option value="info">Campus information</option><option value="opportunity">Opportunities</option><option value="request">Requests</option>
-</select>
+</select><select id="post-sort" aria-label="Sort student posts"><option value="newest">Newest</option><option value="active">Most discussed</option><option value="unanswered">Unanswered first</option></select></div>
 <form id="post-form">
 <select id="post-category" aria-label="Post type">
 <option value="question">Question</option><option value="info">Campus information</option><option value="opportunity">Opportunity</option><option value="request">Request</option>
@@ -287,7 +287,7 @@ function renderStudentPosts(posts){
  if(!posts.length){const p=document.createElement("p");p.className="muted";p.textContent="No student posts yet. Be the first to share something useful.";studentPosts.append(p);return}
  for(const post of posts){
   const article=document.createElement("article");article.className="post";
-  const meta=document.createElement("small");meta.className="muted";meta.textContent=post.category+" • student-reported • "+post.author_name;
+  const meta=document.createElement("small");meta.className="muted";meta.textContent=post.category+" • student-reported • "+post.author_name+" • "+(post.reply_count||0)+" repl"+((post.reply_count||0)===1?"y":"ies");
   const title=document.createElement("h3");title.textContent=post.title;
   const body=document.createElement("p");body.className="muted";body.textContent=post.body;
   const report=document.createElement("button");report.className="report";report.type="button";report.textContent="Report";
@@ -404,8 +404,9 @@ profileDelete.addEventListener("click",async()=>{
  if(response.ok){profileForm.reset();profileDelete.hidden=true;profileDelete.dataset.confirming="";profileDelete.textContent="Delete my profile";profileStatus.textContent="Profile deleted.";await loadProfiles()}else{profileStatus.textContent="Profile could not be deleted.";profileDelete.disabled=false;profileDelete.dataset.confirming="";profileDelete.textContent="Delete my profile"}
 });
 async function loadStudentPosts(){
- const category=postFilter.value;
- const response=await fetch("/api/student-posts"+(category?"?category="+encodeURIComponent(category):""),{headers:initData?{"x-telegram-init-data":initData}:{}});
+ const category=postFilter.value,sort=postSort?.value||"newest";
+ const params=new URLSearchParams();if(category)params.set("category",category);if(sort!=="newest")params.set("sort",sort);
+ const response=await fetch("/api/student-posts"+(params.toString()?"?"+params.toString():""),{headers:initData?{"x-telegram-init-data":initData}:{}});
  if(!response.ok)throw Error("student_posts_failed");
  const data=await response.json();renderStudentPosts(data.posts||[]);
 }
