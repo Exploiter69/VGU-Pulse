@@ -163,6 +163,7 @@
           <h3>${esc(item.title)}</h3>
           <p>${esc(item.body)}</p>
           <div class="cv2-note">By ${esc(item.author)} · ${item.replies} replies · ${item.upvotes} helpful votes</div>
+          ${Number(item.poll_options) ? '<button class="cv2-tool" data-action="poll">📊 Vote in poll</button><div class="cv2-poll-options" hidden></div>' : ''}
           <div class="cv2-item-tools">
             <button class="cv2-tool ${Number(item.my_vote)===1?'active':''}" data-action="vote" data-value="1">▲ ${item.upvotes}</button>
             <button class="cv2-tool ${Number(item.my_vote)===-1?'active':''}" data-action="vote" data-value="-1">▼ ${item.downvotes}</button>
@@ -246,6 +247,14 @@
           if(action==="follow") await api("/api/community-v2/follow",{method:"POST",body:JSON.stringify({item_id:id})});
           if(action==="save") await api("/api/community-v2/save",{method:"POST",body:JSON.stringify({item_id:id})});
           if(action==="report"){await api("/api/community-v2/report",{method:"POST",body:JSON.stringify({item_id:id,reason:"student_report"})});button.textContent="Reported";}
+          if(action==="poll"){
+            const box=item.querySelector(".cv2-poll-options");
+            if(!box.hidden){box.hidden=true;return;}
+            const d=await api("/api/community-v2/poll?item_id="+id);
+            box.innerHTML=(d.options||[]).map(o=>`<button class="cv2-poll-option" data-option-id="${o.id}">${esc(o.label)} <span class="cv2-note">· ${o.votes} votes</span></button>`).join("") || '<span class="cv2-note">Poll unavailable.</span>';
+            box.querySelectorAll("[data-option-id]").forEach(option=>option.onclick=async()=>{await api("/api/community-v2/poll-vote",{method:"POST",body:JSON.stringify({item_id:id,option_id:Number(option.dataset.optionId)})});box.hidden=true;await loadFeed();});
+            box.hidden=false;
+          }
           if(action==="replies"){
             const box=item.querySelector(".cv2-replies");
             if(!box.hidden){box.hidden=true;return;}
