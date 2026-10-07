@@ -61,6 +61,9 @@
       @media(max-width:620px){.cv2-grid{grid-template-columns:1fr}.cv2-toolbar{align-items:stretch}.cv2-post-btn{padding-inline:11px}.cv2-title{font-size:27px}}
     `;
     document.head.appendChild(style);
+    const intentStyle=document.createElement("style");
+    intentStyle.textContent=".cv2-intent-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:7px 0 4px}.cv2-intent-grid button{min-height:62px;text-align:left;border:1px solid var(--border);background:var(--surface-2);border-radius:11px;padding:9px;color:var(--text);cursor:pointer}.cv2-intent-grid button strong{display:block;font-size:12px}.cv2-intent-grid button span{display:block;color:var(--muted);font-size:10px;margin-top:2px}.cv2-intent-grid button.active{border-color:var(--accent);background:rgba(138,180,255,.07)}@media(max-width:620px){.cv2-intent-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}";
+    document.head.appendChild(intentStyle);
 
     const root=document.createElement("section");
     root.id="community-v2-root";
@@ -75,7 +78,7 @@
             <button class="cv2-icon-btn" id="cv2-search-btn" type="button" aria-label="Search">⌕</button>
           </div>
           <button class="cv2-filter-btn" id="cv2-filter-open" type="button">Filter</button>
-          <button class="cv2-post-btn" id="cv2-compose-open" type="button">+ Post</button>
+          <button class="cv2-post-btn" id="cv2-compose-open" type="button">＋ Create</button>
         </div>
         <div class="cv2-tabs" role="tablist" aria-label="Community feed">
           <button class="cv2-tab active" data-sort="trending">Trending</button>
@@ -99,7 +102,7 @@
         <form method="dialog" class="cv2-sheet" id="cv2-compose-form">
           <div class="cv2-sheet-head"><h3>Start a student post</h3><button class="cv2-close" value="cancel" aria-label="Close">×</button></div>
           <div class="cv2-grid">
-            <div class="cv2-field"><label for="cv2-kind">Post type</label><select id="cv2-kind">
+            <div class="cv2-field"><label>What are you trying to do?</label><div class="cv2-intent-grid" id="cv2-intents"><button type="button" data-intent="discussion"><strong>Discussion</strong><span>Start a conversation</span></button><button type="button" data-intent="confession"><strong>Confession</strong><span>Share anonymously</span></button><button type="button" data-intent="campus"><strong>Campus help</strong><span>Something on campus</span></button><button type="button" data-intent="exam"><strong>Exam survival</strong><span>Exam help</span></button><button type="button" data-intent="notes"><strong>Notes / resources</strong><span>Useful material</span></button><button type="button" data-intent="teammate"><strong>Project teammate</strong><span>Find collaborators</span></button><button type="button" data-intent="lost_found"><strong>Lost & found</strong><span>Return or find</span></button><button type="button" data-intent="opportunity"><strong>Opportunity</strong><span>Share an opportunity</span></button></div><select id="cv2-kind">
               <option value="discussion">Discussion</option><option value="confession">Confession</option><option value="campus">Campus pulse</option><option value="exam">Exam survival</option><option value="senior">Senior → junior advice</option><option value="notes">Notes / resources</option><option value="pyq">PYQ / exam material</option><option value="teacher">Teacher / elective advice</option><option value="teammate">Project teammate</option><option value="lost_found">Lost & found</option><option value="ride">Ride sharing</option><option value="roommate">Room / roommate</option><option value="listing">Student exchange</option><option value="opportunity">Opportunity</option>
             </select></div>
             <div class="cv2-field"><label for="cv2-community">Community</label><input id="cv2-community" value="campus" maxlength="60"></div>
@@ -127,6 +130,9 @@
     view.querySelector("#community-v2-mount")?.appendChild(root) || view.appendChild(root);
 
     const $=s=>root.querySelector(s);
+    const intentButtons=[...root.querySelectorAll("[data-intent]")];
+    intentButtons.forEach(btn=>btn.onclick=()=>{const kind=$("#cv2-kind");kind.value=btn.dataset.intent;intentButtons.forEach(x=>x.classList.toggle("active",x===btn));kind.dispatchEvent(new Event("change"))});
+    intentButtons[0]?.classList.add("active");
     const tg=window.Telegram?.WebApp;
     const initData=tg?.initData||"";
     let sort="trending",kind="",personalized=false,community="campus";
