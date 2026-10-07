@@ -322,7 +322,7 @@
       }catch{toast("That discussion could not be opened.")}
     };
     const startParam=new URLSearchParams(location.search).get("startapp")||new URLSearchParams(location.search).get("tgWebAppStartParam")||window.Telegram?.WebApp?.initDataUnsafe?.start_param||"";
-    if(/^(post|poll)-\d+$/.test(startParam)){const id=startParam.split("-")[1];setTimeout(()=>window.__pulseCommunityOpenItem?.(id),1200)}
+    if(/^(post|poll)-\d+$/.test(startParam)){const id=startParam.split("-")[1];setTimeout(()=>{document.querySelector('[data-view="community"]')?.click();setTimeout(()=>window.__pulseCommunityOpenItem?.(id),300)},900)}
     window.__pulseCommunitySaved=async()=>{savedOnly=true;sort="new";kind="";personalized=false;$("#cv2-search").value="";syncTabs();await loadFeed()};
     window.__pulseCommunityAll=async()=>{savedOnly=false;sort="trending";kind="";personalized=false;syncTabs();await loadFeed()};
     loadCommunities();
