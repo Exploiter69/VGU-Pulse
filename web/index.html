@@ -170,8 +170,13 @@ label{font-size:13px;color:var(--muted);font-weight:650}
 .reply-form{margin:10px 0 0 14px}
 .reply-form textarea{margin-bottom:6px}
 .reply-submit{background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:8px 12px;cursor:pointer}
-.report{background:none;border:0;color:var(--muted);padding:5px 0;cursor:pointer}
-.report:hover{color:var(--text)}
+.report{background:none;border:0;color:var(--muted);padding:7px 9px;min-height:36px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font:inherit;line-height:1.2;white-space:nowrap}
+.report:hover{color:var(--text);background:var(--surface-2)}
+.report:focus-visible{outline:2px solid rgba(125,181,255,.45);outline-offset:2px}
+.report:disabled{opacity:.55;cursor:default}
+.action-group{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.action-group .report{margin:0}
+.inline-action-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px}
 .tool-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .tool{
   display:block;background:var(--surface-2);color:var(--text);
@@ -824,7 +829,7 @@ function renderHomeCommunity(posts){
  for(const post of posts.slice(0,3)){const item=document.createElement("article");item.className="home-item";const title=document.createElement("strong");title.textContent=post.title;const meta=document.createElement("small");meta.className="muted home-meta";meta.textContent=post.category+" • student-reported";item.append(title,meta);homeCommunity.append(item)}
 }
 function voteButtons(kind,item,target){
- const wrap=document.createElement("span");wrap.style.display="inline-flex";wrap.style.gap="6px";wrap.style.alignItems="center";wrap.style.marginRight="10px";
+ const wrap=document.createElement("span");wrap.style.display="inline-flex";wrap.style.gap="6px";wrap.style.alignItems="center";
  const up=document.createElement("button");up.type="button";up.className="report";up.textContent="▲ "+String(item.upvotes||0);up.setAttribute("aria-label","Upvote");
  const score=document.createElement("strong");score.textContent=String(item.score||0);score.style.minWidth="24px";score.style.textAlign="center";
  const down=document.createElement("button");down.type="button";down.className="report";down.textContent="▼ "+String(item.downvotes||0);down.setAttribute("aria-label","Downvote");
@@ -865,7 +870,7 @@ function renderStudentPosts(posts){
   const meta=document.createElement("small");meta.className="muted";meta.textContent=post.category+" • student-reported • "+post.author_name+" • "+(post.reply_count||0)+" repl"+((post.reply_count||0)===1?"y":"ies");
   const title=document.createElement("h3");title.textContent=post.title;
   const body=document.createElement("p");body.className="muted";body.textContent=post.body;
-  const actions=document.createElement("div");actions.style.display="flex";actions.style.flexWrap="wrap";actions.style.alignItems="center";actions.style.gap="4px";
+  const actions=document.createElement("div");actions.className="action-group";
   voteButtons("post",post,actions);
   const report=document.createElement("button");report.className="report";report.type="button";report.textContent="Report";report.addEventListener("click",()=>reportPost(post.id,report));
   actions.append(report);
@@ -912,7 +917,7 @@ async function loadReplies(postId,target){
   const item=document.createElement("div");item.className="reply";
   const meta=document.createElement("small");meta.className="muted";meta.textContent=reply.author_name+" • student-reported";
   const text=document.createElement("p");text.className="muted";text.textContent=reply.body;
-  const actions=document.createElement("div");actions.style.display="flex";actions.style.flexWrap="wrap";actions.style.alignItems="center";
+  const actions=document.createElement("div");actions.className="action-group";
   voteButtons("reply",reply,actions);
   const report=document.createElement("button");report.className="report";report.type="button";report.textContent="Report";
   report.addEventListener("click",async()=>{
@@ -942,7 +947,7 @@ async function loadBlockedPeople(){
  if(!list.length)return;
  const label=document.createElement("strong");label.textContent="Blocked profiles";blockedPeople.append(label);
  for(const p of list){
-  const row=document.createElement("div");row.style.marginTop="6px";
+  const row=document.createElement("div");row.className="inline-action-row";
   const name=document.createElement("span");name.textContent=p.display_name+" ";
   const button=document.createElement("button");button.type="button";button.className="report";button.textContent="Unblock";
   button.onclick=async()=>{button.disabled=true;const x=await fetch("/api/student-profile/unblock",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({public_id:p.public_id})});if(x.ok){profileStatus.textContent="Profile unblocked.";await loadBlockedPeople();await loadProfiles()}else button.disabled=false};
@@ -971,7 +976,7 @@ async function loadProfiles(){
   if(goals.some(g=>(p.looking_for||"").toLowerCase().includes(g)))reasons.push("shared goal");
   if(reasons.length)reason.textContent=reasons.join(" · ");
   else reason.textContent="Opt-in student";
-  const actions=document.createElement("div");
+  const actions=document.createElement("div");actions.className="action-group";
   const report=document.createElement("button");report.className="report";report.type="button";report.textContent="Report profile";
   report.onclick=async()=>{if(!initData){status.textContent="Open Pulse from Telegram to report a profile.";return}report.disabled=true;const x=await fetch("/api/student-profile/report",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({profile_public_id:p.public_id})});status.textContent=x.ok?"Profile report recorded.":"Unable to record report.";if(x.ok)await loadProfiles();else report.disabled=false};
   const block=document.createElement("button");block.className="report";block.type="button";block.textContent="Block";
