@@ -29,6 +29,7 @@ import {
 } from "./db";
 import { sendMessage } from "./telegram-bot";
 import { validateInitData } from "./telegram";
+import { handleCommunityV2 } from "./community-v2";
 import { analyzeAcademicQuery, searchKnowledge } from "./intelligence";
 import {
   getNotificationPreferences,
@@ -783,6 +784,17 @@ export default {
           last_name: validated.user.last_name ?? null,
         },
       });
+    }
+
+    if (request.method === "GET" || request.method === "POST" || request.method === "DELETE") {
+      const initData = request.headers.get("x-telegram-init-data") ?? "";
+      const validated = getBotToken(env) ? await validateInitData(initData, getBotToken(env)) : null;
+      if (validated) {
+        const communityResponse = await handleCommunityV2(request, env, validated.user);
+        if (communityResponse) return communityResponse;
+      } else if (url.pathname.startsWith("/api/community-v2")) {
+        return json({ ok: false, error: "unauthorized" }, 401);
+      }
     }
 
     return json({ ok: false, error: "not_found" }, 404);
