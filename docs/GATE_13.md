@@ -9,6 +9,7 @@ Turn the existing Campus view into a practical, source-backed student services d
 ## Delivered
 
 - Official campus facilities remain clearly labelled as **Official**.
+- Official faculty/department discovery is included, with CSE, Mechanical, Civil and Electrical department entries plus the full published directory.
 - Searchable campus/services directory.
 - Student-support services:
   - Student Cell
