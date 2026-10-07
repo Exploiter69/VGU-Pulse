@@ -1,5 +1,14 @@
 # VGU Pulse Roadmap
 
+## Current delivery status
+
+- Phase 9 — People & Collaboration: complete
+- Phase 10 — Student Utility / Daily Tools: complete
+- Phase 11 — Academic Intelligence: complete
+- Phase 12 — Community Quality + Reddit-style voting: complete
+- Phase 13 — Campus Services: complete in source; deployment validation pending
+
+
 ## Gate 0 — Product and architecture foundation
 - repository contract
 - product boundary
