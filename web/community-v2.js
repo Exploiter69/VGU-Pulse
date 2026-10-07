@@ -180,7 +180,7 @@
               <button type="button" class="cv2-tool ${Number(item.my_vote)===-1?'active':''}" data-action="vote" data-value="-1">▼ ${item.downvotes}</button>
               <button type="button" class="cv2-tool" data-action="replies">💬 ${item.replies}</button>
               <button type="button" class="cv2-tool ${item.following?'active':''}" data-action="follow">${item.following?'Following':'Follow'}</button>
-              <button type="button" class="cv2-tool ${item.saved?'active':''}" data-action="save">${item.saved?'Saved':'Save'}</button>
+              <button type="button" class="cv2-tool ${item.saved?'active':''}" data-action="save">${item.saved?'Saved':'Save'}</button><button type="button" class="cv2-tool" data-action="share">Share</button>
               ${item.mine?'<button type="button" class="cv2-tool" data-action="edit">Edit</button><button type="button" class="cv2-tool" data-action="delete">Delete</button>':'<button type="button" class="cv2-tool" data-action="moderate">More</button>'}
             </div>
             <div class="cv2-replies" hidden></div>
@@ -269,7 +269,7 @@
       if(!button||!item)return;
       const id=Number(item.dataset.id),action=button.dataset.action;
       try{
-        if(action==="expand"){const body=item.querySelector(".cv2-body");if(body){body.classList.remove("cv2-collapsed");button.remove()}return}\n        if(action==="vote")await api("/api/community-v2/vote",{method:"POST",body:JSON.stringify({item_id:id,vote:Number(button.dataset.value)})});
+        if(action==="share"){await window.__pulseShare?.("post-"+id,"VGU Pulse discussion: "+String(item.querySelector("h3")?.textContent||""));return}\n        if(action==="expand"){const body=item.querySelector(".cv2-body");if(body){body.classList.remove("cv2-collapsed");button.remove()}return}\n        if(action==="vote")await api("/api/community-v2/vote",{method:"POST",body:JSON.stringify({item_id:id,vote:Number(button.dataset.value)})});
         if(action==="follow"){const following=item.dataset.following==="1";item.dataset.following=following?"0":"1";button.classList.toggle("active",!following);button.textContent=following?"Follow":"Following";try{await api("/api/community-v2/follow"+(following?"?item_id="+encodeURIComponent(id):""),following?{method:"DELETE"}:{method:"POST",body:JSON.stringify({item_id:id})})}catch(e){item.dataset.following=following?"1":"0";button.classList.toggle("active",following);button.textContent=following?"Following":"Follow";throw e}return}\n        if(action==="save"){const saved=item.dataset.saved==="1";item.dataset.saved=saved?"0":"1";button.classList.toggle("active",!saved);button.textContent=saved?"Save":"Saved";try{await api("/api/community-v2/save"+(saved?"?item_id="+encodeURIComponent(id):""),saved?{method:"DELETE"}:{method:"POST",body:JSON.stringify({item_id:id})})}catch(e){item.dataset.saved=saved?"1":"0";button.classList.toggle("active",saved);button.textContent=saved?"Saved":"Save";throw e}return}\n        if(action==="edit"){
           const data=await api("/api/community-v2/items?item_id="+encodeURIComponent(id));
           const current=data.item;
@@ -309,6 +309,15 @@
       askQuestion.parentElement?.appendChild(bridge);
     }
 
+    window.__pulseCommunityOpenItem=async(id)=>{
+      try{
+        const data=await api("/api/community-v2/items?item_id="+encodeURIComponent(id));const item=data.item;
+        $("#cv2-search").value=String(item.title||"").slice(0,120);kind="";community="";savedOnly=false;personalized=false;sort="new";syncTabs();await loadFeed();
+        const card=document.querySelector('.cv2-item[data-id="'+CSS.escape(String(id))+'"]');if(card){card.scrollIntoView({block:"center",behavior:"smooth"});card.querySelector('[data-action="replies"]')?.click()}
+      }catch{toast("That discussion could not be opened.")}
+    };
+    const startParam=new URLSearchParams(location.search).get("startapp")||new URLSearchParams(location.search).get("tgWebAppStartParam")||window.Telegram?.WebApp?.initDataUnsafe?.start_param||"";
+    if(/^(post|poll)-\d+$/.test(startParam)){const id=startParam.split("-")[1];setTimeout(()=>window.__pulseCommunityOpenItem?.(id),1200)}
     window.__pulseCommunitySaved=async()=>{savedOnly=true;sort="new";kind="";personalized=false;$("#cv2-search").value="";syncTabs();await loadFeed()};
     window.__pulseCommunityAll=async()=>{savedOnly=false;sort="trending";kind="";personalized=false;syncTabs();await loadFeed()};
     loadCommunities();
