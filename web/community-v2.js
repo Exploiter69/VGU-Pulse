@@ -154,7 +154,7 @@
       const feed=$("#cv2-feed");
       if(!data.items?.length){feed.innerHTML='<div class="cv2-empty">Nothing here yet. Be the first student to start a conversation.</div>';return;}
       feed.innerHTML=data.items.map(item=>`
-        <article class="cv2-item" data-id="${item.id}">
+        <article class="cv2-item" data-id="${item.id}" data-following="${Number(item.following)?1:0}" data-saved="${Number(item.saved)?1:0}">
           <div class="cv2-meta"><div class="cv2-wrap"><span class="cv2-badge">${esc(item.kind.replaceAll("_"," "))}</span>${Number(item.anonymous)?'<span class="cv2-badge anon">Anonymous</span>':''}<span class="cv2-note">${esc(item.community_slug)}</span></div><span class="cv2-note">${pretty(item.created_at)}</span></div>
           <h3>${esc(item.title)}</h3><p class="cv2-body">${esc(item.body)}</p>
           <div class="cv2-note">By ${esc(item.author)} · ${item.replies} replies · ${item.upvotes} helpful</div>
@@ -165,7 +165,8 @@
             <button class="cv2-tool" data-action="replies">💬 ${item.replies}</button>
             <button class="cv2-tool ${item.following?'active':''}" data-action="follow">${item.following?'Following':'Follow'}</button>
             <button class="cv2-tool ${item.saved?'active':''}" data-action="save">${item.saved?'Saved':'Save'}</button>
-            <button class="cv2-tool" data-action="report">Report</button><button class="cv2-tool" data-action="block">Block</button>
+            ${item.mine?'<button class="cv2-tool" data-action="delete">Delete</button>':''}
+            ${item.mine?'':'<button class="cv2-tool" data-action="report">Report</button><button class="cv2-tool" data-action="block">Block</button>'}
           </div>
           <div class="cv2-replies" hidden></div>
         </article>`).join("");
@@ -231,14 +232,27 @@
       const chip=e.target.closest("[data-community]");
       if(chip){community=chip.dataset.community;$("#cv2-current-community").textContent=community==="campus"?"VGU campus":community;$("#cv2-community").value=community;$("#cv2-communities").closest("details")?.removeAttribute("open");await loadFeed();return}
       const button=e.target.closest("button[data-action]"),item=e.target.closest(".cv2-item");
+      const replyDelete=e.target.closest("[data-reply-delete]");
+      if(replyDelete){try{
+        if(replyDelete.dataset.confirming!=="1"){replyDelete.dataset.confirming="1";replyDelete.textContent="Confirm delete";return}
+        replyDelete.disabled=true;await api("/api/community-v2/replies?reply_id="+encodeURIComponent(replyDelete.dataset.replyDelete),{method:"DELETE"});
+        await loadFeed();
+      }catch{replyDelete.disabled=false;replyDelete.textContent="Try again"}return}
       const replyReport=e.target.closest("[data-reply-report]");
       if(replyReport){try{await api("/api/community-v2/report-reply",{method:"POST",body:JSON.stringify({reply_id:Number(replyReport.dataset.replyReport)})});replyReport.textContent="Reported"}catch{replyReport.textContent="Try again"}return}
       if(!button||!item)return;
       const id=Number(item.dataset.id),action=button.dataset.action;
       try{
         if(action==="vote")await api("/api/community-v2/vote",{method:"POST",body:JSON.stringify({item_id:id,vote:Number(button.dataset.value)})});
-        if(action==="follow")await api("/api/community-v2/follow",{method:"POST",body:JSON.stringify({item_id:id})});
-        if(action==="save")await api("/api/community-v2/save",{method:"POST",body:JSON.stringify({item_id:id})});
+        if(action==="follow"){
+          const following=item.dataset.following==="1";
+          await api("/api/community-v2/follow"+(following?"?item_id="+encodeURIComponent(id):""),following?{method:"DELETE"}:{method:"POST",body:JSON.stringify({item_id:id})});
+        }
+        if(action==="save"){
+          const saved=item.dataset.saved==="1";
+          await api("/api/community-v2/save"+(saved?"?item_id="+encodeURIComponent(id):""),saved?{method:"DELETE"}:{method:"POST",body:JSON.stringify({item_id:id})});
+        }
+        if(action==="delete")await api("/api/community-v2/items?item_id="+encodeURIComponent(id),{method:"DELETE"});
         if(action==="report"){await api("/api/community-v2/report",{method:"POST",body:JSON.stringify({item_id:id,reason:"student_report"})});button.textContent="Reported"}
         if(action==="block")await api("/api/community-v2/block",{method:"POST",body:JSON.stringify({item_id:id})});
         if(action==="poll"){
@@ -252,7 +266,7 @@
         if(action==="replies"){
           const box=item.querySelector(".cv2-replies");if(!box.hidden){box.hidden=true;return}
           const d=await api("/api/community-v2/replies?item_id="+id);
-          box.innerHTML=(d.replies||[]).map(r=>`<div class="cv2-reply"><strong>${esc(r.author)}</strong><div>${esc(r.body)}</div><span class="cv2-note">${pretty(r.created_at)}</span> <button class="cv2-tool" data-reply-report="${r.id}" type="button">Report</button></div>`).join("")||'<span class="cv2-note">No replies yet.</span>';
+          box.innerHTML=(d.replies||[]).map(r=>`<div class="cv2-reply"><strong>${esc(r.author)}</strong><div>${esc(r.body)}</div><span class="cv2-note">${pretty(r.created_at)}</span> ${r.mine?'<button class="cv2-tool" data-reply-delete="'+r.id+'" type="button">Delete</button>':'<button class="cv2-tool" data-reply-report="'+r.id+'" type="button">Report</button'}</div>`).join("")||'<span class="cv2-note">No replies yet.</span>';
           box.insertAdjacentHTML("beforeend",`<div class="cv2-reply-compose"><textarea class="cv2-reply-input" placeholder="Reply to this discussion…"></textarea><button class="cv2-post-btn cv2-reply-send" type="button">Reply</button></div>`);
           box.hidden=false;
           box.querySelector(".cv2-reply-send").onclick=async()=>{const input=box.querySelector(".cv2-reply-input");await api("/api/community-v2/replies",{method:"POST",body:JSON.stringify({item_id:id,body:input.value,anonymous:false})});await loadFeed()};
