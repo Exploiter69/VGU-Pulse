@@ -140,6 +140,19 @@ async function createItem(db: D1Database, user: CommunityUser, input: Record<str
   return (await getItem(db, id, user.id))!;
 }
 
+async function updateItem(db: D1Database, user: CommunityUser, id: number, input: Record<string, unknown>): Promise<Record<string, unknown>> {
+  if (!Number.isSafeInteger(id) || id < 1) throw new Error("invalid_item");
+  const title = clamp(input.title, LIMITS.title);
+  const text = clamp(input.body, LIMITS.body);
+  if (title.length < 4 || text.length < 2) throw new Error("invalid_item");
+  if (unsafeText(title + " " + text)) throw new Error("unsafe_content");
+  const item = await db.prepare("SELECT telegram_user_id,kind FROM community_items WHERE id=? AND status='published'").bind(id).first<{telegram_user_id:string;kind:string}>();
+  if (!item) throw new Error("item_not_found");
+  if (item.telegram_user_id !== String(user.id)) throw new Error("forbidden");
+  await db.prepare("UPDATE community_items SET title=?,body=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND telegram_user_id=?").bind(title,text,id,String(user.id)).run();
+  return (await getItem(db,id,user.id))!;
+}
+
 async function getItem(db: D1Database, id: number, viewerId?: number): Promise<Record<string, unknown> | null> {
   const row = await db.prepare(
     `SELECT i.id, i.kind, i.title, i.body, i.community_slug, i.audience_program, i.audience_branch,
@@ -175,6 +188,10 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
   if (kind && KINDS.has(kind)) { where.push("i.kind=?"); args.push(kind); }
   if (community) { where.push("i.community_slug=?"); args.push(community); }
   if (search) { where.push("(i.title LIKE ? OR i.body LIKE ?)"); args.push(`%${search}%`, `%${search}%`); }
+  if (params.get("saved") === "1") {
+    where.push("EXISTS (SELECT 1 FROM community_saves sx WHERE sx.item_id=i.id AND sx.telegram_user_id=?)");
+    args.push(String(viewerId));
+  }
   const audience = params.get("personalized") === "1";
   if (audience && p) {
     where.push("(i.audience_branch IS NULL OR i.audience_branch=? OR i.community_slug='campus')");
@@ -322,6 +339,11 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       const item=await createItem(env.DB,user,input);
       return json({ok:true,item},201);
     }
+    if(request.method==="PATCH" && url.pathname==="/api/community-v2/items"){
+      const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
+      const item=await updateItem(env.DB,user,Number(input.item_id),input);
+      return json({ok:true,item});
+    }
     if(request.method==="POST" && url.pathname==="/api/community-v2/polls"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
       const item=await poll(env.DB,user,input);
@@ -425,7 +447,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     return json({ok:false,error:"not_found"},404);
   }catch(error){
     const message=error instanceof Error?error.message:"unknown";
-    const status=message==="rate_limited"?429:message==="unsafe_content"?422:message==="invalid_item"||message==="invalid_reply"||message==="invalid_vote"||message==="invalid_poll"||message==="invalid_option"?400:500;
+    const status=message==="rate_limited"?429:message==="unsafe_content"?422:message==="forbidden"?403:message==="item_not_found"||message==="reply_not_found"?404:message==="invalid_item"||message==="invalid_reply"||message==="invalid_vote"||message==="invalid_poll"||message==="invalid_option"||message==="cannot_report_own_item"||message==="cannot_report_own_reply"?400:500;
     return json({ok:false,error:message},status);
   }
 }
