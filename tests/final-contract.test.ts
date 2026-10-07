@@ -1,0 +1,36 @@
+import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+
+const indexSource = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
+const webSource = readFileSync(new URL("../web/index.html", import.meta.url), "utf8");
+const wranglerSource = readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8");
+
+describe("final Student OS production contract", () => {
+  it("has the attention APIs and scheduled sweep", () => {
+    expect(indexSource).toContain('/api/me/notifications');
+    expect(indexSource).toContain('/api/me/notifications/read');
+    expect(indexSource).toContain('/api/community/insights');
+    expect(indexSource).toContain('async scheduled');
+    expect(indexSource).toContain('status: dbOk ? "ok" : "degraded"');
+  });
+
+  it("has the zero-cost cron schedule", () => {
+    expect(wranglerSource).toContain('"crons": ["*/15 * * * *"]');
+    expect(wranglerSource).not.toMatch(/redis|kafka|celery|r2/i);
+  });
+
+  it("keeps Telegram Mini App safety invariants", () => {
+    expect(webSource).toContain('themeChanged');
+    expect(webSource).toContain('viewportChanged');
+    expect(webSource).toContain('HapticFeedback');
+    expect(webSource).toContain('BackButton');
+    expect(webSource).toContain('MainButton');
+    expect(webSource).toContain('requestFullscreen');
+    expect(webSource).not.toMatch(/\bconfirm\s*\(/);
+  });
+
+  it("keeps private academic data out of the public client contract", () => {
+    expect(webSource).toContain("private ERP/Digicampus");
+    expect(webSource).toContain("student-reported");
+  });
+});
