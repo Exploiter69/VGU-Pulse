@@ -858,15 +858,15 @@ function renderPersonalPulse(data){
  item.append(name,meta,looking,reason);myPulseMatches.append(item)}
  myPulseActivity?.replaceChildren();
  const activity=[];
- for(const post of pulse.recent_posts||[]){activity.push({date:post.created_at,type:"Post",text:post.title,meta:"Score "+post.score,id:post.id})}
- for(const reply of pulse.recent_replies||[]){activity.push({date:reply.created_at,type:"Reply",text:reply.body,meta:"Open discussion",id:reply.post_id,replyId:reply.id})}
+ for(const post of pulse.recent_posts||[]){activity.push({date:post.created_at,type:"Post",text:post.title,meta:"Score "+post.score,id:post.id,source:"legacy"})}
+ for(const reply of pulse.recent_replies||[]){activity.push({date:reply.created_at,type:"Reply",text:reply.body,meta:"Open discussion",id:reply.post_id,replyId:reply.id,source:"legacy"})}
  activity.sort((a,b)=>b.date.localeCompare(a.date));
  if(!activity.length){const p=document.createElement("p");p.className="muted";p.textContent="No community activity yet. Ask a question or share something useful.";myPulseActivity.append(p)}
  else{
   const list=document.createElement("div");list.className="pulse-activity-list";
   for(const item of activity.slice(0,6)){
    const button=document.createElement("button");button.type="button";button.className="pulse-activity-item";
-   button.dataset.activityId=String(item.id);button.dataset.activityType=item.type.toLowerCase();if(item.replyId)button.dataset.replyId=String(item.replyId);
+   button.dataset.activityId=String(item.id);button.dataset.activityType=item.type.toLowerCase();button.dataset.activitySource=item.source||"v2";if(item.replyId)button.dataset.replyId=String(item.replyId);
    const main=document.createElement("span");main.className="pulse-activity-main";
    const label=document.createElement("span");label.className="pulse-activity-label";label.textContent=item.type;
    const text=document.createElement("span");text.className="pulse-activity-text";text.textContent=item.text;
@@ -888,7 +888,7 @@ myPulseActivity?.addEventListener("click",event=>{
  const id=item.dataset.activityId;
  if(!id)return;
  document.querySelector("[data-view=\"community\"]")?.click();
- setTimeout(()=>window.__pulseCommunityOpenItem?.(id,item.dataset.replyId||""),80);
+ setTimeout(()=>window.__pulseCommunityOpenItem?.(id,item.dataset.replyId||"",item.dataset.activitySource||"v2"),80);
 });
 async function loadCommunityInsights(){
  const target=document.querySelector("#community-insights");if(!target)return;
