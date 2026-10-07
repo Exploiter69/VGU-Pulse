@@ -620,6 +620,9 @@ function renderHomePulse(next){
  if(!next){const p=document.createElement("p");p.className="muted";p.textContent="No open campus poll right now.";homePulse.append(p);return}
  const p=document.createElement("p");p.textContent=next.question;homePulse.append(p);
  const meta=document.createElement("small");meta.className="muted";meta.textContent=next.total_votes+" vote"+(next.total_votes===1?"":"s")+" so far.";homePulse.append(meta);
+ const wrap=document.createElement("div");wrap.style.marginTop="10px";
+ for(const option of next.options||[]){const button=document.createElement("button");button.type="button";button.className="option"+(next.selected_option_id===option.id?" selected":"");button.disabled=next.selected_option_id!==null;const row=document.createElement("div");row.className="row";const label=document.createElement("strong");label.textContent=option.label;const pct=document.createElement("span");pct.className="muted";const value=next.total_votes?Math.round(option.votes/next.total_votes*100):0;pct.textContent=value+"%";row.append(label,pct);const bar=document.createElement("div");bar.className="bar";const fill=document.createElement("div");fill.className="fill";fill.style.width=value+"%";bar.append(fill);button.append(row,bar);if(!button.disabled)button.onclick=async()=>{button.disabled=true;try{await vote(option.id);await loadHome()}catch{button.disabled=false;toast("Could not record your vote.")}};wrap.append(button)}
+ homePulse.append(wrap);
 }
 function renderHomeCommunity(posts){
  homeCommunity.replaceChildren();
