@@ -82,7 +82,7 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 </div>
 
 <div class="view" data-view-panel="ask">
-<section class="card" id="student-intelligence"><div class="eyebrow">Student intelligence</div><h2>Ask Pulse</h2><p class="muted">Search official VGU information, campus facilities and student-reported knowledge in one place. Official and student-reported results are always labelled.</p><form id="search-form"><input id="search-query" type="search" maxlength="160" placeholder="Try: exam form, medical, transport, hostel…" aria-label="Search Pulse"><button class="submit" type="submit">Search Pulse</button></form><div id="search-quick" style="display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px"></div><div id="search-results"><p class="muted">Search for something you need on campus.</p></div></section>
+<section class="card" id="student-intelligence"><div class="eyebrow">Student intelligence</div><h2>Ask Pulse</h2><p class="muted">Search official VGU information, academic resources, campus facilities and student-reported knowledge in one place. Academic questions are routed deterministically, and private ERP/Digicampus data is never invented.</p><form id="search-form"><input id="search-query" type="search" maxlength="160" placeholder="Try: exam form, medical, transport, hostel…" aria-label="Search Pulse"><button class="submit" type="submit">Search Pulse</button></form><div id="search-quick" style="display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px"></div><div id="search-results"><p class="muted">Search for something you need on campus.</p></div></section>
 <section class="card">
 <div class="eyebrow">Trust</div>
 <p><strong>Official</strong> = VGU information from trusted sources.</p>
@@ -239,8 +239,17 @@ document.addEventListener("click",(event)=>{
  event.preventDefault();
  if(tg?.openLink)tg.openLink(href);else window.open(href,"_blank","noopener,noreferrer");
 });
-function renderSearchResults(results){
+function renderSearchResults(results,meta={}){
  searchResults.replaceChildren();
+ if(meta.intent_label){
+  const intent=document.createElement("p");intent.className="muted";intent.textContent="Academic intent: "+meta.intent_label;searchResults.append(intent);
+ }
+ if(meta.boundary){
+  const boundary=document.createElement("article");boundary.className="tool";
+  const label=document.createElement("small");label.className="muted";label.textContent="Access boundary";
+  const body=document.createElement("span");body.textContent=meta.boundary;
+  boundary.append(label,body);searchResults.append(boundary);
+ }
  if(!results.length){const p=document.createElement("p");p.className="muted";p.textContent="No matching Pulse information found. Try a simpler phrase or use Student Posts for a question.";searchResults.append(p);return}
  for(const item of results){
   const article=document.createElement("article");article.className="post";
@@ -255,10 +264,10 @@ function renderSearchResults(results){
 async function loadSearch(query=""){
  const response=await fetch("/api/search?q="+encodeURIComponent(query));
  if(!response.ok)throw Error("search_failed");
- const data=await response.json();renderSearchResults(data.results||[]);
+ const data=await response.json();renderSearchResults(data.results||[],data);
 }
 function initSearch(){
- const quick=["Exam form","Medical","Transport","Hostel","Library"];
+ const quick=["Exam form","Backlog exam","Re-registration","Academic calendar","ERP / Digicampus","Medical","Transport","Hostel","Library"];
  for(const label of quick){
   const button=document.createElement("button");button.type="button";button.className="report";button.textContent=label;
   button.addEventListener("click",()=>{searchQuery.value=label;loadSearch(label).catch(()=>{searchResults.textContent="Search is temporarily unavailable."})});
