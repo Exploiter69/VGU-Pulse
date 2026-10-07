@@ -101,7 +101,7 @@
       <div id="cv2-feed" class="cv2-feed"><div class="cv2-empty">Loading student discussions…</div></div>
       <dialog class="cv2-dialog" id="cv2-compose-dialog">
         <form method="dialog" class="cv2-sheet" id="cv2-compose-form">
-          <div class="cv2-sheet-head"><h3>Start a student post</h3><button class="cv2-close" id="cv2-compose-close" type="button" aria-label="Close">×</button></div>
+          <div class="cv2-sheet-head"><h3 id="cv2-compose-heading">Start a student post</h3><button class="cv2-close" id="cv2-compose-close" type="button" aria-label="Close">×</button></div>
           <div class="cv2-grid">
             <div class="cv2-field"><label>What are you trying to do?</label><div class="cv2-intent-grid" id="cv2-intents"><button type="button" data-intent="discussion"><strong>Discussion</strong><span>Start a conversation</span></button><button type="button" data-intent="confession"><strong>Confession</strong><span>Share anonymously</span></button><button type="button" data-intent="campus"><strong>Campus help</strong><span>Something on campus</span></button><button type="button" data-intent="exam"><strong>Exam survival</strong><span>Exam help</span></button><button type="button" data-intent="notes"><strong>Notes / resources</strong><span>Useful material</span></button><button type="button" data-intent="teammate"><strong>Project teammate</strong><span>Find collaborators</span></button><button type="button" data-intent="lost_found"><strong>Lost & found</strong><span>Return or find</span></button><button type="button" data-intent="opportunity"><strong>Opportunity</strong><span>Share an opportunity</span></button></div><input id="cv2-kind" type="hidden" value="discussion"></div>
             <div class="cv2-field"><label for="cv2-community">Community</label><input id="cv2-community" value="campus" maxlength="60"></div>
@@ -212,7 +212,7 @@
     }
 
     function syncTabs(){
-      root.querySelectorAll(".cv2-tab").forEach(x=>x.classList.toggle("active",(x.dataset.sort===sort&&kind==="")||(x.dataset.kind===kind&&kind!=="")));
+      root.querySelectorAll(".cv2-tab").forEach(x=>x.classList.toggle("active",x.dataset.special==="saved"?savedOnly:((x.dataset.sort===sort&&kind==="")||(x.dataset.kind===kind&&kind!==""))));
     }
 
     $("#cv2-search-btn").onclick=loadFeed;
@@ -224,26 +224,24 @@
     $("#cv2-filter-close").onclick=()=>$("#cv2-filter-dialog").close();
     $("#cv2-filter-clear").onclick=()=>{$("#cv2-kind-filter").value="";$("#cv2-community-filter").value="campus"};
     $("#cv2-filter-apply").onclick=async()=>{kind=$("#cv2-kind-filter").value;community=$("#cv2-community-filter").value.trim()||"campus";$("#cv2-current-community").textContent=community==="campus"?"VGU campus":community;$("#cv2-filter-dialog").close();syncTabs();await loadFeed()};
-    $("#cv2-compose-open").onclick=()=>{const dialog=$("#cv2-compose-dialog");if(dialog?.showModal)dialog.showModal();else dialog?.setAttribute("open","");$("#cv2-title").focus()};
+    $("#cv2-compose-open").onclick=()=>{editingId=null;$("#cv2-compose-heading").textContent="Start a student post";$("#cv2-publish").textContent="Publish";$("#cv2-compose-status").textContent="";const dialog=$("#cv2-compose-dialog");if(dialog?.showModal)dialog.showModal();else dialog?.setAttribute("open","");$("#cv2-title").focus()};
     $("#cv2-compose-close").onclick=()=>{$("#cv2-compose-dialog")?.close?.()};
     $("#cv2-kind").onchange=e=>{$("#cv2-anon").checked=e.target.value==="confession";$("#cv2-poll-fields").hidden=e.target.value!=="discussion"};
     $("#cv2-publish").onclick=async()=>{
       const status=$("#cv2-compose-status"),button=$("#cv2-publish");
       try{
-        button.disabled=true;status.textContent="Publishing…";
+        button.disabled=true;status.textContent=editingId?"Saving…":"Publishing…";
         const postKind=$("#cv2-kind").value,options=$("#cv2-options").value.split(",").map(x=>x.trim()).filter(Boolean);
-        if(!$("#cv2-title").value.trim()||!$("#cv2-body").value.trim()) throw new Error("invalid_post");
-        if(postKind==="discussion"&&options.length>=2) await api("/api/community-v2/polls",{method:"POST",body:JSON.stringify({kind:postKind,title:$("#cv2-title").value,body:$("#cv2-body").value,community_slug:$("#cv2-community").value,anonymous:$("#cv2-anon").checked,options})});
+        if(!$("#cv2-title").value.trim()||!$("#cv2-body").value.trim()) throw new Error("invalid_item");
+        if(editingId) await api("/api/community-v2/items",{method:"PATCH",body:JSON.stringify({item_id:editingId,title:$("#cv2-title").value,body:$("#cv2-body").value})});
+        else if(postKind==="discussion"&&options.length>=2) await api("/api/community-v2/polls",{method:"POST",body:JSON.stringify({kind:postKind,title:$("#cv2-title").value,body:$("#cv2-body").value,community_slug:$("#cv2-community").value,anonymous:$("#cv2-anon").checked,options})});
         else await api("/api/community-v2/items",{method:"POST",body:JSON.stringify({kind:postKind,title:$("#cv2-title").value,body:$("#cv2-body").value,community_slug:$("#cv2-community").value,anonymous:$("#cv2-anon").checked})});
-        $("#cv2-title").value="";$("#cv2-body").value="";$("#cv2-options").value="";status.textContent="Published.";
-        $("#cv2-compose-dialog").close();await loadFeed();
+        $("#cv2-title").value="";$("#cv2-body").value="";$("#cv2-options").value="";status.textContent=editingId?"Saved.":"Published.";editingId=null;$("#cv2-compose-heading").textContent="Start a student post";$("#cv2-publish").textContent="Publish";$("#cv2-compose-dialog").close();await loadFeed();
       }catch(e){
-        const messages={unsafe_content:"That content needs editing before it can be published.",invalid_item:"Add a title and a little more detail.",invalid_poll:"A poll needs at least two options.",rate_limited:"You have posted a lot recently. Try again later.",unauthorized:"Open Pulse from Telegram to post."};
-        status.textContent=messages[e.message]||"Could not publish. Please try again.";
-      }
-      finally{button.disabled=false}
+        const messages={unsafe_content:"That content needs editing before it can be published.",invalid_item:"Add a title and a little more detail.",invalid_poll:"A poll needs at least two options.",rate_limited:"You have posted a lot recently. Try again later.",unauthorized:"Open Pulse from Telegram to post.",forbidden:"You can only edit your own post.",item_not_found:"That post is no longer available."};
+        status.textContent=messages[e.message]||"Could not save this post. Please try again.";
+      }finally{button.disabled=false}
     };
-
     root.querySelectorAll(".cv2-tab").forEach(tab=>tab.onclick=async()=>{sort=tab.dataset.sort||"new";kind=tab.dataset.kind||"";syncTabs();await loadFeed()});
 
     root.addEventListener("click",async e=>{
