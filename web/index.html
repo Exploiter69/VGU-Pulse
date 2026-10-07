@@ -9,7 +9,7 @@
   --border-strong:rgba(255,255,255,.15);
   --text:#f5f7fa;
   --muted:#98a2af;
-  --faint:#6f7a87;
+  --faint:#87919d;\n  --tg-bg:var(--bg);--tg-surface:var(--surface);--tg-surface-2:var(--surface-2);--tg-text:var(--text);--tg-muted:var(--muted);--tg-accent:var(--accent);--tg-accent-ink:var(--accent-ink);
   --accent:#8ab4ff;
   --accent-ink:#08111e;
   --success:#78d6a5;
@@ -22,7 +22,7 @@
 }
 *{box-sizing:border-box}
 html{background:var(--bg);scroll-behavior:smooth}
-body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-size:15px;line-height:1.55}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-size:15px;line-height:1.55}body.tg-light{color-scheme:light;--bg:var(--tg-bg,#f5f7fa);--surface:var(--tg-surface,#ffffff);--surface-2:var(--tg-surface-2,#eef1f5);--surface-3:#e4e8ee;--border:rgba(15,23,42,.12);--border-strong:rgba(15,23,42,.2);--text:var(--tg-text,#111827);--muted:var(--tg-muted,#5f6b7a);--faint:#667085;--accent:var(--tg-accent,#2481cc);--accent-ink:var(--tg-accent-ink,#ffffff)}
 button,input,textarea,select{font:inherit}
 button,a{touch-action:manipulation}
 button{color:inherit}
@@ -93,7 +93,7 @@ input:focus,textarea:focus,select:focus,.quick:focus-visible,.nav-item:focus-vis
 .result-item.student-result{border-left:2px solid var(--warning);padding-left:12px}
 .service-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
 .service{min-height:74px;border:1px solid var(--border);background:var(--surface-2);border-radius:13px;padding:11px 10px;text-align:left;cursor:pointer}
-.service:hover{background:var(--surface-3)}
+.service:hover{background:var(--surface-3)}.service.active{color:var(--text);border-color:var(--accent);box-shadow:inset 0 0 0 1px rgba(138,180,255,.18)}
 .service strong{display:block;font-size:12px}
 .service span{display:block;color:var(--muted);font-size:10px;margin-top:3px}
 .campus-list{display:grid}
@@ -132,7 +132,7 @@ input:focus,textarea:focus,select:focus,.quick:focus-visible,.nav-item:focus-vis
 .notify-option input{width:16px;min-width:16px;height:16px;min-height:16px;margin:0}
 .empty-state{padding:28px 6px;text-align:center;color:var(--muted)}
 .toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(8px);background:var(--surface-3);border:1px solid var(--border-strong);padding:9px 13px;border-radius:999px;opacity:0;pointer-events:none;transition:.18s;z-index:100}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.option{display:block;width:100%;text-align:left;border:1px solid var(--border);background:var(--surface-2);border-radius:12px;padding:11px;margin:7px 0;cursor:pointer}.option.selected{border-color:var(--accent)}.option .row{display:flex;justify-content:space-between;gap:10px}.option .bar{height:6px;background:var(--surface-3);border-radius:999px;overflow:hidden;margin-top:8px}.option .fill{height:100%;background:var(--accent);border-radius:inherit}
 .toast-action{border:0;background:none;color:var(--accent);font-weight:800;cursor:pointer;margin-left:6px}
 .pulse-sheet{width:min(680px,calc(100% - 24px));margin:auto;border:1px solid var(--border-strong);border-radius:18px;background:var(--surface);color:var(--text);padding:20px}
 .pulse-sheet::backdrop{background:rgba(0,0,0,.62);backdrop-filter:blur(4px)}
@@ -174,7 +174,7 @@ input:focus,textarea:focus,select:focus,.quick:focus-visible,.nav-item:focus-vis
     <div class="brand"><div class="brand-mark" aria-hidden="true">P</div><div><h1 class="app-title">VGU Pulse</h1><p class="app-subtitle">Your VGU student layer</p></div></div>
   </div>
   <div class="header-actions">
-    <button type="button" class="icon-button" data-view="pulse" aria-label="Open notifications">🔔</button>
+    <button type="button" class="icon-button" data-view="pulse" aria-label="Open notifications">🔔<span id="header-notification-badge" hidden aria-label="Unread notifications"></span></button>
     <button type="button" class="avatar" data-view="pulse" aria-label="Open your profile" id="header-avatar">V</button>
   </div>
 </header>
@@ -216,7 +216,7 @@ input:focus,textarea:focus,select:focus,.quick:focus-visible,.nav-item:focus-vis
       <section class="section">
         <div class="section-heading"><div><div class="eyebrow">Students</div><h2>Campus pulse</h2></div><span class="trust-badge student">Student-reported</span></div>
         <div id="home-pulse"><p class="muted">Loading campus activity…</p></div>
-        <div id="home-community"><p class="muted">Loading student activity…</p></div>
+        <div id="home-community"><p class="muted">Loading student activity…</p></div><div id="community-insights" class="card" style="margin-top:12px"><p class="muted">Loading community signals…</p></div>
         <button type="button" class="action-link" data-view="community">Open Community →</button>
       </section>
     </div>
@@ -443,7 +443,7 @@ function showView(name,{replaceHistory=false}={}){
     navigationStack.push(target);
   }
   for(const panel of viewPanels)panel.classList.toggle("active",panel.dataset.viewPanel===target);
-  for(const item of navItems)item.classList.toggle("active",item.dataset.view===target);
+  const primaryTarget=["academics","people","tools"].includes(target)?"pulse":target;for(const item of navItems)item.classList.toggle("active",item.dataset.view===primaryTarget);
   if(tg?.BackButton){if(target==="home")tg.BackButton.hide();else tg.BackButton.show()}
   syncMainButton(target);
   window.scrollTo({top:0,behavior:"smooth"});
@@ -454,7 +454,7 @@ function goBack(){
     showView(navigationStack[navigationStack.length-1],{replaceHistory:true});
   }else showView("home",{replaceHistory:true});
 }
-for(const item of navItems)item.addEventListener("click",()=>{haptic();showView(item.dataset.view);if(item.dataset.view==="community"){if(item.dataset.communityMode==="saved")window.__pulseCommunitySaved?.();else window.__pulseCommunityAll?.()}});
+for(const item of navItems)item.addEventListener("click",()=>{const current=viewPanels.find(panel=>panel.classList.contains("active"))?.dataset.viewPanel||"home";haptic();showView(item.dataset.view);if(item.dataset.view==="community"&&current!=="community"){if(item.dataset.communityMode==="saved")window.__pulseCommunitySaved?.();else window.__pulseCommunityAll?.()}});
 document.querySelectorAll("[data-community-tab]").forEach(button=>button.addEventListener("click",()=>{
  document.querySelector("#post-title")?.focus();haptic();
 }));
@@ -572,14 +572,14 @@ function renderItems(target,items,emptyText){
   target.append(article);
  }
 }
-function pulseDateKey(value){const date=value instanceof Date?value:new Date(String(value));if(!Number.isFinite(date.getTime()))return "";const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(date);const map=Object.fromEntries(parts.filter(p=>p.type!=="literal").map(p=>[p.type,p.value]));return map.year+"-"+map.month+"-"+map.day}function formatPulseDate(value){const raw=String(value??"");if(!raw)return "";const key=/^\d{4}-\d{2}-\d{2}/.test(raw)?raw.slice(0,10):pulseDateKey(raw);if(!/^\d{4}-\d{2}-\d{2}$/.test(key))return raw;const [year,month,day]=key.split("-").map(Number);const date=new Date(Date.UTC(year,month-1,day,12));return new Intl.DateTimeFormat("en-IN",{day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}).format(date)}function renderTodayStats(noticeItems,postItems,pollData){
+function pulseParseDate(value){const raw=String(value??"");if(!raw)return new Date(NaN);if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return new Date(raw+"T12:00:00+05:30");return new Date(/^\d{4}-\d{2}-\d{2}T/.test(raw)&&!/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw)?raw+"Z":raw)}function pulseDateKey(value){const date=value instanceof Date?value:pulseParseDate(value);if(!Number.isFinite(date.getTime()))return "";const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(date);const map=Object.fromEntries(parts.filter(p=>p.type!=="literal").map(p=>[p.type,p.value]));return map.year+"-"+map.month+"-"+map.day}function formatPulseDate(value){const raw=String(value??"");if(!raw)return "";const key=/^\d{4}-\d{2}-\d{2}/.test(raw)?raw.slice(0,10):pulseDateKey(raw);if(!/^\d{4}-\d{2}-\d{2}$/.test(key))return raw;const [year,month,day]=key.split("-").map(Number);const date=new Date(Date.UTC(year,month-1,day,12));return new Intl.DateTimeFormat("en-IN",{day:"numeric",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}).format(date)}function renderTodayStats(noticeItems,postItems,pollData){
  if(!todayStats)return;
  const today=pulseDateKey(new Date());
  const noticesToday=noticeItems.filter(item=>pulseDateKey(item.published_at||item.created_at)===today);
  const postsToday=postItems.filter(item=>pulseDateKey(item.created_at)===today);
  const deadlinesToday=academicItems().filter(item=>item.due===today);
  const values=[noticesToday.length,deadlinesToday.length,postsToday.length,pollData?1:0];
- [...todayStats.querySelectorAll(".today-stat")].forEach((card,index)=>{const strong=card.querySelector("strong");if(strong)strong.textContent=String(values[index])});
+ [...todayStats.querySelectorAll(".stat")].forEach((card,index)=>{const strong=card.querySelector("strong");if(strong)strong.textContent=String(values[index])});
 }
 function renderHomePulse(next){
  homePulse.replaceChildren();
@@ -727,7 +727,7 @@ function renderAcademicSummary(){
  if(!items.length){const p=document.createElement("p");p.className="muted";p.textContent="No local deadlines yet. Add your first assignment or exam.";target.append(p);return}
  const today=pulseDateKey(new Date());
  const deadlineCount=items.filter(item=>item.due>=today).length;
- const statCards=todayStats?.querySelectorAll(".today-stat");
+ const statCards=todayStats?.querySelectorAll(".stat");
  if(statCards?.[1])statCards[1].querySelector("strong").textContent=String(deadlineCount);
  const overdue=items.filter(item=>academicState(item,today)==="overdue").length;
  const todayCount=items.filter(item=>academicState(item,today)==="today").length;
@@ -824,7 +824,7 @@ function renderNotifications(data){
  const target=document.querySelector("#notifications");if(!target)return;
  const notifications=data?.notifications||[];
  const unread=notifications.filter(n=>!n.read_at).length;
- const count=document.querySelector("#notification-count");if(count)count.textContent=unread?String(unread)+" unread":"All caught up";
+ const count=document.querySelector("#notification-count");if(count)count.textContent=unread?String(unread)+" unread":"All caught up";const badge=document.querySelector("#header-notification-badge");if(badge){badge.hidden=unread===0;badge.textContent=unread>9?"9+":String(unread)}
  const official=document.querySelector("#notify-official");if(official)official.checked=Boolean(data?.preferences?.official_updates);
  const community=document.querySelector("#notify-community");if(community)community.checked=Boolean(data?.preferences?.community_replies);
  target.replaceChildren();
@@ -833,7 +833,7 @@ function renderNotifications(data){
   const row=document.createElement("article");row.className="post";
   const title=document.createElement("strong");title.textContent=item.title;
   const body=document.createElement("p");body.className="muted";body.textContent=item.body;
-  const meta=document.createElement("div");meta.className="muted";meta.textContent=(item.kind==="official"?"Official VGU":"Community")+" · "+new Date(item.created_at).toLocaleString();
+  const meta=document.createElement("div");meta.className="muted";meta.textContent=(item.kind==="official"?"Official VGU":"Community")+" · "+(Number.isFinite(pulseParseDate(item.created_at).getTime())?pulseParseDate(item.created_at).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}):String(item.created_at||""));
   row.append(title,body,meta);if(!item.read_at)row.style.borderColor="var(--accent)";target.append(row);
  }
 }
