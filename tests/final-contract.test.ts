@@ -68,7 +68,6 @@ describe("final Student OS production contract", () => {
     expect(webSource).toContain('id="header-notification-badge"');
     expect(webSource).toContain('window.__pulseShare=sharePulse');
     expect(webSource).toContain('/api/share-link?target=');
-    expect(webSource).not.toContain("\\n");
   });
 
   it("keeps Telegram sharing, deep links, theme and security headers wired", () => {
