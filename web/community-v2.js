@@ -45,7 +45,7 @@
       .cv2-sheet{padding:18px}
       .cv2-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
       .cv2-sheet h3{font-size:20px;margin:0}
-      .cv2-close{border:0;background:transparent;color:var(--muted);font:inherit;font-size:22px;cursor:pointer}
+      .cv2-close{width:40px;height:40px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--muted);font:inherit;font-size:22px;line-height:1;cursor:pointer;display:grid;place-items:center}.cv2-close:hover{background:var(--surface-3);color:var(--text)}
       .cv2-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
       .cv2-field{margin-top:9px}
       .cv2-field label{display:block;margin-bottom:4px}
@@ -56,14 +56,12 @@
       .cv2-discovery summary{cursor:pointer;color:var(--text);font-weight:750}
       .cv2-community-list{display:flex;gap:6px;overflow:auto;padding:10px 0 2px;scrollbar-width:none}
       .cv2-community-chip{flex:0 0 auto;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:999px;padding:7px 10px;font:inherit;cursor:pointer}
-      .cv2-anon-toggle{display:inline-flex;align-items:center;gap:7px;min-height:40px;margin-top:9px;color:var(--muted);font-size:12px;font-weight:700}.cv2-anon-toggle input{width:16px;height:16px;margin:0}.cv2-ask-bridge{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+      .cv2-anon-toggle{display:inline-flex;align-items:center;gap:7px;min-height:40px;margin-top:9px;color:var(--muted);font-size:12px;font-weight:700}.cv2-anon-toggle input{width:16px;height:16px;margin:0}.cv2-ask-bridge{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.cv2-intent-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}.cv2-intent-grid button{min-height:68px;text-align:left;border:1px solid var(--border);background:var(--surface-2);border-radius:12px;padding:10px;color:var(--text);cursor:pointer}.cv2-intent-grid button strong{display:block;font-size:12px}.cv2-intent-grid button span{display:block;color:var(--muted);font-size:10px;line-height:1.35;margin-top:3px}.cv2-intent-grid button.active{border-color:var(--accent);background:rgba(138,180,255,.08);box-shadow:inset 0 0 0 1px rgba(138,180,255,.15)}@media(max-width:620px){.cv2-intent-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
       .cv2-ask-bridge button{min-height:38px}
       @media(max-width:620px){.cv2-grid{grid-template-columns:1fr}.cv2-toolbar{align-items:stretch}.cv2-post-btn{padding-inline:11px}.cv2-title{font-size:27px}}
     `;
     document.head.appendChild(style);
-    const intentStyle=document.createElement("style");
-    intentStyle.textContent=".cv2-intent-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:7px 0 4px}.cv2-intent-grid button{min-height:62px;text-align:left;border:1px solid var(--border);background:var(--surface-2);border-radius:11px;padding:9px;color:var(--text);cursor:pointer}.cv2-intent-grid button strong{display:block;font-size:12px}.cv2-intent-grid button span{display:block;color:var(--muted);font-size:10px;margin-top:2px}.cv2-intent-grid button.active{border-color:var(--accent);background:rgba(138,180,255,.07)}@media(max-width:620px){.cv2-intent-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}";
-    document.head.appendChild(intentStyle);
+    
 
     const root=document.createElement("section");
     root.id="community-v2-root";
@@ -100,11 +98,9 @@
       <div id="cv2-feed" class="cv2-feed"><div class="cv2-empty">Loading student discussions…</div></div>
       <dialog class="cv2-dialog" id="cv2-compose-dialog">
         <form method="dialog" class="cv2-sheet" id="cv2-compose-form">
-          <div class="cv2-sheet-head"><h3>Start a student post</h3><button class="cv2-close" value="cancel" aria-label="Close">×</button></div>
+          <div class="cv2-sheet-head"><h3>Start a student post</h3><button class="cv2-close" id="cv2-compose-close" type="button" aria-label="Close">×</button></div>
           <div class="cv2-grid">
-            <div class="cv2-field"><label>What are you trying to do?</label><div class="cv2-intent-grid" id="cv2-intents"><button type="button" data-intent="discussion"><strong>Discussion</strong><span>Start a conversation</span></button><button type="button" data-intent="confession"><strong>Confession</strong><span>Share anonymously</span></button><button type="button" data-intent="campus"><strong>Campus help</strong><span>Something on campus</span></button><button type="button" data-intent="exam"><strong>Exam survival</strong><span>Exam help</span></button><button type="button" data-intent="notes"><strong>Notes / resources</strong><span>Useful material</span></button><button type="button" data-intent="teammate"><strong>Project teammate</strong><span>Find collaborators</span></button><button type="button" data-intent="lost_found"><strong>Lost & found</strong><span>Return or find</span></button><button type="button" data-intent="opportunity"><strong>Opportunity</strong><span>Share an opportunity</span></button></div><select id="cv2-kind">
-              <option value="discussion">Discussion</option><option value="confession">Confession</option><option value="campus">Campus pulse</option><option value="exam">Exam survival</option><option value="senior">Senior → junior advice</option><option value="notes">Notes / resources</option><option value="pyq">PYQ / exam material</option><option value="teacher">Teacher / elective advice</option><option value="teammate">Project teammate</option><option value="lost_found">Lost & found</option><option value="ride">Ride sharing</option><option value="roommate">Room / roommate</option><option value="listing">Student exchange</option><option value="opportunity">Opportunity</option>
-            </select></div>
+            <div class="cv2-field"><label>What are you trying to do?</label><div class="cv2-intent-grid" id="cv2-intents"><button type="button" data-intent="discussion"><strong>Discussion</strong><span>Start a conversation</span></button><button type="button" data-intent="confession"><strong>Confession</strong><span>Share anonymously</span></button><button type="button" data-intent="campus"><strong>Campus help</strong><span>Something on campus</span></button><button type="button" data-intent="exam"><strong>Exam survival</strong><span>Exam help</span></button><button type="button" data-intent="notes"><strong>Notes / resources</strong><span>Useful material</span></button><button type="button" data-intent="teammate"><strong>Project teammate</strong><span>Find collaborators</span></button><button type="button" data-intent="lost_found"><strong>Lost & found</strong><span>Return or find</span></button><button type="button" data-intent="opportunity"><strong>Opportunity</strong><span>Share an opportunity</span></button></div><input id="cv2-kind" type="hidden" value="discussion"></div>
             <div class="cv2-field"><label for="cv2-community">Community</label><input id="cv2-community" value="campus" maxlength="60"></div>
           </div>
           <div class="cv2-field"><label for="cv2-title">Title</label><input id="cv2-title" maxlength="180" placeholder="What do you want other students to know?" required></div>
@@ -209,7 +205,8 @@
     $("#cv2-filter-close").onclick=()=>$("#cv2-filter-dialog").close();
     $("#cv2-filter-clear").onclick=()=>{$("#cv2-kind-filter").value="";$("#cv2-community-filter").value="campus"};
     $("#cv2-filter-apply").onclick=async()=>{kind=$("#cv2-kind-filter").value;community=$("#cv2-community-filter").value.trim()||"campus";$("#cv2-current-community").textContent=community==="campus"?"VGU campus":community;$("#cv2-filter-dialog").close();syncTabs();await loadFeed()};
-    $("#cv2-compose-open").onclick=()=>{$("#cv2-compose-dialog").showModal();$("#cv2-title").focus()};
+    $("#cv2-compose-open").onclick=()=>{const dialog=$("#cv2-compose-dialog");if(dialog?.showModal)dialog.showModal();else dialog?.setAttribute("open","");$("#cv2-title").focus()};
+    $("#cv2-compose-close").onclick=()=>{$("#cv2-compose-dialog")?.close?.()};
     $("#cv2-kind").onchange=e=>{$("#cv2-anon").checked=e.target.value==="confession";$("#cv2-poll-fields").hidden=e.target.value!=="discussion"};
     $("#cv2-publish").onclick=async()=>{
       const status=$("#cv2-compose-status"),button=$("#cv2-publish");
@@ -269,7 +266,7 @@
     if(askView&&askQuestion){
       const bridge=document.createElement("div");bridge.className="cv2-ask-bridge";
       bridge.innerHTML='<button type="button" class="cv2-tool" data-ask-action="start">Ask students →</button><button type="button" class="cv2-tool" data-ask-action="related">Related discussions →</button>';
-      bridge.querySelector('[data-ask-action="start"]').onclick=()=>{const title=askQuestion.value.trim();document.querySelector('[data-view="community"]')?.click();setTimeout(()=>{$("#cv2-compose-dialog").showModal();$("#cv2-kind").value="discussion";$("#cv2-title").value=title.slice(0,180);$("#cv2-body").value="";$("#cv2-title").focus()},80)};
+      bridge.querySelector('[data-ask-action="start"]').onclick=()=>{const title=askQuestion.value.trim();document.querySelector('[data-view="community"]')?.click();setTimeout(()=>{const dialog=$("#cv2-compose-dialog");if(dialog?.showModal)dialog.showModal();else dialog?.setAttribute("open","");$("#cv2-kind").value="discussion";$("#cv2-title").value=title.slice(0,180);$("#cv2-body").value="";$("#cv2-title").focus()},80)};
       bridge.querySelector('[data-ask-action="related"]').onclick=async()=>{const q=askQuestion.value.trim();document.querySelector('[data-view="community"]')?.click();setTimeout(async()=>{$("#cv2-search").value=q;sort="trending";kind="";syncTabs();await loadFeed()},80)};
       askQuestion.parentElement?.appendChild(bridge);
     }
