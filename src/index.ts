@@ -18,6 +18,9 @@ import {
   reportStudentPost,
   reportStudentReply,
   listStudentReplies,
+  voteStudentPost,
+  voteStudentReply,
+  findRelatedStudentPosts,
   upsertTelegramUser,
   validateStudentPostInput,
   validateStudentReplyInput,
@@ -281,6 +284,36 @@ export default {
       } catch {
         return json({ ok: false, error: "student_posts_unavailable" }, 500);
       }
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/student-posts/vote") {
+      if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
+      const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
+      if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+      let body: { post_id?: unknown; vote?: unknown };
+      try { body = (await request.json()) as { post_id?: unknown; vote?: unknown }; }
+      catch { return json({ ok: false, error: "invalid_json" }, 400); }
+      const postId = Number(body.post_id);
+      if (!Number.isSafeInteger(postId) || postId < 1 || (body.vote !== 1 && body.vote !== -1)) return json({ ok: false, error: "invalid_vote" }, 400);
+      try {
+        await voteStudentPost(env.DB, postId, validated.user.id, body.vote as -1 | 1);
+        const posts = await listStudentPosts(env.DB, 20, undefined, validated.user.id, "newest");
+        return json({ ok: true, post: posts.find((item) => item.id === postId) });
+      } catch (error) {
+        if (error instanceof Error && error.message === "post_not_found") return json({ ok: false, error: "post_not_found" }, 404);
+        return json({ ok: false, error: "vote_failed" }, 500);
+      }
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/student-posts/related") {
+      const postId = Number(url.searchParams.get("post_id"));
+      if (!Number.isSafeInteger(postId) || postId < 1) return json({ ok: false, error: "invalid_post" }, 400);
+      try {
+        const source = await env.DB.prepare("SELECT title, body FROM student_posts WHERE id = ? AND status = 'published'").bind(postId).first<{ title: string; body: string }>();
+        if (!source) return json({ ok: false, error: "post_not_found" }, 404);
+        const related = await findRelatedStudentPosts(env.DB, source.title, source.body, postId);
+        return json({ ok: true, trust: "student-reported", posts: related });
+      } catch { return json({ ok: false, error: "related_posts_unavailable" }, 500); }
     }
 
     if (request.method === "POST" && url.pathname === "/api/student-posts") {
