@@ -22,7 +22,7 @@ main{max-width:720px;margin:auto;padding:28px 18px 48px}
 .view{display:none}.view.active{display:block}
 .quick-card{margin-top:0}.quick-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .quick{background:#222733;color:#f5f7fa;border:1px solid #343b49;border-radius:12px;padding:14px;text-align:left;cursor:pointer;font:inherit}
-.quick strong,.quick span{display:block}.quick span{color:#9aa3b2;font-size:13px;margin-top:4px}.home-summary{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.home-item{padding:10px 0;border-top:1px solid #2b303b}.home-item:first-child{border-top:0}.home-meta{display:block;margin-top:5px}
+.quick strong,.quick span{display:block}.quick span{color:#9aa3b2;font-size:13px;margin-top:4px}.home-summary{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.home-item{padding:10px 0;border-top:1px solid #2b303b}.home-item:first-child{border-top:0}.home-meta{display:block;margin-top:5px}.today-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.today-stat{background:#222733;border:1px solid #343b49;border-radius:12px;padding:12px}.today-stat strong{display:block;font-size:20px}.today-stat span{display:block;color:#9aa3b2;font-size:13px;margin-top:3px}@media(max-width:520px){.today-grid{grid-template-columns:1fr}}
 @media(max-width:520px){.quick-grid{grid-template-columns:1fr}}
 textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:#f5f7fa;border:1px solid #343b49;border-radius:12px;padding:12px;margin:6px 0 10px;font:inherit}
 .submit{width:100%;background:#6ea8fe;color:#08101d;border:0;border-radius:12px;padding:13px;font-weight:700;cursor:pointer}
@@ -55,7 +55,9 @@ textarea,input,select{width:100%;box-sizing:border-box;background:#222733;color:
 <p id="status" class="muted"></p>
 </section>
 <section class="card">
-<div class="eyebrow">Today</div><h2>Important VGU updates</h2>
+<div class="eyebrow">Today</div><h2>Your campus at a glance</h2>
+<div class="today-grid" id="today-stats"><div class="today-stat"><strong>—</strong><span>Official updates</span></div><div class="today-stat"><strong>—</strong><span>Deadlines</span></div><div class="today-stat"><strong>—</strong><span>Student posts</span></div><div class="today-stat"><strong>—</strong><span>Active poll</span></div></div>
+<div class="eyebrow" style="margin-top:18px">Official updates</div>
 <div id="notices"><p class="muted">Loading verified information…</p></div>
 <button type="button" class="quick" data-view="ask" style="width:100%;margin-top:10px"><strong>Ask Pulse</strong><span>Search the full official information archive</span></button>
 </section>
@@ -193,7 +195,7 @@ function showView(name){
 for(const item of navItems)item.addEventListener("click",()=>showView(item.dataset.view));
 tg?.BackButton?.onClick?.(()=>showView("home"));
 let initData="",poll=null;
-const profileForm=document.querySelector("#profile-form"),profileStatus=document.querySelector("#profile-status"),profiles=document.querySelector("#profiles"),profileDelete=document.querySelector("#profile-delete");const homePulse=document.querySelector("#home-pulse"),homeCommunity=document.querySelector("#home-community");const identity=document.querySelector("#identity"),status=document.querySelector("#status"),searchForm=document.querySelector("#search-form"),searchQuery=document.querySelector("#search-query"),searchQuick=document.querySelector("#search-quick"),searchResults=document.querySelector("#search-results"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status"),postFilter=document.querySelector("#post-filter");
+const profileForm=document.querySelector("#profile-form"),profileStatus=document.querySelector("#profile-status"),profiles=document.querySelector("#profiles"),profileDelete=document.querySelector("#profile-delete");const todayStats=document.querySelector("#today-stats");const homePulse=document.querySelector("#home-pulse"),homeCommunity=document.querySelector("#home-community");const identity=document.querySelector("#identity"),status=document.querySelector("#status"),searchForm=document.querySelector("#search-form"),searchQuery=document.querySelector("#search-query"),searchQuick=document.querySelector("#search-quick"),searchResults=document.querySelector("#search-results"),question=document.querySelector("#question"),options=document.querySelector("#options"),voteTotal=document.querySelector("#vote-total"),notices=document.querySelector("#notices"),events=document.querySelector("#events"),studentPosts=document.querySelector("#student-posts"),postForm=document.querySelector("#post-form"),postStatus=document.querySelector("#post-status"),postFilter=document.querySelector("#post-filter");
 
 document.addEventListener("click",(event)=>{
  const link=event.target.closest("a[href]");
@@ -262,6 +264,12 @@ function renderItems(target,items,emptyText){
   }
   target.append(article);
  }
+}
+function renderTodayStats(noticeItems,postItems,pollData){
+ if(!todayStats)return;
+ const deadlines=academicItems().filter(item=>item.due>=new Date().toISOString().slice(0,10));
+ const values=[noticeItems.length,deadlines.length,postItems.length,pollData?1:0];
+ [...todayStats.querySelectorAll(".today-stat")].forEach((card,index)=>{const strong=card.querySelector("strong");if(strong)strong.textContent=String(values[index])});
 }
 function renderHomePulse(next){
  homePulse.replaceChildren();
@@ -464,6 +472,7 @@ async function loadHome(){
  renderHomePulse(data.poll);
  const homePosts=data.sections?.find(s=>s.type==="student-posts")?.items||[];
  renderHomeCommunity(homePosts);
+ renderTodayStats(data.sections?.find(s=>s.type==="notice")?.items||[],homePosts,data.poll);
  renderStudentPosts(homePosts);
 }
 async function vote(optionId){
@@ -529,6 +538,7 @@ academicForm?.addEventListener("submit",(event)=>{
 });
 renderAcademic();
 renderAcademicSummary();
+renderTodayStats([],[],null);
 async function boot(){
  initSearch();
  try{await loadSearch("")}catch{}
