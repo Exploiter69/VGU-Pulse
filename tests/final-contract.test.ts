@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
 const indexSource = readFileSync("src/index.ts", "utf8");
+const notificationSource = readFileSync("src/notifications.ts", "utf8");
 const webSource = readFileSync("web/index.html", "utf8");
 const wranglerSource = readFileSync("wrangler.jsonc", "utf8");
 
@@ -11,7 +12,8 @@ describe("final Student OS production contract", () => {
     expect(indexSource).toContain('/api/me/notifications/read');
     expect(indexSource).toContain('/api/community/insights');
     expect(indexSource).toContain('async scheduled');
-    expect(indexSource).toContain('LIMIT 18');
+    expect(notificationSource).toContain("LIMIT 18");
+    expect(notificationSource).toContain("const queued = await queueOfficialNotifications");
     expect(indexSource).toContain('official_updates = 1 AND datetime(enabled_at) <= datetime(?)');
     expect(indexSource).toContain('DELETE FROM student_notifications');
     expect(indexSource).toContain('dependencies: { database: dbOk, signal: signalOk }');
