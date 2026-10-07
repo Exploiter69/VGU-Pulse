@@ -146,7 +146,8 @@ input:focus,textarea:focus,select:focus,.quick:focus-visible,.nav-item:focus-vis
   .home-main{min-width:0}.home-aside{position:sticky;top:18px}
 }
 @media(max-width:899px){
-  .nav{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));box-shadow:0 14px 34px rgba(0,0,0,.4)}
+  .home-layout{display:flex;flex-direction:column}.home-aside{order:-1}
+  .nav{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom) + var(--tg-content-safe-bottom,0px));box-shadow:0 14px 34px rgba(0,0,0,.4)}
   .nav-item{font-size:11px}
 }
 @media(max-width:620px){
