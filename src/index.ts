@@ -151,13 +151,23 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/health") {
       let dbOk = false;
+      let signalOk = false;
       try {
         await env.DB.prepare("SELECT 1").first();
         dbOk = true;
-      } catch {
-        dbOk = false;
-      }
-      return json({ service: "vgu-pulse", status: dbOk ? "ok" : "degraded", database: dbOk }, dbOk ? 200 : 503);
+      } catch {}
+      try {
+        const upstream = await env.SIGNAL_SERVICE.fetch(
+          new Request("https://vgu-signal-worker/health", { headers: { accept: "application/json" } }),
+        );
+        signalOk = upstream.ok;
+      } catch {}
+      const healthy = dbOk && signalOk;
+      return json({
+        service: "vgu-pulse",
+        status: healthy ? "ok" : "degraded",
+        dependencies: { database: dbOk, signal: signalOk },
+      }, healthy ? 200 : 503);
     }
 
     if (request.method === "POST" && url.pathname === "/telegram/webhook") {
