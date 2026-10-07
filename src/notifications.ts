@@ -47,11 +47,20 @@ export async function setNotificationPreferences(
   const current = await getNotificationPreferences(db, userId);
   const official = input.official_updates ?? current.official_updates;
   const community = input.community_replies ?? current.community_replies;
-  await db.prepare(
-    `UPDATE notification_preferences
-     SET official_updates = ?, community_replies = ?, updated_at = CURRENT_TIMESTAMP
-     WHERE telegram_user_id = ?`,
-  ).bind(official ? 1 : 0, community ? 1 : 0, String(userId)).run();
+  const justEnabledOfficial = official && !current.official_updates;
+  if (justEnabledOfficial) {
+    await db.prepare(
+      `UPDATE notification_preferences
+       SET official_updates = ?, community_replies = ?, enabled_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+       WHERE telegram_user_id = ?`,
+    ).bind(1, community ? 1 : 0, String(userId)).run();
+  } else {
+    await db.prepare(
+      `UPDATE notification_preferences
+       SET official_updates = ?, community_replies = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE telegram_user_id = ?`,
+    ).bind(official ? 1 : 0, community ? 1 : 0, String(userId)).run();
+  }
   return { ...current, official_updates: official, community_replies: community };
 }
 
