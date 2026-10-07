@@ -641,7 +641,6 @@ applyTelegramTheme();
 tg?.onEvent?.("themeChanged",applyTelegramTheme);
 tg?.onEvent?.("viewportChanged",()=>document.documentElement.style.setProperty("--tg-viewport-height",(tg.viewportHeight||window.innerHeight)+"px"));
 tg?.ready?.();tg?.expand?.();
-tg?.enableClosingConfirmation?.();
 function haptic(type="selection"){
  try{if(type==="impact")tg?.HapticFeedback?.impactOccurred("light");else tg?.HapticFeedback?.selectionChanged()}catch{}
 }
@@ -665,6 +664,9 @@ function showView(name){
   window.scrollTo({top:0,behavior:"smooth"});
 }
 for(const item of navItems)item.addEventListener("click",()=>{haptic();showView(item.dataset.view)});
+document.querySelectorAll("[data-community-tab]").forEach(button=>button.addEventListener("click",()=>{
+ document.querySelector("#post-title")?.focus();haptic();
+}));
 tg?.BackButton?.onClick?.(()=>showView(previousView==="home"?"home":previousView));
 function syncMainButton(target){
  const button=tg?.MainButton;if(!button)return;
@@ -1205,7 +1207,10 @@ document.querySelectorAll("[data-campus-category]").forEach(button=>button.addEv
     clearTimeout(timeout);
     const data=await response.json();
     if(response.ok){
-     identity.textContent="Telegram identity verified."; const greeting=document.querySelector("#home-greeting"); if(greeting) greeting.textContent="Good to see you, "+(data.user.first_name||data.user.username||"student")+".";
+     identity.textContent="Telegram identity verified.";
+     const displayName=data.user.first_name||data.user.username||"student";
+     const avatar=document.querySelector("#me-avatar");if(avatar)avatar.textContent=displayName.slice(0,1).toUpperCase();
+     const greeting=document.querySelector("#home-greeting"); if(greeting) greeting.textContent="Good to see you, "+displayName+".";
      status.textContent="Telegram identity verified.";
      return true;
     }
