@@ -92,7 +92,8 @@ describe("final Student OS production contract", () => {
     expect(webSource).toContain('--tg-content-safe-bottom');
     const headers = readFileSync("web/_headers", "utf8");
     expect(headers).toContain("Content-Security-Policy");
-    expect(headers).toContain("X-Frame-Options: DENY");
+    expect(headers).not.toContain("X-Frame-Options: DENY");
+    expect(headers).not.toContain("frame-ancestors 'none'");
   });
 
   it("keeps private academic data out of the public client contract", () => {
