@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 const indexSource = readFileSync("src/index.ts", "utf8");
 const notificationSource = readFileSync("src/notifications.ts", "utf8");
 const webSource = readFileSync("web/index.html", "utf8");
+const communityWebSource = readFileSync("web/community-v2.js", "utf8");
 const wranglerSource = readFileSync("wrangler.jsonc", "utf8");
 
 describe("final Student OS production contract", () => {
@@ -73,7 +74,7 @@ describe("final Student OS production contract", () => {
   it("keeps Telegram sharing, deep links, theme and security headers wired", () => {
     expect(indexSource).toContain('/api/share-link');
     expect(indexSource).toContain('https://api.telegram.org/bot');
-    expect(webSource).toContain('start_param');
+    expect(communityWebSource).toContain('start_param');
     expect(webSource).toContain('CloudStorage');
     expect(webSource).toContain('--tg-content-safe-bottom');
     const headers = readFileSync("web/_headers", "utf8");
