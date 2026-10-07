@@ -56,6 +56,32 @@ describe("final Student OS production contract", () => {
     expect(webSource).not.toContain("renderStudentPosts");
   });
 
+  it("keeps the main Student OS flows defined and reachable", () => {
+    for (const name of ["loadProfiles","loadProfile","loadBlockedPeople","renderAcademic","renderAcademicSummary","hydrateAcademicPlan"]) {
+      expect(webSource).toContain("function " + name);
+    }
+    expect(webSource).not.toContain("function renderStudentPosts");
+    expect(webSource).not.toContain("function loadStudentPosts");
+    expect(webSource).toContain('querySelectorAll(".stat")');
+    expect(webSource).toContain('id="community-insights"');
+    expect(webSource).toContain('id="att-mode"');
+    expect(webSource).toContain('id="header-notification-badge"');
+    expect(webSource).toContain('window.__pulseShare=sharePulse');
+    expect(webSource).toContain('/api/share-link?target=');
+    expect(webSource).not.toContain("\\n");
+  });
+
+  it("keeps Telegram sharing, deep links, theme and security headers wired", () => {
+    expect(indexSource).toContain('/api/share-link');
+    expect(indexSource).toContain('https://api.telegram.org/bot');
+    expect(webSource).toContain('start_param');
+    expect(webSource).toContain('CloudStorage');
+    expect(webSource).toContain('--tg-content-safe-bottom');
+    const headers = readFileSync("web/_headers", "utf8");
+    expect(headers).toContain("Content-Security-Policy");
+    expect(headers).toContain("X-Frame-Options: DENY");
+  });
+
   it("keeps private academic data out of the public client contract", () => {
     expect(webSource).toContain("private ERP/Digicampus");
     expect(webSource).toContain("student-reported");
