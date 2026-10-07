@@ -23,5 +23,9 @@ jobs:
         run: npm install
       - name: Typecheck
         run: npm run check
+      - name: Worker dry run
+        run: npx wrangler deploy --dry-run --outdir .ci-dist
+      - name: Web JavaScript syntax
+        run: node -e "const fs=require('fs'); const html=fs.readFileSync('web/index.html','utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]); if(!scripts.length) throw new Error('No inline script found'); for(const source of scripts) new Function(source); console.log('web scripts:',scripts.length,'syntax ok')"
       - name: Tests
         run: npm test
