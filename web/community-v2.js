@@ -20,6 +20,8 @@
       .cv2-tabs::-webkit-scrollbar{display:none}
       .cv2-tab{flex:0 0 auto;min-height:38px;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:999px;padding:7px 11px;font:inherit;font-size:12px;font-weight:750;cursor:pointer}
       .cv2-tab.active{color:var(--text);background:var(--surface-2);border-color:var(--border-strong)}
+      .cv2-item-edited{color:var(--accent);font-size:11px}
+      .cv2-more-dialog .cv2-field select{margin:0}
       .cv2-context{display:flex;align-items:center;gap:7px;margin-top:9px;min-height:34px}
       .cv2-context-label{font-size:12px;color:var(--muted)}
       .cv2-community{border:0;background:transparent;color:var(--accent);font:inherit;font-weight:750;padding:6px 0;cursor:pointer}
@@ -84,6 +86,7 @@
           <button type="button" class="cv2-tab" data-kind="confession">Confessions</button>
           <button type="button" class="cv2-tab" data-kind="campus">Campus</button>
           <button type="button" class="cv2-tab" data-kind="exam">Exam survival</button>
+          <button type="button" class="cv2-tab" data-special="saved">Saved</button>
         </div>
         <div class="cv2-context">
           <span class="cv2-context-label">Showing</span>
@@ -110,6 +113,14 @@
           <div class="cv2-actions-row"><span id="cv2-compose-status" class="cv2-note" aria-live="polite"></span><button class="cv2-post-btn" id="cv2-publish" type="button">Publish</button></div>
         </form>
       </dialog>
+      <dialog class="cv2-dialog cv2-more-dialog" id="cv2-more-dialog">
+        <div class="cv2-sheet">
+          <div class="cv2-sheet-head"><h3>Post actions</h3><button class="cv2-close" id="cv2-more-close" type="button" aria-label="Close">×</button></div>
+          <div class="cv2-field"><label for="cv2-report-reason">Why are you reporting this?</label><select id="cv2-report-reason"><option value="spam">Spam</option><option value="harassment">Harassment</option><option value="misinformation">Misleading information</option><option value="unsafe">Unsafe content</option><option value="other">Other</option></select></div>
+          <div class="cv2-actions-row"><button class="cv2-tool" id="cv2-more-report" type="button">Report</button><button class="cv2-tool" id="cv2-more-block" type="button">Block author</button></div>
+          <p id="cv2-more-status" class="cv2-note" aria-live="polite"></p>
+        </div>
+      </dialog>
       <dialog class="cv2-dialog" id="cv2-filter-dialog">
         <div class="cv2-sheet">
           <div class="cv2-sheet-head"><h3>Filter community</h3><button class="cv2-close" id="cv2-filter-close" type="button">×</button></div>
@@ -131,7 +142,7 @@
     intentButtons[0]?.classList.add("active");
     const tg=window.Telegram?.WebApp;
     const initData=tg?.initData||"";
-    let sort="trending",kind="",personalized=false,community="campus";
+    let sort="trending",kind="",personalized=false,community="campus",savedOnly=false,editingId=null,moderationItemId=null;
 
     async function api(path,options={}){
       const headers={"content-type":"application/json"};
@@ -151,14 +162,15 @@
         const params=new URLSearchParams({sort});
         if(kind) params.set("kind",kind);
         if(personalized) params.set("personalized","1");
-        if(community) params.set("community",community);
+        if(!savedOnly && community) params.set("community",community);
+        if(savedOnly) params.set("saved","1");
         const q=$("#cv2-search").value.trim(); if(q) params.set("q",q);
         const data=await api("/api/community-v2/feed?"+params);
         const feed=$("#cv2-feed");
         if(!data.items?.length){feed.innerHTML='<div class="cv2-empty">Nothing here yet. Be the first student to start a conversation.</div>';return;}
         feed.innerHTML=data.items.map(item=>`
           <article class="cv2-item" data-id="${item.id}" data-following="${Number(item.following)?1:0}" data-saved="${Number(item.saved)?1:0}">
-            <div class="cv2-meta"><div class="cv2-wrap"><span class="cv2-badge">${esc(item.kind.replaceAll("_"," "))}</span>${Number(item.anonymous)?'<span class="cv2-badge anon">Anonymous</span>':''}<span class="cv2-note">${esc(item.community_slug)}</span></div><span class="cv2-note">${pretty(item.created_at)}</span></div>
+            <div class="cv2-meta"><div class="cv2-wrap"><span class="cv2-badge">${esc(item.kind.replaceAll("_"," "))}</span>${Number(item.anonymous)?'<span class="cv2-badge anon">Anonymous</span>':''}<span class="cv2-note">${esc(item.community_slug)}</span>${item.updated_at?'<span class="cv2-item-edited">Edited</span>':''}</div><span class="cv2-note">${pretty(item.created_at)}</span></div>
             <h3>${esc(item.title)}</h3><p class="cv2-body">${esc(item.body)}</p>
             <div class="cv2-note">By ${esc(item.author)} · ${item.replies} replies · ${item.upvotes} helpful</div>
             ${Number(item.poll_options)?'<button type="button" class="cv2-tool" data-action="poll">📊 Poll</button><div class="cv2-poll-options" hidden></div>':''}
@@ -168,8 +180,8 @@
               <button type="button" class="cv2-tool" data-action="replies">💬 ${item.replies}</button>
               <button type="button" class="cv2-tool ${item.following?'active':''}" data-action="follow">${item.following?'Following':'Follow'}</button>
               <button type="button" class="cv2-tool ${item.saved?'active':''}" data-action="save">${item.saved?'Saved':'Save'}</button>
-              ${item.mine?'<button type="button" class="cv2-tool" data-action="delete">Delete</button>':''}
-              ${item.mine?'':'<button type="button" class="cv2-tool" data-action="report">Report</button><button type="button" class="cv2-tool" data-action="block">Block</button>'}
+              ${item.mine?'<button type="button" class="cv2-tool" data-action="edit">Edit</button><button type="button" class="cv2-tool" data-action="delete">Delete</button>':''}
+              ${item.mine?'':'<button type="button" class="cv2-tool" data-action="moderate">More</button>'}
             </div>
             <div class="cv2-replies" hidden></div>
           </article>`).join("");
@@ -282,6 +294,9 @@
       }catch{button.textContent="Try again"}
     });
 
+    $("#cv2-more-close").onclick=()=>$("#cv2-more-dialog")?.close?.();
+    $("#cv2-more-report").onclick=async()=>{if(!moderationItemId)return;try{await api("/api/community-v2/report",{method:"POST",body:JSON.stringify({item_id:moderationItemId,reason:$("#cv2-report-reason").value})});$("#cv2-more-status").textContent="Reported. Thank you.";setTimeout(()=>$("#cv2-more-dialog")?.close?.(),500)}catch(e){$("#cv2-more-status").textContent=e.message==="cannot_report_own_item"?"You cannot report your own post.":"Could not report this post."}};
+    $("#cv2-more-block").onclick=async()=>{if(!moderationItemId)return;try{await api("/api/community-v2/block",{method:"POST",body:JSON.stringify({item_id:moderationItemId}));$("#cv2-more-status").textContent="Author blocked.";setTimeout(async()=>{$("#cv2-more-dialog")?.close?.();await loadFeed()},500)}catch{$("#cv2-more-status").textContent="Could not block this author."}};
     const askView=document.querySelector('[data-view-panel="ask"]'),askQuestion=document.querySelector("#search-query");
     if(askView&&askQuestion){
       const bridge=document.createElement("div");bridge.className="cv2-ask-bridge";
@@ -291,6 +306,8 @@
       askQuestion.parentElement?.appendChild(bridge);
     }
 
+    window.__pulseCommunitySaved=async()=>{savedOnly=true;sort="new";kind="";personalized=false;$("#cv2-search").value="";syncTabs();await loadFeed()};
+    window.__pulseCommunityAll=async()=>{savedOnly=false;sort="trending";kind="";personalized=false;syncTabs();await loadFeed()};
     loadCommunities();
     loadFeed().catch(()=>{$("#cv2-feed").innerHTML='<div class="cv2-empty">Community is temporarily unavailable. Try again in a moment.</div>'});
   };
