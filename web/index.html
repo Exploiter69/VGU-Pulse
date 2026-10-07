@@ -9,7 +9,8 @@
   --border-strong:rgba(255,255,255,.15);
   --text:#f5f7fa;
   --muted:#98a2af;
-  --faint:#87919d;\n  --tg-bg:var(--bg);--tg-surface:var(--surface);--tg-surface-2:var(--surface-2);--tg-text:var(--text);--tg-muted:var(--muted);--tg-accent:var(--accent);--tg-accent-ink:var(--accent-ink);
+  --faint:#87919d;
+  --tg-bg:var(--bg);--tg-surface:var(--surface);--tg-surface-2:var(--surface-2);--tg-text:var(--text);--tg-muted:var(--muted);--tg-accent:var(--accent);--tg-accent-ink:var(--accent-ink);
   --accent:#8ab4ff;
   --accent-ink:#08111e;
   --success:#78d6a5;
@@ -906,7 +907,8 @@ document.querySelectorAll("[data-campus-category]").forEach(button=>{
   identity.textContent="Open Pulse from Telegram to unlock participation.";
  }
 
- initPeopleUi();\n try{await loadHome()}catch{status.textContent="Pulse information is temporarily unavailable. Try again."}
+ initPeopleUi();
+ try{await loadHome()}catch{status.textContent="Pulse information is temporarily unavailable. Try again."}
  try{await loadProfiles()}catch{}
 
  if(initData){
