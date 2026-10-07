@@ -174,6 +174,11 @@ export async function reportStudentProfile(db: D1Database, profilePublicId: stri
   ).bind(profilePublicId).first<{ telegram_user_id: string }>();
   if (!profile || profile.telegram_user_id === String(reporterUserId)) return;
 
+  const recentReports = await db.prepare(
+    "SELECT COUNT(*) AS count FROM student_profile_reports WHERE reporter_telegram_user_id = ? AND created_at >= datetime('now', '-1 hour')",
+  ).bind(String(reporterUserId)).first<{ count: number }>();
+  if (Number(recentReports?.count ?? 0) >= 30) throw new Error("rate_limited");
+
   const result = await db.prepare(
     `INSERT OR IGNORE INTO student_profile_reports (profile_public_id, reporter_telegram_user_id)
      VALUES (?, ?)`,
@@ -231,6 +236,11 @@ export async function createStudentPost(
   userId: number,
   input: { category: StudentPost["category"]; title: string; body: string },
 ): Promise<StudentPost> {
+  const recent = await db.prepare(
+    "SELECT COUNT(*) AS count FROM student_posts WHERE telegram_user_id = ? AND created_at >= datetime('now', '-1 hour')",
+  ).bind(String(userId)).first<{ count: number }>();
+  if (Number(recent?.count ?? 0) >= 10) throw new Error("rate_limited");
+
   const result = await db
     .prepare(
       `INSERT INTO student_posts (telegram_user_id, category, title, body)
@@ -453,6 +463,11 @@ export async function createStudentReply(
     .first<{ id: number }>();
   if (!post) throw new Error("post_not_found");
 
+  const recent = await db.prepare(
+    "SELECT COUNT(*) AS count FROM student_post_replies WHERE telegram_user_id = ? AND created_at >= datetime('now', '-1 hour')",
+  ).bind(String(userId)).first<{ count: number }>();
+  if (Number(recent?.count ?? 0) >= 30) throw new Error("rate_limited");
+
   const result = await db
     .prepare(
       `INSERT INTO student_post_replies (post_id, telegram_user_id, body)
@@ -491,6 +506,11 @@ export async function reportStudentReply(
   const owner = await db.prepare("SELECT telegram_user_id FROM student_post_replies WHERE id = ?").bind(replyId).first<{ telegram_user_id: string }>();
   if (!owner || owner.telegram_user_id === String(userId)) return;
 
+  const recentReports = await db.prepare(
+    "SELECT COUNT(*) AS count FROM student_post_reply_reports WHERE telegram_user_id = ? AND created_at >= datetime('now', '-1 hour')",
+  ).bind(String(userId)).first<{ count: number }>();
+  if (Number(recentReports?.count ?? 0) >= 30) throw new Error("rate_limited");
+
   const result = await db
     .prepare(
       `INSERT OR IGNORE INTO student_post_reply_reports (reply_id, telegram_user_id)
@@ -519,6 +539,11 @@ export async function reportStudentPost(
 ): Promise<void> {
   const owner = await db.prepare("SELECT telegram_user_id FROM student_posts WHERE id = ?").bind(postId).first<{ telegram_user_id: string }>();
   if (!owner || owner.telegram_user_id === String(userId)) return;
+
+  const recentReports = await db.prepare(
+    "SELECT COUNT(*) AS count FROM student_post_reports WHERE telegram_user_id = ? AND created_at >= datetime('now', '-1 hour')",
+  ).bind(String(userId)).first<{ count: number }>();
+  if (Number(recentReports?.count ?? 0) >= 30) throw new Error("rate_limited");
 
   const result = await db
     .prepare(
