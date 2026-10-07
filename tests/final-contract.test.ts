@@ -47,6 +47,13 @@ describe("final Student OS production contract", () => {
     expect(webSource).toContain('button.setAttribute("aria-pressed","true")');
   });
 
+  it("does not let removed legacy student-post UI crash the main app", () => {
+    expect(webSource).toContain("if(!studentPosts)return;");
+    expect(webSource).toContain("if(!studentPosts||!postFilter)return;");
+    expect(webSource).toContain('postForm?.addEventListener("submit",submitPost)');
+    expect(webSource).toContain('postFilter?.addEventListener("change"');
+  });
+
   it("keeps private academic data out of the public client contract", () => {
     expect(webSource).toContain("private ERP/Digicampus");
     expect(webSource).toContain("student-reported");
