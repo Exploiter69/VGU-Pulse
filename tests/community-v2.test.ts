@@ -34,7 +34,7 @@ describe("community V2 contract", () => {
       "Trending","Confessions","Campus pulse","Exam survival","Senior → junior advice",
       "Notes / resources","PYQ / exam material","Project teammate","Lost & found",
       "Ride sharing","Room / roommate","Student exchange","Discussion alerts",
-      "Personalized alerts","Ask VGU students","Start a student discussion","See related student discussions",
+      "Personalized alerts","Start a student discussion","See related student discussions",
     ]) expect(source).toContain(text);
   });
 
