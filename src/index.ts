@@ -240,8 +240,8 @@ export default {
       if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
       const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
-      let body: { public_id?: unknown };
-      try { body = (await request.json()) as { public_id?: unknown }; } catch { return json({ ok: false, error: "invalid_json" }, 400); }
+      const body = await readJson<{ public_id?: unknown }>(request);
+      if (!body) return json({ ok: false, error: "invalid_json" }, 400);
       if (typeof body.public_id !== "string" || body.public_id.length > 100) return json({ ok: false, error: "invalid_profile" }, 400);
       return json({ ok: true, unblocked: await unblockStudentProfile(env.DB, validated.user.id, body.public_id) });
     }
