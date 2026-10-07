@@ -118,9 +118,9 @@ describe("final Student OS production contract", () => {
 
 describe("personal contribution compatibility", () => {
   it("routes legacy personal contributions through the Community compatibility endpoint", async () => {
-    const community = await fs.promises.readFile("src/community-v2.ts", "utf8");
-    const web = await fs.promises.readFile("web/community-v2.js", "utf8");
-    const index = await fs.promises.readFile("web/index.html", "utf8");
+    const community = readFileSync("src/community-v2.ts", "utf8");
+    const web = readFileSync("web/community-v2.js", "utf8");
+    const index = readFileSync("web/index.html", "utf8");
     expect(community).toContain("/api/community-v2/legacy-item");
     expect(web).toContain('source==="legacy"');
     expect(index).toContain("data-activity-source");
