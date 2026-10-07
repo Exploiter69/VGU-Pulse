@@ -644,7 +644,18 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/api/home") {
-      const poll = await getOpenPoll(env.DB);
+      let poll = null;
+      try {
+        poll = await getOpenPoll(env.DB);
+      } catch {
+        poll = null;
+      }
+      let communityItems: Awaited<ReturnType<typeof listStudentPosts>> = [];
+      try {
+        communityItems = await listStudentPosts(env.DB);
+      } catch {
+        communityItems = [];
+      }
       let signalItems: Array<Record<string, unknown>> = [];
       try {
         const upstream = await env.SIGNAL_SERVICE.fetch(
@@ -682,7 +693,7 @@ export default {
             title: "Student community",
             body: "Questions, useful campus information and opportunities shared by students.",
             trust: "student-reported",
-            items: await listStudentPosts(env.DB),
+            items: communityItems,
           },
           {
             type: "notice",
