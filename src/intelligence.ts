@@ -68,6 +68,7 @@ const CAMPUS: IntelligenceItem[] = [
   ["Faculty & Department Directory","Official faculty and department listing","https://vgu.ac.in/assets/documents/resources/handbook-brochures/StudentHandbook2025.pdf"],
 ].map(([title, summary, url]) => ({kind:"campus", title, summary, url, trust:"official", source:"VGU campus facilities"}));
 
+const SEARCH_STOPWORDS = new Set(["a","an","and","are","do","for","how","i","in","is","me","my","of","on","the","to","what","where","which","who","with"]);
 function text(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
