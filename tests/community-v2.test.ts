@@ -45,6 +45,16 @@ describe("community V2 contract", () => {
     }
   });
 
+
+  it("keeps critical community controls explicitly wired", () => {
+    const source = readFileSync("web/community-v2.js", "utf8");
+    expect(source).toContain('id="cv2-compose-close" type="button"');
+    expect(source).toContain('$("#cv2-compose-close").onclick');
+    expect(source).toContain('<input id="cv2-kind" type="hidden" value="discussion">');
+    expect(source).not.toContain('<select id="cv2-kind">');
+    expect(source).toContain('if(dialog?.showModal)dialog.showModal()');
+  });
+
   it("never exposes Telegram identity for anonymous content", () => {
     const source = readFileSync("src/community-v2.ts", "utf8");
     expect(source).toContain('const { telegram_user_id: _private, ...publicRow } = row');
