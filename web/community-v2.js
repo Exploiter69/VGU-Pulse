@@ -56,7 +56,7 @@
       .cv2-discovery summary{cursor:pointer;color:var(--text);font-weight:750}
       .cv2-community-list{display:flex;gap:6px;overflow:auto;padding:10px 0 2px;scrollbar-width:none}
       .cv2-community-chip{flex:0 0 auto;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:999px;padding:7px 10px;font:inherit;cursor:pointer}
-      .cv2-ask-bridge{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+      .cv2-anon-toggle{display:inline-flex;align-items:center;gap:7px;min-height:40px;margin-top:9px;color:var(--muted);font-size:12px;font-weight:700}.cv2-anon-toggle input{width:16px;height:16px;margin:0}.cv2-ask-bridge{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
       .cv2-ask-bridge button{min-height:38px}
       @media(max-width:620px){.cv2-grid{grid-template-columns:1fr}.cv2-toolbar{align-items:stretch}.cv2-post-btn{padding-inline:11px}.cv2-title{font-size:27px}}
     `;
@@ -87,7 +87,7 @@
         <div class="cv2-context">
           <span class="cv2-context-label">Showing</span>
           <button class="cv2-community" id="cv2-current-community" type="button">VGU campus</button>
-          <button class="cv2-tool" id="cv2-personalize" type="button">For me</button>
+          <button class="cv2-tool" id="cv2-personalize" type="button">For me</button><button class="cv2-tool" id="cv2-people" type="button">Find people</button>
         </div>
         <details class="cv2-discovery">
           <summary>More communities & topics</summary>
@@ -107,7 +107,7 @@
           <div class="cv2-field"><label for="cv2-title">Title</label><input id="cv2-title" maxlength="180" placeholder="What do you want other students to know?" required></div>
           <div class="cv2-field"><label for="cv2-body">Details</label><textarea id="cv2-body" maxlength="4000" rows="5" placeholder="Give enough context to help someone respond." required></textarea></div>
           <div class="cv2-field" id="cv2-poll-fields" hidden><label for="cv2-options">Poll options</label><input id="cv2-options" placeholder="Option 1, Option 2, Option 3"></div>
-          <label class="cv2-tool" style="display:inline-flex;align-items:center;gap:7px;margin-top:9px"><input id="cv2-anon" type="checkbox" style="width:16px;height:16px"> Post anonymously</label>
+          <label class="cv2-anon-toggle"><input id="cv2-anon" type="checkbox"><span>Post anonymously</span></label>
           <div class="cv2-actions-row"><span id="cv2-compose-status" class="cv2-note" aria-live="polite"></span><button class="cv2-post-btn" id="cv2-publish" type="button">Publish</button></div>
         </form>
       </dialog>
@@ -186,7 +186,7 @@
     $("#cv2-search-btn").onclick=loadFeed;
     $("#cv2-search").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();loadFeed()}};
     $("#cv2-personalize").onclick=async()=>{personalized=!personalized;$("#cv2-personalize").textContent=personalized?"For you":"For me";await loadFeed()};
-    $("#cv2-current-community").onclick=()=>{$("#cv2-filter-dialog").showModal()};
+    $("#cv2-current-community").onclick=()=>{$("#cv2-filter-dialog").showModal()};\n    $("#cv2-people").onclick=()=>document.querySelector("[data-view=\"people\"]")?.click();
     $("#cv2-filter-open").onclick=()=>{$("#cv2-kind-filter").value=kind;$("#cv2-community-filter").value=community;$("#cv2-filter-dialog").showModal()};
     $("#cv2-filter-close").onclick=()=>$("#cv2-filter-dialog").close();
     $("#cv2-filter-clear").onclick=()=>{$("#cv2-kind-filter").value="";$("#cv2-community-filter").value="campus"};
