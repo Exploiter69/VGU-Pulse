@@ -169,7 +169,7 @@
             <button class="cv2-tool" data-action="replies">💬 ${item.replies}</button>
             <button class="cv2-tool ${item.following?'active':''}" data-action="follow">${item.following?'Following':'Follow'}</button>
             <button class="cv2-tool ${item.saved?'active':''}" data-action="save">${item.saved?'Saved':'Save'}</button>
-            <button class="cv2-tool" data-action="report">Report</button>
+            <button class="cv2-tool" data-action="report">Report</button><button class="cv2-tool" data-action="block">Block</button>
           </div>
           <div class="cv2-replies" hidden></div>
         </article>
@@ -234,6 +234,11 @@
 
     root.addEventListener("click", async e => {
       const button=e.target.closest("button[data-action]"); const item=e.target.closest(".cv2-item");
+      const replyReport=e.target.closest("[data-reply-report]");
+      if(replyReport){
+        try { await api("/api/community-v2/report-reply",{method:"POST",body:JSON.stringify({reply_id:Number(replyReport.dataset.replyReport)})}); replyReport.textContent="Reported"; } catch { replyReport.textContent="Try again"; }
+        return;
+      }
       if(button && item){
         const id=Number(item.dataset.id), action=button.dataset.action;
         try{
@@ -245,7 +250,7 @@
             const box=item.querySelector(".cv2-replies");
             if(!box.hidden){box.hidden=true;return;}
             const d=await api("/api/community-v2/replies?item_id="+id);
-            box.innerHTML=(d.replies||[]).map(r=>`<div class="cv2-reply"><strong>${esc(r.author)}</strong><div>${esc(r.body)}</div><span class="cv2-note">${pretty(r.created_at)}</span></div>`).join("") || '<span class="cv2-note">No replies yet.</span>';
+            box.innerHTML=(d.replies||[]).map(r=>`<div class="cv2-reply"><strong>${esc(r.author)}</strong><div>${esc(r.body)}</div><span class="cv2-note">${pretty(r.created_at)}</span> <button class="cv2-tool" data-reply-report="${r.id}" type="button">Report</button></div>`).join("") || '<span class="cv2-note">No replies yet.</span>';
             box.insertAdjacentHTML("beforeend",`<div class="spaced"><textarea class="cv2-reply-input" placeholder="Reply to this discussion…"></textarea><button class="submit cv2-reply-send" type="button">Reply</button></div>`);
             box.hidden=false;
             box.querySelector(".cv2-reply-send").onclick=async()=>{const input=box.querySelector(".cv2-reply-input");await api("/api/community-v2/replies",{method:"POST",body:JSON.stringify({item_id:id,body:input.value,anonymous:false})});await loadFeed();};
