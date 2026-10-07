@@ -59,6 +59,11 @@ const CAMPUS: IntelligenceItem[] = [
   ["Controller of Examinations","Exam timetables, examinations, results, grade cards and transcripts","https://vgu.ac.in/academic-leadership/controller-of-examination"],
   ["Anti-Ragging Support","Official anti-ragging contacts and support","https://www.vgu.ac.in/Student%20Handbook%202025%20.pdf"],
   ["VGU Main Contact","Main office, student helpline and general enquiries","https://vgu.ac.in/contact"],
+  ["Computer Science & Engineering","Department of Computer Science and Engineering","https://vgu.ac.in/engineering"],
+  ["Mechanical Engineering","Department of Mechanical Engineering","https://vgu.ac.in/engineering"],
+  ["Civil Engineering","Department of Civil Engineering","https://vgu.ac.in/engineering"],
+  ["Electrical Engineering","Department of Electrical Engineering","https://vgu.ac.in/engineering"],
+  ["Faculty & Department Directory","Official faculty and department listing","https://vgu.ac.in/assets/documents/resources/handbook-brochures/StudentHandbook2025.pdf"],
 ].map(([title, summary, url]) => ({kind:"campus", title, summary, url, trust:"official", source:"VGU campus facilities"}));
 
 function text(value: unknown): string {
