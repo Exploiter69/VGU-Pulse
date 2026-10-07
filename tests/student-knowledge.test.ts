@@ -11,6 +11,10 @@ describe("student knowledge coverage", () => {
       "VGU Student Clubs & Societies",
       "VGU Hostel Information",
       "VGU Tele Directory",
+      "VGU Fees & Payment Information",
+      "VGU Events",
+      "VGU Academic Regulations & ABC",
+      "VGU Controller of Examinations",
     ]));
   });
 
@@ -22,7 +26,8 @@ describe("student knowledge coverage", () => {
   });
 
   it("keeps knowledge deterministic and bounded", () => {
-    expect(knowledgeItems().length).toBeGreaterThan(15);
+    expect(knowledgeItems().length).toBeGreaterThan(25);
+    expect(STUDENT_KNOWLEDGE.every((item) => item.url.includes("vgu.ac.in") || item.url.includes("tcsion.com") || item.url.includes("digialm.com"))).toBe(true);
     expect(knowledgeItems().every((item) => item.title && item.summary && /^https?:\/\//.test(item.url))).toBe(true);
   });
 });
