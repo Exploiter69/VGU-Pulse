@@ -14,7 +14,7 @@ describe("final Student OS production contract", () => {
     expect(indexSource).toContain('LIMIT 18');
     expect(indexSource).toContain('official_updates = 1 AND enabled_at <= ?');
     expect(indexSource).toContain('DELETE FROM student_notifications');
-    expect(indexSource).toContain('status: dbOk ? "ok" : "degraded"');
+    expect(indexSource).toContain('dependencies: { database: dbOk, signal: signalOk }');
   });
 
   it("has the zero-cost cron schedule", () => {
