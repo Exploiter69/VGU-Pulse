@@ -334,6 +334,13 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       return json({ok:true,items:await listItems(env.DB,user.id,new URLSearchParams({q,sort:"trending"}))});
     }
 
+    if(request.method==="GET" && url.pathname==="/api/community-v2/items"){
+      const id=Number(url.searchParams.get("item_id"));
+      if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
+      const item=await getItem(env.DB,id,user.id);
+      if(!item)return json({ok:false,error:"item_not_found"},404);
+      return json({ok:true,item});
+    }
     if(request.method==="POST" && url.pathname==="/api/community-v2/items"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
       const item=await createItem(env.DB,user,input);
