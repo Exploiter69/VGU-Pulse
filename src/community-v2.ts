@@ -166,7 +166,7 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
       ? "(SELECT COUNT(*) FROM community_replies rr WHERE rr.item_id=i.id AND rr.status='published') DESC, i.created_at DESC"
       : "i.created_at DESC";
   const sql = `SELECT i.id,i.kind,i.title,i.body,i.community_slug,i.audience_program,i.audience_branch,i.audience_year,
-      i.anonymous,i.created_at,
+      i.anonymous,i.created_at,i.telegram_user_id,
       (SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=1) AS upvotes,
       (SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=-1) AS downvotes,
       (SELECT COUNT(*) FROM community_replies r WHERE r.item_id=i.id AND r.status='published') AS replies,
@@ -180,7 +180,8 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
   return Promise.all(rows.map(async row => {
     const owner = await db.prepare("SELECT display_name FROM student_profiles WHERE telegram_user_id=?").bind(String((row as any).telegram_user_id ?? "")).first<{display_name:string}>();
     const author = Number(row.anonymous) ? "Anonymous student" : (owner?.display_name || "VGU student");
-    return { ...row, author, trust: "student-community" };
+    const { telegram_user_id: _private, ...publicRow } = row as Record<string, unknown>;
+    return { ...publicRow, author, trust: "student-community" };
   }));
 }
 
