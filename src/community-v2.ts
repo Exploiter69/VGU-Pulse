@@ -203,7 +203,7 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
       ? "(SELECT COUNT(*) FROM community_replies rr WHERE rr.item_id=i.id AND rr.status='published') DESC, i.created_at DESC"
       : "i.created_at DESC";
   const sql = `SELECT i.id,i.kind,i.title,i.body,i.community_slug,i.audience_program,i.audience_branch,i.audience_year,
-      i.anonymous,i.created_at,i.telegram_user_id,
+      i.anonymous,i.created_at,i.updated_at,i.telegram_user_id,
       CASE WHEN i.telegram_user_id=? THEN 1 ELSE 0 END AS mine,
       (SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=1) AS upvotes,
       (SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=-1) AS downvotes,
