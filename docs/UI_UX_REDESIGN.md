@@ -94,13 +94,13 @@ Official and student-owned information remain visually distinct.
 
 ## Research basis
 
-Apple's current HIG recommends tab bars for top-level navigation, keeping the number of visible destinations small, labeling tabs clearly, and avoiding overflow tabs. citeturn1search0turn1search3
+Apple's current HIG recommends tab bars for top-level navigation, keeping the number of visible destinations small, labeling tabs clearly, and avoiding overflow tabs.
 
-Discord's mobile navigation work similarly found that primary features became easier to discover when promoted into a small, consistent tab system, while secondary navigation remained within the current section. citeturn0search0turn0search2
+Discord's mobile navigation work similarly found that primary features became easier to discover when promoted into a small, consistent tab system, while secondary navigation remained within the current section.
 
-Current university-app examples also converge on a small set of primary destinations with contextual access to events, services, academics, community and profile rather than exposing every feature as a top-level destination. citeturn2search0turn2search4turn2search9
+Current university-app examples also converge on a small set of primary destinations with contextual access to events, services, academics, community and profile rather than exposing every feature as a top-level destination.
 
-The redesign also follows touch-target guidance: important custom controls should be comfortably tappable, with 44px as a strong accessibility target where practical. citeturn1search6
+The redesign also follows touch-target guidance: important custom controls should be comfortably tappable, with 44px as a strong accessibility target where practical.
 
 ## Current implementation status
 
