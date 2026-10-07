@@ -157,7 +157,17 @@ function score(item: IntelligenceItem, query: string, analysis: AcademicAnalysis
   };
 
   if (intentBoosts[analysis.intent].some((term) => title.includes(term.toLowerCase()))) points += 30;
-  if (analysis.intent === "erp-private-data" && item.title === "Student ERP") points += 50;
+  const canonicalTitles: Record<AcademicIntent, string[]> = {
+    exam: ["Examination Rules", "Exam Form"],
+    "academic-calendar": ["VGU Academic Calendars"],
+    "exam-form": ["Exam Form"],
+    backlog: ["Backlog Exam Form"],
+    "re-registration": ["Re-registration"],
+    "erp-private-data": ["Student ERP"],
+    "academic-facilities": ["Academic facilities"],
+    general: [],
+  };
+  if (canonicalTitles[analysis.intent].some((name) => item.title === name)) points += 80;
   return points;
 }
 
