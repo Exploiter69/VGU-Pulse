@@ -1,7 +1,14 @@
 # Phase 22 — Observability & Reliability
 
-Status: implementation complete; deployment validation pending.
+Status: implementation complete; latest hardening revision pending production deployment.
 
-Health now returns HTTP 503 when D1 is unavailable. Home isolates D1 poll/community failures from Signal failures. Signal failure remains non-fatal. Notification sweeps emit structured operational events and delivery failures remain retryable. GitHub Actions now runs typecheck and tests on pushes and pull requests.
+Delivered:
+- D1 health check
+- Signal dependency health in /health
+- HTTP 503 when a required dependency is unavailable
+- Home isolation of D1/Signal partial failures
+- structured notification sweep events
+- bounded notification work
+- GitHub Actions typecheck/tests/dry-run/static production guards
 
 No paid observability infrastructure was added.
