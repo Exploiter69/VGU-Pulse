@@ -9,7 +9,15 @@
 - Phase 13 — Campus Services: complete in production
 - Phase 14 — Personal Pulse: complete in production
 - UI/UX Redesign — Student OS: complete in production
-- Phase 15 — Production Hardening: implementation complete; deployment validation pending
+- Phase 15 — Production Hardening: complete in production
+- Phase 16 — Student Reality & Information Coverage: implementation complete; deployment validation pending
+- Phase 17 — Notifications & Attention: implementation complete; deployment validation pending
+- Phase 18 — Student Knowledge & FAQ: implementation complete; deployment validation pending
+- Phase 19 — Community Intelligence: implementation complete; deployment validation pending
+- Phase 20 — Personal Student OS: implementation complete; deployment validation pending
+- Phase 21 — Telegram Mini App Excellence: implementation complete; deployment validation pending
+- Phase 22 — Observability & Reliability: implementation complete; deployment validation pending
+- Phase 23 — Final Student Acceptance: implementation complete; deployment validation pending
 
 
 ## Gate 0 — Product and architecture foundation
@@ -113,3 +121,34 @@ Stop or change direction if:
 - campus density cannot be achieved
 - the product becomes dependent on paid infrastructure
 - students prefer existing tools for every core use case
+
+
+## Student OS completion roadmap
+
+### Phase 16 — Student Reality & Information Coverage
+Public VGU student knowledge is indexed deterministically while private ERP/Digicampus boundaries remain explicit.
+
+### Phase 17 — Notifications & Attention
+Opt-in official and community Telegram notifications use D1 + the existing Worker Cron Trigger.
+
+### Phase 18 — Student Knowledge & FAQ
+Common student questions map to deterministic official answers and source links.
+
+### Phase 19 — Community Intelligence
+Unanswered, useful and recent student signals are surfaced without confusing them with official information.
+
+### Phase 20 — Personal Student OS
+My Pulse combines personal profile, academic planning, community activity and attention.
+
+### Phase 21 — Telegram Mini App Excellence
+Telegram-native behaviors and sharing are hardened without replacing the existing static Mini App architecture.
+
+### Phase 22 — Observability & Reliability
+Partial failures are isolated and CI becomes a permanent typecheck/test gate.
+
+### Phase 23 — Final Student Acceptance
+The final gate validates core student journeys, privacy, failure behavior, moderation and production deployment.
+
+## Current product boundary
+
+VGU Pulse does not replace Student ERP/Digicampus, VGU-Signal, WhatsApp, Telegram itself or university administrative systems. It is the student-facing layer that connects trusted public information, useful campus navigation, personal planning and opt-in student participation.
