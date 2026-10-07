@@ -27,5 +27,19 @@ jobs:
         run: npx wrangler deploy --dry-run --outdir .ci-dist
       - name: Web JavaScript syntax
         run: node -e "const fs=require('fs'); const html=fs.readFileSync('web/index.html','utf8'); const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(m=>m[1]); if(!scripts.length) throw new Error('No inline script found'); for(const source of scripts) new Function(source); console.log('web scripts:',scripts.length,'syntax ok')"
+      - name: Static production guards
+        run: |
+          node - <<'NODE'
+          const fs = require("fs");
+          const html = fs.readFileSync("web/index.html", "utf8");
+          const ids = [...html.matchAll(/id=["']([^"']+)["']/g)].map((m) => m[1]);
+          const duplicates = ids.filter((id, i) => ids.indexOf(id) !== i);
+          if (duplicates.length) throw new Error("Duplicate IDs: " + [...new Set(duplicates)].join(", "));
+          if (/\bconfirm\s*\(/.test(html)) throw new Error("Native confirm() is forbidden in the Telegram Mini App");
+          if (/redis|kafka|celery|r2/i.test(fs.readFileSync("wrangler.jsonc", "utf8"))) throw new Error("Paid/forbidden infrastructure reference found");
+          if (!html.includes("safeAreaChanged") || !html.includes("contentSafeAreaChanged")) throw new Error("Telegram safe-area handlers missing");
+          if (!html.includes("const navigationStack")) throw new Error("Telegram navigation history missing");
+          console.log("production guards: ok");
+          NODE
       - name: Tests
         run: npm test
