@@ -620,6 +620,7 @@ function renderRelatedPosts(target,posts){
  }
 }
 function renderStudentPosts(posts){
+ if(!studentPosts)return;
  studentPosts.replaceChildren();
  if(!posts.length){const p=document.createElement("p");p.className="muted";p.textContent="No student posts yet. Be the first to share something useful.";studentPosts.append(p);return}
  for(const post of posts){
@@ -768,7 +769,8 @@ profileDelete.addEventListener("click",async()=>{
  if(response.ok){profileForm.reset();profileDelete.hidden=true;profileDelete.dataset.confirming="";profileDelete.textContent="Delete my profile";profileStatus.textContent="Profile deleted.";await loadProfiles()}else{profileStatus.textContent="Profile could not be deleted.";profileDelete.disabled=false;profileDelete.dataset.confirming="";profileDelete.textContent="Delete my profile"}
 });
 async function loadStudentPosts(){
- const category=postFilter.value,sort=postSort?.value||"newest";
+ if(!studentPosts||!postFilter)return;
+ const category=postFilter.value,sort="newest";
  const params=new URLSearchParams();if(category)params.set("category",category);if(sort!=="newest")params.set("sort",sort);
  const response=await fetch("/api/student-posts"+(params.toString()?"?"+params.toString():""),{headers:initData?{"x-telegram-init-data":initData}:{}});
  if(!response.ok)throw Error("student_posts_failed");
@@ -791,8 +793,8 @@ async function submitPost(event){
  postForm.reset();postStatus.textContent="Shared with students. It is labelled student-reported.";
  button.disabled=false;await loadStudentPosts();
 }
-postForm.addEventListener("submit",submitPost);
-postFilter.addEventListener("change",()=>loadStudentPosts().catch(()=>{status.textContent="Unable to load that student-post filter."}));
+postForm?.addEventListener("submit",submitPost);
+postFilter?.addEventListener("change",()=>loadStudentPosts().catch(()=>{status.textContent="Unable to load that student-post filter."}));
 document.querySelector("#campus-search")?.addEventListener("input",renderCampusGuide);
 const campusFacilities=[
  {title:"Student Cell",category:"Student support",body:"Primary student-support office for records, certificates, ERP-related issues, scholarships and grievances.",contact:"studentcell@vgu.ac.in",link:"https://vgu.ac.in/centers-and-cells/student-cell"},
