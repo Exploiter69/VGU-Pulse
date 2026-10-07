@@ -488,6 +488,7 @@ export async function createStudentReply(
     .bind(result.meta.last_row_id)
     .first<StudentReply>();
   if (!reply) throw new Error("reply_create_failed");
+  await createCommunityReplyNotification(db, postId, result.meta.last_row_id as number, userId, body);
   return { ...reply, report_count: Number(reply.report_count) };
 }
 
