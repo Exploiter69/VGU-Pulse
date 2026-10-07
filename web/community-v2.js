@@ -35,7 +35,7 @@
       .cv2-actions{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-top:10px}
       .cv2-tool{min-height:38px;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:10px;padding:7px 10px;font:inherit;font-size:12px;font-weight:650;cursor:pointer}
       .cv2-tool:hover,.cv2-tool.active{color:var(--text);background:var(--surface-2)}
-      .cv2-replies{margin-top:10px;padding-left:12px;border-left:2px solid var(--border)}
+      .cv2-replies{margin-top:10px;padding-left:12px;border-left:2px solid var(--border)}.cv2-reply-compose{margin-top:10px}
       .cv2-reply{padding:8px 0;border-bottom:1px solid var(--border)}
       .cv2-reply:last-child{border-bottom:0}
       .cv2-poll-options{display:grid;gap:6px;margin-top:9px}
@@ -186,7 +186,8 @@
     $("#cv2-search-btn").onclick=loadFeed;
     $("#cv2-search").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();loadFeed()}};
     $("#cv2-personalize").onclick=async()=>{personalized=!personalized;$("#cv2-personalize").textContent=personalized?"For you":"For me";await loadFeed()};
-    $("#cv2-current-community").onclick=()=>{$("#cv2-filter-dialog").showModal()};\n    $("#cv2-people").onclick=()=>document.querySelector("[data-view=\"people\"]")?.click();
+    $("#cv2-current-community").onclick=()=>{$("#cv2-filter-dialog").showModal()};
+    $("#cv2-people").onclick=()=>document.querySelector("[data-view=\"people\"]")?.click();
     $("#cv2-filter-open").onclick=()=>{$("#cv2-kind-filter").value=kind;$("#cv2-community-filter").value=community;$("#cv2-filter-dialog").showModal()};
     $("#cv2-filter-close").onclick=()=>$("#cv2-filter-dialog").close();
     $("#cv2-filter-clear").onclick=()=>{$("#cv2-kind-filter").value="";$("#cv2-community-filter").value="campus"};
@@ -235,7 +236,7 @@
           const box=item.querySelector(".cv2-replies");if(!box.hidden){box.hidden=true;return}
           const d=await api("/api/community-v2/replies?item_id="+id);
           box.innerHTML=(d.replies||[]).map(r=>`<div class="cv2-reply"><strong>${esc(r.author)}</strong><div>${esc(r.body)}</div><span class="cv2-note">${pretty(r.created_at)}</span> <button class="cv2-tool" data-reply-report="${r.id}" type="button">Report</button></div>`).join("")||'<span class="cv2-note">No replies yet.</span>';
-          box.insertAdjacentHTML("beforeend",`<div style="margin-top:10px"><textarea class="cv2-reply-input" placeholder="Reply to this discussion…"></textarea><button class="cv2-post-btn cv2-reply-send" type="button">Reply</button></div>`);
+          box.insertAdjacentHTML("beforeend",`<div class="cv2-reply-compose"><textarea class="cv2-reply-input" placeholder="Reply to this discussion…"></textarea><button class="cv2-post-btn cv2-reply-send" type="button">Reply</button></div>`);
           box.hidden=false;
           box.querySelector(".cv2-reply-send").onclick=async()=>{const input=box.querySelector(".cv2-reply-input");await api("/api/community-v2/replies",{method:"POST",body:JSON.stringify({item_id:id,body:input.value,anonymous:false})});await loadFeed()};
           return;
