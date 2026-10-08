@@ -671,9 +671,12 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/api/home") {
+      let viewerId: number | undefined;
+      const homeInitData = request.headers.get("x-telegram-init-data") ?? "";
+      if (homeInitData && getBotToken(env)) { const validated = await validateInitData(homeInitData, getBotToken(env)); viewerId = validated?.user.id; }
       let poll = null;
       try {
-        poll = await getOpenPoll(env.DB);
+        poll = await getOpenPoll(env.DB, viewerId);
       } catch {
         poll = null;
       }
@@ -760,7 +763,7 @@ export default {
       const body = await readJson<{ poll_id?: unknown; option_id?: unknown }>(request);
       if (!body) return json({ ok: false, error: "invalid_json" }, 400);
 
-      if (!Number.isSafeInteger(body.poll_id) || !Number.isSafeInteger(body.option_id)) {
+      if (!Number.isSafeInteger(body.poll_id) || !Number.isSafeInteger(body.option_id) || (body.poll_id as number) < 1 || (body.option_id as number) < 1) {
         return json({ ok: false, error: "invalid_vote" }, 400);
       }
 
@@ -770,6 +773,7 @@ export default {
       try {
         await voteInPoll(env.DB, pollId, optionId, validated.user.id);
       } catch (error) {
+        if (error instanceof Error && error.message === "poll_closed") return json({ ok: false, error: "poll_closed" }, 400);
         if (error instanceof Error && error.message === "invalid_option") {
           return json({ ok: false, error: "invalid_option" }, 400);
         }
