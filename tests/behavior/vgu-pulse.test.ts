@@ -159,15 +159,14 @@ describe("VGU-Pulse real D1 behavior",()=>{
     const env=await compatWorker.getEnv() as {DB:D1Database};
     await env.DB.prepare("INSERT INTO users (telegram_user_id,first_name) VALUES ('2002','Legacy target'),('3003','Legacy')").run();
     await env.DB.prepare("INSERT INTO student_profile_blocks(blocker_telegram_user_id,blocked_telegram_user_id) VALUES('3003','2002')").run();
-    const applySql=async(file:string)=>env.DB.exec(readFileSync("migrations/"+file,"utf8").replace(/^--.*\n/gm,""));
-    await applySql("0010_gate1_hardening.sql");
-    await applySql("0011_gate2_safety.sql");
-    await applySql("0012_gate3_foundations.sql");
-    await applySql("0013_gate3_qa.sql");
-    await applySql("0014_gate3_reliability.sql");
-    await applySql("0015_gate4_features.sql");
-    await applySql("0016_gate4_completion.sql");
-    const row=await env.DB.prepare("SELECT via_anonymous,source_item_id FROM student_profile_blocks WHERE blocker_telegram_user_id='3003' AND blocked_telegram_user_id='2002'").first<{via_anonymous:number;source_item_id:number|null}>();
+    await server.update({workers:[
+      {configPath:"./wrangler.jsonc",secrets:{BOT_TOKEN,ANON_ALIAS_SECRET:"gate-2-anon-secret",ADMIN_IDS:"9009"},bindingOverrides:{SIGNAL_SERVICE:"signal-mock"}},
+      {config:{name:"signal-mock",main:"tests/behavior/signal-mock.ts",compatibility_date:"2026-10-01"}},
+      {configPath:"./tests/behavior/wrangler-compat-all.jsonc",secrets:{BOT_TOKEN,ANON_ALIAS_SECRET:"gate-2-anon-secret"}}
+    ]});
+    await compatWorker.applyD1Migrations("DB");
+    const upgraded=await compatWorker.getEnv() as {DB:D1Database};
+    const row=await upgraded.DB.prepare("SELECT via_anonymous,source_item_id FROM student_profile_blocks WHERE blocker_telegram_user_id='3003' AND blocked_telegram_user_id='2002'").first<{via_anonymous:number;source_item_id:number|null}>();
     expect(Number(row?.via_anonymous)).toBe(0);
     expect(row?.source_item_id).toBeNull();
   });
