@@ -276,6 +276,39 @@ export async function createStudentPost(
   return { ...post, report_count: Number(post.report_count) };
 }
 
+export async function deleteAllStudentData(db:D1Database,userId:number):Promise<void>{
+  const id=String(userId);
+  const statements=[
+    "DELETE FROM community_poll_votes WHERE telegram_user_id=?",
+    "DELETE FROM community_votes WHERE telegram_user_id=?",
+    "DELETE FROM community_follows WHERE telegram_user_id=?",
+    "DELETE FROM community_saves WHERE telegram_user_id=?",
+    "DELETE FROM community_reports WHERE telegram_user_id=?",
+    "DELETE FROM community_reply_reports WHERE telegram_user_id=?",
+    "DELETE FROM student_profile_blocks WHERE blocker_telegram_user_id=? OR blocked_telegram_user_id=?",
+    "DELETE FROM student_profile_reports WHERE reporter_telegram_user_id=?",
+    "DELETE FROM student_post_reply_votes WHERE telegram_user_id=?",
+    "DELETE FROM student_post_votes WHERE telegram_user_id=?",
+    "DELETE FROM student_notifications WHERE telegram_user_id=?",
+    "DELETE FROM notification_preferences WHERE telegram_user_id=?",
+    "DELETE FROM community_badges WHERE telegram_user_id=?",
+    "DELETE FROM community_reputation_events WHERE telegram_user_id=?",
+    "DELETE FROM community_reputation WHERE telegram_user_id=?",
+    "DELETE FROM community_anonymous_notices WHERE telegram_user_id=?",
+    "DELETE FROM community_rules_ack WHERE telegram_user_id=?",
+    "DELETE FROM user_bans WHERE telegram_user_id=?",
+    "DELETE FROM moderation_report_weights WHERE telegram_user_id=?",
+    "DELETE FROM community_replies WHERE telegram_user_id=?",
+    "DELETE FROM community_items WHERE telegram_user_id=?",
+    "DELETE FROM student_post_replies WHERE telegram_user_id=?",
+    "DELETE FROM student_posts WHERE telegram_user_id=?",
+    "DELETE FROM student_profiles WHERE telegram_user_id=?",
+    "DELETE FROM users WHERE telegram_user_id=?",
+  ];
+  const batch=statements.map(sql=>db.prepare(sql).bind(sql.includes("OR blocked")?id:id, ...(sql.includes("OR blocked")?[id]:[])));
+  await db.batch(batch);
+}
+
 export async function deleteStudentProfile(db: D1Database, userId: number): Promise<boolean> {
   const result = await db.prepare(
     `DELETE FROM student_profiles WHERE telegram_user_id = ?`,
