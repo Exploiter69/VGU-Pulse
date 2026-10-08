@@ -107,9 +107,14 @@ async function publishNextChannelCard(env:Env):Promise<void>{
   ).all<{kind:string;entity_id:number;title:string;detail:string}>();
   for(const x of rows.results??[]){
     let key="",target="",text="",reply_markup:any;
-    if(x.kind==="event"){key=`event:${x.entity_id}:${x.detail}`;target=`event:${x.entity_id}`;text=`📅 <b>Upcoming event</b>\n${x.title}\n${x.detail}\n\nStudent event — open Pulse for details.`;reply_markup={inline_keyboard:[[{text:"I'm interested",callback_data:`rsvp:${x.entity_id}`},{text:"Remind me",callback_data:`remind:${x.entity_id}`}],[{text:"Open in VGU Pulse",url:await telegramDeepLink(env,target)}]]};}
-    else if(x.kind==="mess"){key=`mess:${new Date().toISOString().slice(0,10)}`;target="mess";text=`🍽 <b>Mess pulse</b>\n${x.title}\n\nStudent-reported rating summary.`;reply_markup={inline_keyboard:[[{text:"Open mess pulse",url:await telegramDeepLink(env,target)}]]};}
-    else {key=`thread:${x.entity_id}:${new Date().toISOString().slice(0,10)}`;target=`post:${x.entity_id}`;text=`💬 <b>Student content</b> · helpful thread\n${x.title}\n\nStudent-reported discussion — not an official VGU announcement.`;reply_markup={inline_keyboard:[[{text:"Read in VGU Pulse",url:await telegramDeepLink(env,target)}]]};}
+    if(x.kind==="poll"){
+      key=`poll:${x.entity_id}`;target=`poll:${x.entity_id}`;
+      const options=await env.DB.prepare("SELECT id,label FROM poll_options WHERE poll_id=? ORDER BY sort_order LIMIT 8").bind(x.entity_id).all<{id:number;label:string}>();
+      text=`📊 <b>Today's campus poll</b>\n${x.title}\n\nStudent poll — vote in Telegram or open Pulse for the full result.`;
+      reply_markup={inline_keyboard:[...(options.results??[]).map(o=>[{text:String(o.label).slice(0,48),callback_data:`vote:${x.entity_id}:${o.id}`}]),[{text:"Open poll in VGU Pulse",url:await telegramDeepLink(env,target)}]]};
+    }else if(x.kind==="event"){key=`event:${x.entity_id}:${x.detail}`;target=`event:${x.entity_id}`;text=`📅 <b>Upcoming event</b>\n${x.title}\n${x.detail}\n\nStudent event — open Pulse for details.`;reply_markup={inline_keyboard:[[{text:"I'm interested",callback_data:`rsvp:${x.entity_id}`},{text:"Remind me",callback_data:`remind:${x.entity_id}`}],[{text:"Open in VGU Pulse",url:await telegramDeepLink(env,target)}]]};
+    }else if(x.kind==="mess"){key=`mess:${new Date().toISOString().slice(0,10)}`;target="mess";text=`🍽 <b>Mess pulse</b>\n${x.title}\n\nStudent-reported rating summary.`;reply_markup={inline_keyboard:[[{text:"Open mess pulse",url:await telegramDeepLink(env,target)}]]};
+    }else {key=`thread:${x.entity_id}:${new Date().toISOString().slice(0,10)}`;target=`post:${x.entity_id}`;text=`💬 <b>Student content</b> · helpful thread\n${x.title}\n\nStudent-reported discussion — not an official VGU announcement.`;reply_markup={inline_keyboard:[[{text:"Read in VGU Pulse",url:await telegramDeepLink(env,target)}]]};}
     const claimed=await env.DB.prepare("INSERT OR IGNORE INTO telegram_channel_cards(card_key,kind,entity_id,created_at) VALUES(?,?,?,CURRENT_TIMESTAMP)").bind(key,x.kind,Number(x.entity_id||0)).run();
     if(Number(claimed.meta.changes??0)!==1)continue;
     const response=await telegramApi(getBotToken(env),"sendMessage",{chat_id:channelId,text,parse_mode:"HTML",reply_markup});
