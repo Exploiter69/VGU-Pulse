@@ -123,6 +123,14 @@ Stop or change direction if:
 - students prefer existing tools for every core use case
 
 
+## Community Daily-Habit Execution
+
+- Phase 1 — Community UX Polish: complete on 2026-10-08.
+- Community now defaults to For You with cohort-aware ranking and a campus-Trending fallback.
+- The Community compose surface prioritizes seven common intents and keeps the remaining intents behind More….
+- Campus Pulse summaries, unanswered-answer actions, solved/accepted visibility, and lightweight reputation badges are part of the Community surface.
+- Telegram-native haptics, safe-area behavior, moderation/privacy contracts, and the static Mini App delivery model remain unchanged.
+
 ## Student OS completion roadmap
 
 ### Phase 16 — Student Reality & Information Coverage
