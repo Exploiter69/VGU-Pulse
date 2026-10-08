@@ -1,4 +1,3 @@
-import { readFileSync, readdirSync } from "node:fs";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createTestHarness } from "wrangler";
 
