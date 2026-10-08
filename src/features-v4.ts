@@ -44,7 +44,9 @@ export async function handleFeaturesV4(request:Request,env:Env,user:User):Promis
    return json({ok:true,title,exam_at:new Date(examAt).toISOString()});
   }
   if(request.method==="GET"&&u.pathname==="/api/v4/exam-countdowns"){
-   const rows=await env.DB.prepare("SELECT title,exam_at FROM exam_countdowns WHERE telegram_user_id=? ORDER BY exam_at").bind(String(user.id)).all();return json({ok:true,items:rows.results??[]});
+   const rows=await env.DB.prepare("SELECT title,exam_at FROM exam_countdowns WHERE telegram_user_id=? AND exam_at>CURRENT_TIMESTAMP ORDER BY exam_at").bind(String(user.id)).all();
+   const items=rows.results??[]; const next=items[0] as {title:string;exam_at:string}|undefined; const days=next?Math.ceil((Date.parse(next.exam_at)-Date.now())/86400000):null;
+   return json({ok:true,items,exam_season:Boolean(days!==null&&days<=30),next:next??null});
   }
   if(request.method==="POST"&&u.pathname==="/api/v4/resource"){
    const b=await body<Record<string,unknown>>(request);if(!b)return json({ok:false,error:"invalid_json"},400);
