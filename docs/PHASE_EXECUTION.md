@@ -97,7 +97,7 @@ Baseline repository reviewed on 2026-10-08:
 
 ## Phase 2 — Telegram Growth Engine
 
-**Status: IMPLEMENTATION COMPLETE — automated verification pending**
+**Status: COMPLETE (CI green; manual Telegram verification remains)**
 
 ### Shipped
 - Rich, bounded Telegram `startapp` contract for sections, posts, polls, events, and communities.
@@ -120,9 +120,9 @@ Baseline repository reviewed on 2026-10-08:
 - [x] Notification sweep remains opt-in and bounded.
 - [x] No paid dependency or forbidden infrastructure added.
 - [x] Contract tests added.
-- [ ] `npm run check` — GitHub CI verification pending.
-- [ ] `npm test` — GitHub CI verification pending.
-- [ ] `npx vitest run tests/behavior` — GitHub CI verification pending.
+- [x] `npm run check` — CI run `37782297059` PASS.
+- [x] `npm test` — 71/71 tests PASS in CI run `37782297059`.
+- [x] `npx vitest run tests/behavior` — behavior suite PASS in CI run `37782297059`.
 - [ ] Real Telegram channel/mobile/Desktop smoke — manual verification remains.
 
 ### Implementation commits
@@ -133,6 +133,12 @@ Baseline repository reviewed on 2026-10-08:
 - `7756505` / `7c21ea0` / `53bfc1f` / `83aaa26` — Mini App target resolution and cache-bust
 - `747f942` / `9af429e` — contract tests
 - `9186bdf` / `5190d3f` — Telegram growth documentation
+- `f009e30` / `84a9df8` — CI assertion correction for the new Community cache key
+
+### CI verification
+- Temporary verification PR #20 validated the current main tree.
+- CI run `37782297059`: typecheck, Wrangler dry-run, web syntax, static guards, unit tests, and real-D1 behavior tests all PASS.
+- Temporary verification PR was closed; no verification-only product change was merged to `main`.
 
 ## Phase 3 — Home Daily Magnet
 
