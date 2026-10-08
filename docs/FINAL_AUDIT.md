@@ -95,12 +95,12 @@ Current VGU public surfaces were checked independently of the repository. The of
 
 ## Hardening verification boundary
 
-The repository hardening implementation is present on `main` at commit `ba0e44a`.
+The repository hardening implementation plus final verification additions is present on `main` at commit `c5b90afb167f785fbee0be11fda147fea6c54a10`.
 
 Verified in the repository/local real-D1 harness:
 - `npm run check`: passed
-- `npm test`: 66/66 passed
-- `npx vitest run tests/behavior`: 24/24 passed
+- `npm test`: 68/68 passed
+- `npx vitest run tests/behavior`: 26/26 passed
 - fresh-D1 migration chain through 0020: covered
 - existing-0009 compatibility path: covered
 - working tree after local verification: clean
