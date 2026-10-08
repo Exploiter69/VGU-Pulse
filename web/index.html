@@ -318,6 +318,14 @@ input:focus,textarea:focus,select:focus,.quick:focus-visible,.nav-item:focus-vis
     </div>
   </section>
   <section class="section">
+    <div class="section-heading"><div><div class="eyebrow">Account</div><h2>Privacy & data</h2></div></div>
+    <div class="card" style="margin:0">
+      <p class="settings-note">You can permanently remove your Pulse profile, student posts, replies, votes, follows, saves, notifications, preferences and personal feature data. Moderation bans/history are retained for safety.</p>
+      <button id="delete-my-data" type="button" class="quick">Delete all my Pulse data</button>
+      <p id="delete-my-data-status" class="settings-note" aria-live="polite"></p>
+    </div>
+  </section>
+  <section class="section">
     <div class="section-heading"><div><div class="eyebrow">Semester</div><h2>Next deadlines</h2></div><button type="button" class="action-link" data-view="academics">Open Study plan →</button></div>
     <div id="my-pulse-academics"><p class="muted">Your local academic plan will appear here.</p></div>
   </section>
@@ -1141,6 +1149,20 @@ document.getElementById("v4-review-submit")?.addEventListener("click",async()=>{
  const r=await fetch("/api/v4/teacher-review",{method:"POST",headers:h,body:JSON.stringify(body)});if(status)status.textContent=r.ok?"Review submitted for moderation.":"Could not submit review.";
 });
 
+
+document.getElementById("delete-my-data")?.addEventListener("click",async()=>{
+ const status=document.getElementById("delete-my-data-status");
+ if(!initData){if(status)status.textContent="Reopen Pulse from Telegram.";return}
+ if(!window.confirm){if(status)status.textContent="Use the Telegram confirmation sheet to continue.";return}
+ const ok=window.prompt("Type DELETE to permanently remove your VGU Pulse data.")==="DELETE";
+ if(!ok){if(status)status.textContent="Deletion cancelled.";return}
+ try{
+  const r=await fetch("/api/account/delete",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({confirm:true})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||"delete_failed");
+  if(status)status.textContent="Your Pulse data has been deleted. Reopen Pulse from Telegram to start again.";
+ }catch(e){if(status)status.textContent=e.message==="unauthorized"?"Reopen Pulse from Telegram.":"Could not complete deletion. Please try again."}
+});
 </script>
 </body>
 </html>
