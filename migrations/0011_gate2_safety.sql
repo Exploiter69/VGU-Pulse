@@ -1,6 +1,6 @@
 -- Gate 2 privacy, moderation and account controls. Never modify 0001-0010.
 CREATE TABLE IF NOT EXISTS community_anonymous_notices (
-  telegram_user_id TEXT PRIMARY KEY REFERENCES users(telegram_user_id) ON DELETE CASCADE,
+  telegram_user_id TEXT PRIMARY KEY,
   acknowledged_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS user_bans (
 );
 
 CREATE TABLE IF NOT EXISTS moderation_report_weights (
-  telegram_user_id TEXT PRIMARY KEY REFERENCES users(telegram_user_id) ON DELETE CASCADE,
+  telegram_user_id TEXT PRIMARY KEY,
   weight REAL NOT NULL DEFAULT 1 CHECK(weight>=0.25 AND weight<=5),
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
