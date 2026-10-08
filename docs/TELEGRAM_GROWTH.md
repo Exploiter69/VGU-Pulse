@@ -18,7 +18,7 @@ Invalid or oversized targets are rejected by `/api/share-link`; arbitrary URL/pa
 
 The Worker caches the bot username in memory for six hours and coalesces concurrent `getMe` requests. Cache state is not persisted in D1.
 
-Telegram exposes the `startapp` value to the Mini App as `start_param`; VGU Pulse also accepts the URL query fallbacks used by Telegram clients. citeturn0search0
+Telegram exposes the `startapp` value to the Mini App as `start_param`; VGU Pulse also accepts the URL query fallbacks used by Telegram clients.
 
 ## Exact entity resolution
 
