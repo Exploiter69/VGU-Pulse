@@ -72,7 +72,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
   it("applies every migration to a fresh D1 database",async()=>{
     const env=await worker.getEnv() as {DB:D1Database};
     const rows=await env.DB.prepare("SELECT name FROM d1_migrations ORDER BY id").all<{name:string}>();
-    expect(rows.results.map(x=>x.name)).toEqual(expect.arrayContaining(["0001_initial.sql","0009_community_network.sql","0010_gate1_hardening.sql","0011_gate2_safety.sql","0012_gate3_foundations.sql","0013_gate3_qa.sql","0014_gate3_reliability.sql","0015_gate4_features.sql"]));
+    expect(rows.results.map(x=>x.name)).toEqual(expect.arrayContaining(["0001_initial.sql","0009_community_network.sql","0010_gate1_hardening.sql","0011_gate2_safety.sql","0012_gate3_foundations.sql","0013_gate3_qa.sql","0014_gate3_reliability.sql","0015_gate4_features.sql","0016_gate4_completion.sql"]));
   });
 
   it("reproduces the replies contract and hides non-published parents",async()=>{
@@ -165,6 +165,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
     await env.DB.exec(readFileSync("migrations/0013_gate3_qa.sql","utf8"));
     await env.DB.exec(readFileSync("migrations/0014_gate3_reliability.sql","utf8"));
     await env.DB.exec(readFileSync("migrations/0015_gate4_features.sql","utf8"));
+    await env.DB.exec(readFileSync("migrations/0016_gate4_completion.sql","utf8"));
     const row=await env.DB.prepare("SELECT via_anonymous,source_item_id FROM student_profile_blocks WHERE blocker_telegram_user_id='3003' AND blocked_telegram_user_id='2002'").first<{via_anonymous:number;source_item_id:number|null}>();
     expect(Number(row?.via_anonymous)).toBe(0);
     expect(row?.source_item_id).toBeNull();
