@@ -296,8 +296,6 @@ export async function deleteAllStudentData(db:D1Database,userId:number):Promise<
     "DELETE FROM community_reputation WHERE telegram_user_id=?",
     "DELETE FROM community_anonymous_notices WHERE telegram_user_id=?",
     "DELETE FROM community_rules_ack WHERE telegram_user_id=?",
-    "DELETE FROM user_bans WHERE telegram_user_id=?",
-    "DELETE FROM moderation_report_weights WHERE telegram_user_id=?",
     "DELETE FROM community_replies WHERE telegram_user_id=?",
     "DELETE FROM community_items WHERE telegram_user_id=?",
     "DELETE FROM student_post_replies WHERE telegram_user_id=?",
