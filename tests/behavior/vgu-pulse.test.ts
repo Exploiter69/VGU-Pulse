@@ -81,7 +81,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
   it("applies every migration to a fresh D1 database",async()=>{
     const env=await worker.getEnv() as {DB:D1Database};
     const rows=await env.DB.prepare("SELECT name FROM d1_migrations ORDER BY id").all<{name:string}>();
-    expect(rows.results.map(x=>x.name)).toEqual(expect.arrayContaining(["0001_initial.sql","0009_community_network.sql","0010_gate1_hardening.sql","0011_gate2_safety.sql","0012_gate3_foundations.sql","0013_gate3_qa.sql","0014_gate3_reliability.sql","0015_gate4_features.sql","0016_gate4_completion.sql","0017_gate3_academic_mapping.sql","0018_gate3_fts_backfill.sql"]));
+    expect(rows.results.map(x=>x.name)).toEqual(expect.arrayContaining(["0001_initial.sql","0009_community_network.sql","0010_gate1_hardening.sql","0011_gate2_safety.sql","0012_gate3_foundations.sql","0013_gate3_qa.sql","0014_gate3_reliability.sql","0015_gate4_features.sql","0016_gate4_completion.sql","0017_gate3_academic_mapping.sql","0018_gate3_fts_backfill.sql","0019_gate4_review_uniqueness.sql"]));
   });
 
   it("reproduces the replies contract and hides non-published parents",async()=>{
@@ -369,6 +369,16 @@ describe("VGU-Pulse real D1 behavior",()=>{
     expect(forbidden.status).toBe(403);
     const author=await request("/api/community-v2/solve",{id:2002,first_name:"Author"},{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({item_id:1,reply_id:1})});
     expect(author.status).toBe(200);
+  });
+
+  it("upserts one teacher review per student/course instead of creating duplicates",async()=>{
+    const user={id:1001,first_name:"Viewer"};
+    const payload={teacher:"Professor Z",elective:"Networks",teaching:5,workload:2,support:4,comment:"first"};
+    expect((await request("/api/v4/teacher-review",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)})).status).toBe(201);
+    expect((await request("/api/v4/teacher-review",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...payload,teaching:4,comment:"updated"}))).status).toBe(200);
+    const env=await worker.getEnv() as {DB:D1Database};
+    const rows=await env.DB.prepare("SELECT teaching,comment,status FROM teacher_reviews WHERE telegram_user_id='1001' AND teacher='Professor Z' AND elective='Networks'").all<{teaching:number;comment:string;status:string}>();
+    expect(rows.results).toEqual([{teaching:4,comment:"updated",status:"pending"}]);
   });
 
   it("covers Gate 4 student feature flows",async()=>{
