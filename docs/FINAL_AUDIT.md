@@ -93,20 +93,29 @@ The notification sweep was specifically reviewed against current Cloudflare free
 
 Current VGU public surfaces were checked independently of the repository. The official resource hub currently exposes academic calendars, examination rules, student ERP, exam forms, backlog forms, re-registration, scholarship, fees, Tele Directory and student-club resources. Current VGU pages also expose events, hostels, clubs, placement information, welfare/Proctor information and the Controller of Examinations.
 
-## Production validation boundary
+## Hardening verification boundary
 
-Final production validation completed on 2026-10-07:
-- local Git checkout synced to the latest `main`
-- TypeScript check passed
-- 32/32 tests passed
-- remote D1 migrations: no migrations pending
-- production Worker deployed successfully
-- production version: `eda30493-a6ad-40c2-882a-19806ceb80cd`
-- production health: HTTP 200
-- D1 dependency: `true`
-- Signal dependency: `true`
+The repository hardening implementation is present on `main` at commit `ba0e44a`.
 
-A real Telegram mobile smoke test remains the only device-specific validation that cannot be reproduced by GitHub/static checks; the source includes the Telegram-safe navigation, viewport, safe-area, haptics, fullscreen, sharing and touch-target safeguards.
+Verified in the repository/local real-D1 harness:
+- `npm run check`: passed
+- `npm test`: 66/66 passed
+- `npx vitest run tests/behavior`: 24/24 passed
+- fresh-D1 migration chain through 0020: covered
+- existing-0009 compatibility path: covered
+- working tree after local verification: clean
+- no migration 0001-0009 changes
+- no remote D1 migration is part of the hardening workflow
+- deployment workflow is test-gated and intentionally migration-free
+
+Not claimed here:
+- a real Telegram Desktop/mobile device smoke test
+- real Telegram API 403/429 delivery behavior
+- real Telegram channel posting
+- representative production V1-to-V2 data migration review
+- production deployment from this hardening verification
+
+Those require external credentials, a real Telegram client, or production data access and are therefore outside the repository-only hardening proof. No synthetic result is recorded as if it were a real-device or production result.
 
 ## Architecture freeze decision
 
