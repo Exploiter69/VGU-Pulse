@@ -211,6 +211,13 @@ describe("VGU-Pulse real D1 behavior",()=>{
     const viewer={id:1001,first_name:"Viewer"};
     const vote=await request("/api/community-v2/reply-vote",viewer,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({reply_id:1,vote:1})});
     expect(vote.status).toBe(200);
+    const env=await worker.getEnv() as {DB:D1Database};
+    const awarded=await env.DB.prepare("SELECT points FROM community_reputation WHERE telegram_user_id='2002'").first<{points:number}>();
+    expect(Number(awarded?.points)).toBe(1);
+    const flip=await request("/api/community-v2/reply-vote",viewer,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({reply_id:1,vote:-1})});
+    expect(flip.status).toBe(200);
+    const reversed=await env.DB.prepare("SELECT points FROM community_reputation WHERE telegram_user_id='2002'").first<{points:number}>();
+    expect(Number(reversed?.points)).toBe(0);
     const forbidden=await request("/api/community-v2/solve",viewer,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({item_id:1,reply_id:1})});
     expect(forbidden.status).toBe(403);
     const author=await request("/api/community-v2/solve",{id:2002,first_name:"Author"},{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({item_id:1,reply_id:1})});
