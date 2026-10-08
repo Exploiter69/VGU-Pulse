@@ -310,7 +310,7 @@ async function reply(db: D1Database, user: CommunityUser, itemId: number, text: 
 
 async function vote(db: D1Database,userId:number,itemId:number,value:number): Promise<void> {
   if (value!==1 && value!==-1) throw new Error("invalid_vote");
-  const item=await db.prepare("SELECT telegram_user_id FROM community_items WHERE id=? AND status='published'").bind(itemId).first<{telegram_user_id:string}>();
+  const item=await db.prepare("SELECT telegram_user_id,anonymous FROM community_items WHERE id=? AND status='published'").bind(itemId).first<{telegram_user_id:string}>();
   if(!item) throw new Error("item_not_found");
   const existing=await db.prepare("SELECT vote FROM community_votes WHERE item_id=? AND telegram_user_id=?").bind(itemId,String(userId)).first<{vote:number}>();
   if(existing?.vote===value){
@@ -583,7 +583,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       const id=Number(input.item_id); if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
       const owner=await env.DB.prepare("SELECT telegram_user_id FROM community_items WHERE id=?").bind(id).first<{telegram_user_id:string}>();
       if(!owner || owner.telegram_user_id===String(user.id)) return json({ok:false,error:"invalid_target"},400);
-      await env.DB.prepare("INSERT OR IGNORE INTO student_profile_blocks(blocker_telegram_user_id,blocked_telegram_user_id,via_anonymous,source_item_id) VALUES(?,?,?,?)").bind(String(user.id),owner.telegram_user_id,1,id).run();
+      await env.DB.prepare("INSERT OR IGNORE INTO student_profile_blocks(blocker_telegram_user_id,blocked_telegram_user_id,via_anonymous,source_item_id) VALUES(?,?,?,?)").bind(String(user.id),owner.telegram_user_id,Number(owner.anonymous),Number(owner.anonymous)?id:null).run();
       return json({ok:true});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/preferences"){
