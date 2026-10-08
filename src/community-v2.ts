@@ -1,4 +1,5 @@
 import { SUPPORT_RESOURCES } from "./support";
+import { clamp, json, readJson as body, safePositiveId } from "./http";
 type CommunityEnv = { DB: D1Database; ANON_ALIAS_SECRET?: string; ADMIN_IDS?: string };
 
 type CommunityUser = {
@@ -26,34 +27,6 @@ const LIMITS: Record<string, number> = {
   community: 60,
   reason: 80,
 };
-
-function clamp(value: unknown, max: number): string {
-  return typeof value === "string" ? value.trim().slice(0, max) : "";
-}
-
-function communitySlug(value: unknown): string {
-  return clamp(value, LIMITS.community).toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, LIMITS.community);
-}
-
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-      "x-content-type-options": "nosniff",
-    },
-  });
-}
-
-async function body<T>(request: Request): Promise<T | null> {
-  const length=Number(request.headers.get("content-length")??"0");
-  if(Number.isFinite(length)&&length>32768)return null;
-  try {
-    const value = await request.json() as T;
-    return value && typeof value === "object" ? value : null;
-  } catch { return null; }
-}
 
 function unsafeText(value: string): { threat: boolean; credential: boolean; support: boolean } {
   const s = value.toLowerCase();
@@ -445,7 +418,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       return json({ok:true,reputation:await reputation(env.DB,user.id)});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/replies"){
-      const id=Number(url.searchParams.get("item_id"));
+      const id=safePositiveId(url.searchParams.get("item_id"));
       if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
       const viewerId=String(user.id);
       const item=await env.DB.prepare(`SELECT i.telegram_user_id
