@@ -473,7 +473,9 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/context"){
       const p=await profile(env.DB,user.id);
-      const community=p ? p.branch.toLowerCase().replace(/[^a-z0-9]+/g,"-") + "-year-" + p.year : "campus";
+      const candidate=p ? p.branch.toLowerCase().replace(/[^a-z0-9]+/g,"-") + "-year-" + p.year : "campus";
+      const approved=await env.DB.prepare("SELECT slug FROM communities WHERE slug=? AND approved=1").bind(candidate).first<{slug:string}>();
+      const community=approved?.slug || "campus";
       return json({ok:true,profile:p,community});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/feed"){
