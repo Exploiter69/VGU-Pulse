@@ -2,20 +2,21 @@
 
 Date: 2026-10-08
 Repository: `Exploiter69/VGU-Pulse`
-Baseline: `ba0e44a`
+Current verification commit: `c5b90afb167f785fbee0be11fda147fea6c54a10`
 
 ## Repository-verifiable completion
 
 The remediation implementation for Gates 0–4 is present on `main`. The current real-D1 behavior suite covers the implemented hardening paths and the local verification reported:
 
 - `npm run check`: PASS
-- `npm test`: 66/66 PASS
-- `npx vitest run tests/behavior`: 24/24 PASS
+- `npm test`: 68/68 PASS
+- `npx vitest run tests/behavior`: 26/26 PASS
 - Fresh D1: full migration chain through 0020 is exercised.
 - Existing 0009 compatibility: exercised before applying the appended hardening migrations.
 - Working tree: clean after local verification.
 - Migrations 0001–0009 remain untouched.
 - No production D1 migration is performed by the deployment workflow.
+- The push-triggered deploy workflow attempted on the verification commits but failed authentication because the repository currently has no Cloudflare GitHub Actions secrets; therefore no production deployment was claimed or recorded.
 
 ## Implemented hardening
 
