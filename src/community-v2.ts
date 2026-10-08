@@ -220,12 +220,12 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
     args.push(p.branch);
   }
   const order = sort === "trending"
-    ? "(CAST((SELECT COUNT(*) FROM community_votes vv WHERE vv.item_id=i.id AND vv.vote=1) AS REAL) + 2.0*(SELECT COUNT(*) FROM community_replies rr WHERE rr.item_id=i.id AND rr.status='published') + MAX(0.0, 48.0 - (julianday('now')-julianday(i.created_at))*2.0)) DESC"
+    ? "((CAST((SELECT COUNT(*) FROM community_votes vv WHERE vv.item_id=i.id AND vv.vote=1) AS REAL) - CAST((SELECT COUNT(*) FROM community_votes vv WHERE vv.item_id=i.id AND vv.vote=-1) AS REAL) + 2.0*(SELECT COUNT(*) FROM community_replies rr WHERE rr.item_id=i.id AND rr.status='published') + 1.0) / pow((MAX(0.0,(julianday('now')-julianday(i.created_at))*24.0) + 2.0),1.5)) DESC"
     : sort === "active"
       ? "(SELECT COUNT(*) FROM community_replies rr WHERE rr.item_id=i.id AND rr.status='published') DESC, i.created_at DESC"
       : "i.created_at DESC";
   const sql = `SELECT i.id,i.kind,i.title,i.body,i.community_slug,i.audience_program,i.audience_branch,i.audience_year,
-      i.anonymous,i.created_at,i.updated_at,i.telegram_user_id,
+      i.anonymous,i.created_at,i.updated_at,i.telegram_user_id,sp.display_name,
       CASE WHEN i.telegram_user_id=? THEN 1 ELSE 0 END AS mine,
       (SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=1) AS upvotes,
       (SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=-1) AS downvotes,
@@ -235,17 +235,16 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
            WHEN EXISTS(SELECT 1 FROM community_votes mv WHERE mv.item_id=i.id AND mv.telegram_user_id=? AND mv.vote=-1) THEN -1 ELSE 0 END AS my_vote,
       CASE WHEN EXISTS(SELECT 1 FROM community_follows f WHERE f.item_id=i.id AND f.telegram_user_id=?) THEN 1 ELSE 0 END AS following,
       CASE WHEN EXISTS(SELECT 1 FROM community_saves s WHERE s.item_id=i.id AND s.telegram_user_id=?) THEN 1 ELSE 0 END AS saved
-      FROM community_items i WHERE ${where.join(" AND ")}
+      FROM community_items i LEFT JOIN student_profiles sp ON sp.telegram_user_id=i.telegram_user_id WHERE ${where.join(" AND ")}
         AND NOT EXISTS (SELECT 1 FROM student_profile_blocks b WHERE b.blocker_telegram_user_id=? AND b.blocked_telegram_user_id=i.telegram_user_id)
       ORDER BY ${order} LIMIT ? OFFSET ?`;
   const result = await db.prepare(sql).bind(String(viewerId),String(viewerId),String(viewerId),String(viewerId),String(viewerId),...args,String(viewerId),limit,offset).all<Record<string, unknown>>();
   const rows = result.results ?? [];
-  return Promise.all(rows.map(async row => {
-    const owner = await db.prepare("SELECT display_name FROM student_profiles WHERE telegram_user_id=?").bind(String((row as any).telegram_user_id ?? "")).first<{display_name:string}>();
-    const author = Number(row.anonymous) ? "Anonymous student" : (owner?.display_name || "VGU student");
-    const { telegram_user_id: _private, ...publicRow } = row as Record<string, unknown>;
+  return rows.map(row => {
+    const author = Number(row.anonymous) ? "Anonymous student" : ((row as any).display_name || "VGU student");
+    const { telegram_user_id: _private, display_name: _name, ...publicRow } = row as Record<string, unknown>;
     return { ...publicRow, mine: Boolean(row.mine), author, trust: "student-community" };
-  }));
+  });
 }
 
 async function reply(db: D1Database, user: CommunityUser, itemId: number, text: string, anonymous: boolean): Promise<Record<string, unknown>> {
@@ -289,7 +288,8 @@ async function vote(db: D1Database,userId:number,itemId:number,value:number): Pr
 async function poll(db:D1Database,user:CommunityUser,input:Record<string,unknown>):Promise<Record<string,unknown>>{
   const title=clamp(input.title,180), text=clamp(input.body,800);
   const raw=Array.isArray(input.options)?input.options.map(x=>clamp(x,100)).filter(Boolean).slice(0,6):[];
-  if(title.length<4||raw.length<2||raw.length>6||unsafeText(title+" "+text)) throw new Error("invalid_poll");
+  if(title.length<4||raw.length<2||raw.length>6) throw new Error("invalid_poll");
+  requireSafeContent(title+" "+text);
   if(await rateLimited(db,user.id,"community_items",1,20)) throw new Error("rate_limited");
   const item=await createItem(db,user,{...input,kind:"discussion",title,body:text});
   const statements=[db.prepare("DELETE FROM community_poll_options WHERE item_id=?").bind(item.id)];
