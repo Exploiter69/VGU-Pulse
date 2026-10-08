@@ -207,9 +207,12 @@
           feed.insertAdjacentHTML("beforeend",'<div id="cv2-load-more-wrap" style="padding:14px 0;text-align:center"><button type="button" class="cv2-tool" id="cv2-load-more">Load more discussions</button></div>');
           $("#cv2-load-more").onclick=async()=>{const b=$("#cv2-load-more");b.disabled=true;b.textContent="Loading…";try{await loadFeed({append:true})}catch{b.disabled=false;b.textContent="Try again"}};
         }
-      }catch{
-        if(!append){feed.innerHTML='<div class="cv2-empty">Community could not be loaded. <button class="cv2-tool" id="cv2-feed-retry" type="button">Retry</button></div>';$("#cv2-feed-retry").onclick=loadFeed}
-        else throw new Error("feed_failed");
+      }catch(error){
+        if(!append){
+          const message=error?.message==="reopen_telegram"?"Reopen Pulse from Telegram to continue.":"Community could not be loaded.";
+          feed.innerHTML='<div class="cv2-empty">'+esc(message)+(error?.message==="reopen_telegram"?'':' <button class="cv2-tool" id="cv2-feed-retry" type="button">Retry</button>')+'</div>';
+          if(error?.message!=="reopen_telegram") $("#cv2-feed-retry").onclick=loadFeed;
+        } else throw error;
       }
     }
     async function loadCommunities(){
@@ -329,7 +332,8 @@
           const box=item.querySelector(".cv2-poll-options");
           if(!box.hidden){box.hidden=true;return}
           const d=await api("/api/community-v2/poll?item_id="+id);
-          box.innerHTML=(d.options||[]).map(o=>`<button type="button" class="cv2-poll-option" data-option-id="${o.id}">${esc(o.label)} <span class="cv2-note">· ${o.votes} votes</span></button>`).join("")||'<span class="cv2-note">Poll unavailable.</span>';
+          const selectedId=Number(d.selected_option_id)||0;
+          box.innerHTML=(d.options||[]).map(o=>`<button type="button" class="cv2-poll-option ${Number(o.id)===selectedId?'active':''}" data-option-id="${o.id}" aria-pressed="${Number(o.id)===selectedId?'true':'false'}">${esc(o.label)} ${Number(o.id)===selectedId?'<strong> · Your choice</strong>':''} <span class="cv2-note">· ${o.votes} votes</span></button>`).join("")||'<span class="cv2-note">Poll unavailable.</span>';
           box.querySelectorAll("[data-option-id]").forEach(option=>option.onclick=async()=>{await api("/api/community-v2/poll-vote",{method:"POST",body:JSON.stringify({item_id:id,option_id:Number(option.dataset.optionId)})});box.hidden=true;await loadFeed()});
           box.hidden=false;return;
         }
