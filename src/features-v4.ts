@@ -52,6 +52,12 @@ export async function handleFeaturesV4(request:Request,env:Env,user:User):Promis
    const r=await env.DB.prepare("INSERT INTO resources(telegram_user_id,file_id,file_unique_id,name,mime_type,size_bytes,subject,semester,resource_type,status) VALUES(?,?,?,?,?,?,?,?,?,'pending')").bind(String(user.id),fileId,text(b.file_unique_id,256),name,text(b.mime_type,100),Number.isSafeInteger(Number(b.size_bytes))?Number(b.size_bytes):null,text(b.subject,100),text(b.semester,30),type).run();
    return json({ok:true,id:r.meta.last_row_id,status:"pending"},201);
   }
+  if(request.method==="POST"&&u.pathname==="/api/v4/resource/report"){
+   const b=await body<Record<string,unknown>>(request);if(!b)return json({ok:false,error:"invalid_json"},400);const id=safeId(b.resource_id);if(!id)return json({ok:false,error:"invalid_resource"},400);
+   const row=await env.DB.prepare("SELECT id FROM resources WHERE id=? AND status='published'").bind(id).first();if(!row)return json({ok:false,error:"not_found"},404);
+   const r=await env.DB.prepare("INSERT OR IGNORE INTO resource_reports(resource_id,telegram_user_id,reason) VALUES(?,?,?)").bind(id,String(user.id),text(b.reason,80)||"other").run();if(Number(r.meta.changes??0))await env.DB.prepare("UPDATE resources SET status='review' WHERE id=? AND (SELECT COUNT(*) FROM resource_reports WHERE resource_id=?)>=3").bind(id,id).run();
+   return json({ok:true});
+  }
   if(request.method==="GET"&&u.pathname==="/api/v4/resources"){
    const rows=await env.DB.prepare("SELECT id,name,mime_type,size_bytes,subject,semester,resource_type,created_at FROM resources WHERE status='published' ORDER BY created_at DESC LIMIT 50").all();return json({ok:true,items:rows.results??[],trust:"student-reported"});
   }
@@ -63,6 +69,10 @@ export async function handleFeaturesV4(request:Request,env:Env,user:User):Promis
   }
   if(request.method==="GET"&&u.pathname==="/api/v4/events"){
    const rows=await env.DB.prepare("SELECT id,title,description,starts_at,ends_at,location,community_slug,official FROM campus_events WHERE status='published' AND starts_at>=CURRENT_TIMESTAMP ORDER BY starts_at LIMIT 50").all();return json({ok:true,items:rows.results??[]});
+  }
+  if(request.method==="POST"&&u.pathname==="/api/v4/event/reminder"){
+   const b=await body<Record<string,unknown>>(request);if(!b)return json({ok:false,error:"invalid_json"},400);const id=safeId(b.event_id);if(!id)return json({ok:false,error:"invalid_event"},400);
+   await env.DB.prepare("INSERT INTO event_reminders(event_id,telegram_user_id,enabled) VALUES(?,?,?) ON CONFLICT(event_id,telegram_user_id) DO UPDATE SET enabled=excluded.enabled").bind(id,String(user.id),b.enabled===false?0:1).run();return json({ok:true,enabled:b.enabled!==false});
   }
   if(request.method==="POST"&&u.pathname==="/api/v4/event/rsvp"){
    const b=await body<Record<string,unknown>>(request);if(!b)return json({ok:false,error:"invalid_json"},400);const id=safeId(b.event_id);if(!id)return json({ok:false,error:"invalid_event"},400);
@@ -81,6 +91,9 @@ export async function handleFeaturesV4(request:Request,env:Env,user:User):Promis
    const b=await body<Record<string,unknown>>(request);if(!b)return json({ok:false,error:"invalid_json"},400);const id=safeId(b.id);if(!id)return json({ok:false,error:"invalid_listing"},400);
    const row=await env.DB.prepare("SELECT telegram_user_id FROM expiring_listings WHERE id=?").bind(id).first<{telegram_user_id:string}>();if(!row)return json({ok:false,error:"not_found"},404);if(row.telegram_user_id!==String(user.id)&&!admin(env,user.id))return json({ok:false,error:"forbidden"},403);
    await env.DB.prepare("UPDATE expiring_listings SET status='resolved',resolved_at=CURRENT_TIMESTAMP WHERE id=?").bind(id).run();return json({ok:true,resolved:true});
+  }
+  if(request.method==="GET"&&u.pathname==="/api/v4/growth/top"){
+   const rows=await env.DB.prepare("SELECT id,title,upvotes,replies,created_at FROM community_items WHERE status='published' ORDER BY (upvotes+2*replies-downvotes) DESC,created_at DESC LIMIT 5").all();return json({ok:true,items:rows.results??[],share_prefix:"vgu-pulse"});
   }
   if(request.method==="POST"&&u.pathname==="/api/v4/teacher-review"){
    const b=await body<Record<string,unknown>>(request);if(!b)return json({ok:false,error:"invalid_json"},400);const teacher=text(b.teacher,120),elective=text(b.elective,120);const vals=[Number(b.teaching),Number(b.workload),Number(b.support)];
