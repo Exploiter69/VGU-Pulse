@@ -234,9 +234,10 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
   const community = clamp(params.get("community"), LIMITS.community);
   const search = clamp(params.get("q"), 120);
   const limitValue = Number(params.get("limit") || 40);
-  const offsetValue = Number(params.get("offset") || 0);
   const limit = Number.isInteger(limitValue) && limitValue >= 1 && limitValue <= 40 ? limitValue : 40;
-  const offset = Number.isInteger(offsetValue) && offsetValue >= 0 && offsetValue <= 10000 ? offsetValue : 0;
+  const cursorRaw=params.get("cursor");
+  let cursor:{created_at:string;id:number}|null=null;
+  if(cursorRaw){try{const decoded=JSON.parse(atob(cursorRaw)); if(typeof decoded.created_at==="string"&&Number.isSafeInteger(decoded.id)&&decoded.id>0)cursor=decoded;}catch{throw new Error("invalid_cursor");}}
   const p = await profile(db, viewerId);
   const where = ["i.status='published'"];
   const args: unknown[] = [];
@@ -248,6 +249,7 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
     args.push(String(viewerId));
   }
   const audience = params.get("personalized") === "1";
+  if (sort==="new" && cursor) { where.push("(i.created_at < ? OR (i.created_at = ? AND i.id < ?))"); args.push(cursor.created_at,cursor.created_at,cursor.id); }
   if (audience && p) {
     where.push("(i.audience_branch IS NULL OR i.audience_branch=? OR i.community_slug='campus')");
     args.push(p.branch);
@@ -271,8 +273,8 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
       FROM community_items i LEFT JOIN student_profiles sp ON sp.telegram_user_id=i.telegram_user_id WHERE ${where.join(" AND ")}
         AND NOT EXISTS (SELECT 1 FROM student_profile_blocks b WHERE b.blocker_telegram_user_id=? AND b.blocked_telegram_user_id=i.telegram_user_id)
       ORDER BY ${order} LIMIT ? OFFSET ?`;
-  const result = await db.prepare(sql).bind(String(viewerId),String(viewerId),String(viewerId),String(viewerId),String(viewerId),...args,String(viewerId),limit,offset).all<Record<string, unknown>>();
-  const rows = result.results ?? [];
+  const result = await db.prepare(sql).bind(String(viewerId),String(viewerId),String(viewerId),String(viewerId),String(viewerId),...args,String(viewerId),limit+1).all<Record<string, unknown>>();
+  const rows = (result.results ?? []).slice(0,limit);
   return Promise.all(rows.map(async row => {
     const author = Number(row.anonymous) ? await anonymousAlias(anonSecret,Number(row.telegram_user_id),Number(row.id)) : ((row as any).display_name || "VGU student");
     const { telegram_user_id: _private, display_name: _name, ...publicRow } = row as Record<string, unknown>;
@@ -397,7 +399,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       return json({ok:true,profile:p,community});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/feed"){
-      const items=await listItems(env.DB,user.id,url.searchParams,env.ANON_ALIAS_SECRET);const requestedLimit=Number(url.searchParams.get("limit")||40);const nextOffset=items.length===Math.min(40,Math.max(1,Number.isFinite(requestedLimit)?requestedLimit:40))?Number(url.searchParams.get("offset")||0)+items.length:null;return json({ok:true,items,next_offset:nextOffset});
+      const items=await listItems(env.DB,user.id,url.searchParams,env.ANON_ALIAS_SECRET); const last=items.at(-1) as Record<string,unknown>|undefined; const requestedLimit=Math.min(40,Math.max(1,Number(url.searchParams.get("limit")||40))); const nextCursor=items.length===requestedLimit&&last?btoa(JSON.stringify({created_at:last.created_at,id:last.id})):null; return json({ok:true,items,next_cursor:nextCursor});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/reputation"){
       return json({ok:true,reputation:await reputation(env.DB,user.id)});
