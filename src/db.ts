@@ -337,6 +337,41 @@ export async function listStudentPosts(
   }));
 }
 
+export async function getStudentPostById(db:D1Database,postId:number,userId?:number):Promise<StudentPost|null>{
+  const viewer=userId===undefined?null:String(userId);
+  const row=await db.prepare(
+    `SELECT p.id,p.category,p.title,p.body,
+      COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name,'')),''),'VGU student') AS author_name,
+      p.created_at,p.report_count,
+      (SELECT COUNT(*) FROM student_post_replies r WHERE r.post_id=p.id AND r.status='published' AND r.report_count<3) AS reply_count,
+      (SELECT COUNT(*) FROM student_post_votes v WHERE v.post_id=p.id AND v.vote=1) AS upvotes,
+      (SELECT COUNT(*) FROM student_post_votes v WHERE v.post_id=p.id AND v.vote=-1) AS downvotes,
+      (SELECT COALESCE(v.vote,0) FROM student_post_votes v WHERE v.post_id=p.id AND v.telegram_user_id=?) AS viewer_vote,
+      CASE WHEN ? IS NOT NULL AND p.telegram_user_id=? THEN 1 ELSE 0 END AS owned
+     FROM student_posts p JOIN users u ON u.telegram_user_id=p.telegram_user_id
+     WHERE p.id=? AND p.status='published' AND p.report_count<3`
+  ).bind(viewer,viewer,viewer,postId).first<StudentPost>();
+  if(!row)return null;
+  return {...row,report_count:Number(row.report_count),reply_count:Number(row.reply_count??0),upvotes:Number(row.upvotes??0),downvotes:Number(row.downvotes??0),score:Number(row.upvotes??0)-Number(row.downvotes??0),viewer_vote:Number(row.viewer_vote??0) as -1|0|1,...(userId!==undefined?{owned:Boolean(row.owned)}:{})};
+}
+
+export async function getStudentReplyById(db:D1Database,replyId:number,userId?:number):Promise<StudentReply|null>{
+  const viewer=userId===undefined?null:String(userId);
+  const row=await db.prepare(
+    `SELECT r.id,r.post_id,r.body,
+      COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name,'')),''),'VGU student') AS author_name,
+      r.created_at,r.report_count,
+      (SELECT COUNT(*) FROM student_post_reply_votes v WHERE v.reply_id=r.id AND v.vote=1) AS upvotes,
+      (SELECT COUNT(*) FROM student_post_reply_votes v WHERE v.reply_id=r.id AND v.vote=-1) AS downvotes,
+      (SELECT COALESCE(v.vote,0) FROM student_post_reply_votes v WHERE v.reply_id=r.id AND v.telegram_user_id=?) AS viewer_vote,
+      CASE WHEN ? IS NOT NULL AND r.telegram_user_id=? THEN 1 ELSE 0 END AS owned
+     FROM student_post_replies r LEFT JOIN users u ON u.telegram_user_id=r.telegram_user_id
+     WHERE r.id=? AND r.status='published' AND r.report_count<3`
+  ).bind(viewer,viewer,viewer,replyId).first<StudentReply>();
+  if(!row)return null;
+  return {...row,report_count:Number(row.report_count),upvotes:Number(row.upvotes??0),downvotes:Number(row.downvotes??0),score:Number(row.upvotes??0)-Number(row.downvotes??0),viewer_vote:Number(row.viewer_vote??0) as -1|0|1,...(userId!==undefined?{owned:Boolean(row.owned)}:{})};
+}
+
 export async function voteStudentPost(db: D1Database, postId: number, userId: number, vote: -1 | 1): Promise<void> {
   const post = await db.prepare(
     `SELECT id FROM student_posts WHERE id = ? AND status = 'published' AND report_count < 3`,
