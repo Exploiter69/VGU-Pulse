@@ -185,6 +185,7 @@ async function getItem(db: D1Database, id: number, viewerId?: number, anonSecret
       (SELECT COUNT(*) FROM community_poll_options po WHERE po.item_id=i.id) AS poll_options,
       CASE WHEN EXISTS(SELECT 1 FROM community_follows f WHERE f.item_id=i.id AND f.telegram_user_id=?) THEN 1 ELSE 0 END AS following,
       CASE WHEN EXISTS(SELECT 1 FROM community_saves s WHERE s.item_id=i.id AND s.telegram_user_id=?) THEN 1 ELSE 0 END AS saved,
+      CASE WHEN EXISTS(SELECT 1 FROM community_item_reads rd WHERE rd.item_id=i.id AND rd.telegram_user_id=? AND rd.last_read_at >= i.created_at) THEN 0 ELSE 1 END AS unread,
       CASE WHEN i.telegram_user_id=? THEN 1 ELSE 0 END AS mine,
       CASE WHEN EXISTS(SELECT 1 FROM community_votes mv WHERE mv.item_id=i.id AND mv.telegram_user_id=? AND mv.vote=1) THEN 1
            WHEN EXISTS(SELECT 1 FROM community_votes mv WHERE mv.item_id=i.id AND mv.telegram_user_id=? AND mv.vote=-1) THEN -1 ELSE 0 END AS my_vote
@@ -214,6 +215,9 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
   if(cursorRaw){try{const decoded=JSON.parse(atob(cursorRaw)); if(typeof decoded.created_at==="string"&&Number.isSafeInteger(decoded.id)&&decoded.id>0)cursor=decoded;}catch{throw new Error("invalid_cursor");}}
   const p = await profile(db, viewerId);
   const where = ["i.status='published'"];
+  const solvedFilter=params.get("solved");
+  if(solvedFilter==="solved")where.push("i.solved=1");
+  if(solvedFilter==="unanswered")where.push("i.solved=0 AND NOT EXISTS (SELECT 1 FROM community_replies ur WHERE ur.item_id=i.id AND ur.status='published')");
   const args: unknown[] = [];
   if (kind && KINDS.has(kind)) { where.push("i.kind=?"); args.push(kind); }
   if (community) { where.push("i.community_slug=?"); args.push(community); }
@@ -247,7 +251,7 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
       FROM community_items i LEFT JOIN student_profiles sp ON sp.telegram_user_id=i.telegram_user_id WHERE ${where.join(" AND ")}
         AND NOT EXISTS (SELECT 1 FROM student_profile_blocks b WHERE b.blocker_telegram_user_id=? AND b.blocked_telegram_user_id=i.telegram_user_id)
       ORDER BY ${order} LIMIT ?`;
-  const result = await db.prepare(sql).bind(String(viewerId),String(viewerId),String(viewerId),String(viewerId),String(viewerId),...args,String(viewerId),limit+1).all<Record<string, unknown>>();
+  const result = await db.prepare(sql).bind(String(viewerId),String(viewerId),String(viewerId),String(viewerId),String(viewerId),String(viewerId),...args,String(viewerId),limit+1).all<Record<string, unknown>>();
   const rows = (result.results ?? []).slice(0,limit);
   return Promise.all(rows.map(async row => {
     const author = Number(row.anonymous) ? await anonymousAlias(anonSecret,Number(row.telegram_user_id),Number(row.id)) : ((row as any).display_name || "VGU student");
