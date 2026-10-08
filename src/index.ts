@@ -32,7 +32,7 @@ import {
   validateStudentReplyInput,
   voteInPoll,
 } from "./db";
-import { sendMessage } from "./telegram-bot";
+import { sendMessage, telegramApi } from "./telegram-bot";
 import { validateInitData } from "./telegram";
 import { handleCommunityV2 } from "./community-v2";
 import { handleFeaturesV4 } from "./features-v4";
@@ -184,8 +184,8 @@ export default {
       for(const r of reminderRows.results??[]){
         try{
           const message="Reminder: "+r.title+" starts at "+r.starts_at+(r.location?" · "+r.location:"");
-          const sent=await sendMessage(getBotToken(env),Number(r.telegram_user_id),message,env.TELEGRAM_WEBAPP_URL);
-          if(sent)reminderUpdates.push(env.DB.prepare("UPDATE event_reminders SET sent_at=CURRENT_TIMESTAMP WHERE event_id=? AND telegram_user_id=?").bind(r.event_id,r.telegram_user_id));
+          const response=await telegramApi(getBotToken(env),"sendMessage",{chat_id:Number(r.telegram_user_id),text:message});
+          if(response.ok)reminderUpdates.push(env.DB.prepare("UPDATE event_reminders SET sent_at=CURRENT_TIMESTAMP WHERE event_id=? AND telegram_user_id=?").bind(r.event_id,r.telegram_user_id));
         }catch{}
       }
       if(reminderUpdates.length)await env.DB.batch(reminderUpdates);
