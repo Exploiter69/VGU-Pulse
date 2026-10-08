@@ -109,7 +109,13 @@ async function createItem(db: D1Database, user: CommunityUser, input: Record<str
   if (await rateLimited(db, user.id, "community_items", 1, 20)) throw new Error("rate_limited");
 
   const p = await profile(db, user.id);
+  const rulesAck=await db.prepare("SELECT 1 FROM community_rules_ack WHERE telegram_user_id=?").bind(String(user.id)).first();
+  if(!rulesAck)throw new Error("rules_required");
   const anonymous = kind === "confession" || Boolean(input.anonymous);
+  if(anonymous){
+    const notice=await db.prepare("SELECT 1 FROM community_anonymous_notices WHERE telegram_user_id=?").bind(String(user.id)).first();
+    if(!notice)throw new Error("anonymous_notice_required");
+  }
   const community = communitySlug(input.community_slug) || "campus";
   const communityRow=await db.prepare("SELECT slug FROM communities WHERE slug=? AND approved=1").bind(community).first<{slug:string}>();
   if(!communityRow) throw new Error("invalid_community");
