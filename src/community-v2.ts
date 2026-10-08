@@ -413,7 +413,9 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
         await env.DB.prepare("INSERT INTO community_reply_votes(reply_id,telegram_user_id,vote) VALUES(?,?,?) ON CONFLICT(reply_id,telegram_user_id) DO UPDATE SET vote=excluded.vote,created_at=CURRENT_TIMESTAMP").bind(replyId,String(user.id),value).run();
         if(value===1) await award(env.DB,Number(replyRow.telegram_user_id),1,"helpful_answer",ref);
       }
-      return json({ok:true});   if(request.method==="POST" && url.pathname==="/api/community-v2/read"){
+      return json({ok:true});
+    }
+    if(request.method==="POST" && url.pathname==="/api/community-v2/read"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
       const itemId=Number(input.item_id); if(!Number.isSafeInteger(itemId)||itemId<1)return json({ok:false,error:"invalid_item"},400);
       await env.DB.prepare("INSERT INTO community_item_reads(item_id,telegram_user_id,last_read_at) VALUES(?,?,CURRENT_TIMESTAMP) ON CONFLICT(item_id,telegram_user_id) DO UPDATE SET last_read_at=CURRENT_TIMESTAMP").bind(itemId,String(user.id)).run();
