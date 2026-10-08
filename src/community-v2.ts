@@ -311,9 +311,9 @@ async function poll(db:D1Database,user:CommunityUser,input:Record<string,unknown
 }
 
 async function pollVote(db:D1Database,userId:number,itemId:number,optionId:number):Promise<void>{
-  const poll=await db.prepare("SELECT id,closes_at FROM community_items WHERE id=? AND status='published'").bind(itemId).first<{id:number;closes_at:string|null}>();
+  const poll=await db.prepare("SELECT id,poll_status,poll_closes_at FROM community_items WHERE id=? AND status='published'").bind(itemId).first<{id:number;poll_status:"open"|"closed";poll_closes_at:string|null}>();
   if(!poll) throw new Error("item_not_found");
-  if(poll.closes_at && Date.parse(poll.closes_at)<=Date.now()) throw new Error("poll_closed");
+  if(poll.poll_status!=="open" || (poll.poll_closes_at && Date.parse(poll.poll_closes_at)<=Date.now())) throw new Error("poll_closed");
   const option=await db.prepare("SELECT id FROM community_poll_options WHERE id=? AND item_id=?").bind(optionId,itemId).first();
   if(!option) throw new Error("invalid_option");
   await db.prepare("INSERT INTO community_poll_votes(item_id,option_id,telegram_user_id) VALUES(?,?,?) ON CONFLICT(item_id,telegram_user_id) DO UPDATE SET option_id=excluded.option_id,created_at=CURRENT_TIMESTAMP").bind(itemId,optionId,String(userId)).run();
