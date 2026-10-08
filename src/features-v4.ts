@@ -1,4 +1,4 @@
-import { clamp, json, readJson, safePositiveId } from "./http";
+import { json, readJson, safePositiveId } from "./http";
 type Env={DB:D1Database;ADMIN_IDS?:string};
 type User={id:number;username?:string};
 
