@@ -36,6 +36,7 @@ import { sendMessage } from "./telegram-bot";
 import { validateInitData } from "./telegram";
 import { handleCommunityV2 } from "./community-v2";
 import { handleFeaturesV4 } from "./features-v4";
+import { requireUser as requireHttpUser } from "./http";
 import { analyzeAcademicQuery, searchKnowledge } from "./intelligence";
 import {
   getNotificationPreferences,
@@ -289,11 +290,9 @@ export default {
         const year = Number.isInteger(parsedYear) && parsedYear >= 1 && parsedYear <= 6
           ? parsedYear
           : undefined;
-        const initData = request.headers.get("x-telegram-init-data") ?? "";
-        if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
-        const validated = await validateInitData(initData, getBotToken(env));
-        if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
-        const profiles = await listStudentProfiles(env.DB, 30, validated.user.id, {
+        const user = await requireHttpUser(request, env);
+        if (!user) return json({ ok: false, error: "unauthorized" }, 401);
+        const profiles = await listStudentProfiles(env.DB, 30, user.id, {
           q,
           program,
           branch,
@@ -304,11 +303,11 @@ export default {
     }
 
     if (request.method === "POST" && url.pathname === "/api/account/delete") {
-      const validated=await validateInitData(request.headers.get("x-telegram-init-data")??"",getBotToken(env));
-      if(!validated)return json({ok:false,error:"unauthorized"},401);
+      const user = await requireHttpUser(request, env);
+      if(!user)return json({ok:false,error:"unauthorized"},401);
       const body=await readJson<{confirm?:unknown}>(request);
       if(body?.confirm!==true)return json({ok:false,error:"confirmation_required"},400);
-      await deleteAllStudentData(env.DB,validated.user.id);
+      await deleteAllStudentData(env.DB,user.id);
       return json({ok:true,deleted:true});
     }
 
