@@ -129,15 +129,22 @@ export async function listStudentProfiles(
   return rows.results;
 }
 
-export async function listBlockedProfiles(db: D1Database, userId: number): Promise<Array<{ public_id: string; display_name: string }>> {
+export async function listBlockedProfiles(db: D1Database, userId: number): Promise<Array<{ block_id: number; public_id: string | null; display_name: string }>> {
   const rows = await db.prepare(
-    `SELECT p.public_id, p.display_name
+    `SELECT b.id AS block_id,
+      CASE WHEN b.via_anonymous=1 THEN NULL ELSE p.public_id END AS public_id,
+      CASE WHEN b.via_anonymous=1 THEN 'Anonymous author (from post #' || COALESCE(b.source_item_id,'?') || ')' ELSE COALESCE(p.display_name,'VGU student') END AS display_name
      FROM student_profile_blocks b
-     JOIN student_profiles p ON p.telegram_user_id = b.blocked_telegram_user_id
+     LEFT JOIN student_profiles p ON p.telegram_user_id = b.blocked_telegram_user_id
      WHERE b.blocker_telegram_user_id = ?
-     ORDER BY p.display_name`,
-  ).bind(String(userId)).all<{ public_id: string; display_name: string }>();
+     ORDER BY b.id DESC`,
+  ).bind(String(userId)).all<{ block_id:number; public_id:string|null; display_name:string }>();
   return rows.results;
+}
+
+export async function unblockStudentProfileBlock(db: D1Database,userId:number,blockId:number):Promise<boolean>{
+  const result=await db.prepare("DELETE FROM student_profile_blocks WHERE id=? AND blocker_telegram_user_id=?").bind(blockId,String(userId)).run();
+  return Number(result.meta.changes??0)>0;
 }
 
 export async function setStudentProfileVisibility(db: D1Database, userId: number, visible: boolean): Promise<boolean> {
