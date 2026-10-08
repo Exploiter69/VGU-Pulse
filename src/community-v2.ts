@@ -201,7 +201,7 @@ async function getItem(db: D1Database, id: number, viewerId?: number, anonSecret
      LEFT JOIN community_votes v ON v.item_id=i.id
      WHERE i.id=? AND i.status='published'
      GROUP BY i.id`,
-  ).bind(String(viewerId ?? -1), String(viewerId ?? -1), String(viewerId ?? -1), String(viewerId ?? -1), String(viewerId ?? -1), id).first<Record<string, unknown>>();
+  ).bind(String(viewerId ?? -1), String(viewerId ?? -1), String(viewerId ?? -1), String(viewerId ?? -1), String(viewerId ?? -1), String(viewerId ?? -1), id).first<Record<string, unknown>>();
   if (!row) return null;
   const ownerId = String(row.telegram_user_id);
   const owner = await db.prepare("SELECT display_name FROM student_profiles WHERE telegram_user_id=?").bind(ownerId).first<{display_name:string}>();
