@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validateStudentPostInput, validateStudentReplyInput, validateStudentProfileInput } from "../src/db";
 import { validateInitData } from "../src/telegram";
+import { parseResourceCaption } from "../src/index";
 
 describe("validateInitData", () => {
   it("rejects empty input", async () => {
@@ -72,5 +73,16 @@ describe("validateStudentPostInput", () => {
         body: "Hello",
       }),
     ).toBeNull();
+  });
+});
+
+
+describe("parseResourceCaption", () => {
+  it("parses resource metadata separated by whitespace", () => {
+    expect(parseResourceCaption("/resource type=PYQ subject=DBMS semester=5")).toEqual({
+      type: "PYQ",
+      subject: "DBMS",
+      semester: "5",
+    });
   });
 });
