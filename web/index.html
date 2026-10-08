@@ -1098,8 +1098,7 @@ communityScript.src="/community-v2.js?v=20261007-4";
 communityScript.onload=()=>window.__pulseBoot?.();
 communityScript.onerror=()=>window.__pulseBoot?.();
 document.body.append(communityScript);
-</script>
-</body></htmlfunction escapeHtml(value){return String(value??"").replace(/[&<>"\']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","\'":"&#39;"}[ch]));}
+function escapeHtml(value){return String(value??"").replace(/[&<>"\']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","\'":"&#39;"}[ch]));}
 async function loadV4Extras(){
  const box=document.getElementById("v4-extras"),eventsBox=document.getElementById("v4-events"),resourcesBox=document.getElementById("v4-resources"),questionBox=document.getElementById("v4-question");
  if(!initData){if(box)box.textContent="Reopen Pulse from Telegram to use student features.";return}
@@ -1141,6 +1140,7 @@ document.getElementById("v4-review-submit")?.addEventListener("click",async()=>{
  const status=document.getElementById("v4-review-status");if(!initData){if(status)status.textContent="Reopen Pulse from Telegram.";return}
  const r=await fetch("/api/v4/teacher-review",{method:"POST",headers:h,body:JSON.stringify(body)});if(status)status.textContent=r.ok?"Review submitted for moderation.":"Could not submit review.";
 });
+
 </script>
 </body>
 </html>
