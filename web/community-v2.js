@@ -149,6 +149,7 @@
       if(initData) headers["x-telegram-init-data"]=initData;
       const r=await fetch(path,{...options,headers:{...headers,...(options.headers||{})}});
       const d=await r.json().catch(()=>({}));
+      if(r.status===401) throw new Error("unauthorized");
       if(!r.ok) throw new Error(d.error||"request_failed");
       return d;
     }
@@ -170,7 +171,7 @@
         const items=data.items||[];
         if(!items.length&&!append){feed.innerHTML='<div class="cv2-empty">Nothing here yet. Be the first student to start a conversation.</div>';return}
         const html=items.map(item=>`
-          <article class="cv2-item" data-id="${item.id}" data-following="${Number(item.following)?1:0}" data-saved="${Number(item.saved)?1:0}">
+          <article class="cv2-item" data-id="${item.id}" data-my-vote="${Number(item.my_vote)||0}" data-anonymous="${Number(item.anonymous)||0}" data-following="${Number(item.following)?1:0}" data-saved="${Number(item.saved)?1:0}">
             <div class="cv2-meta"><div class="cv2-wrap"><span class="cv2-badge">${esc(item.kind.replaceAll("_"," "))}</span>${Number(item.anonymous)?'<span class="cv2-badge anon">Anonymous</span>':''}<span class="cv2-note">${esc(item.community_slug)}</span>${item.updated_at?'<span class="cv2-item-edited">Edited</span>':''}</div><span class="cv2-note">${pretty(item.created_at)}</span></div>
             <h3>${esc(item.title)}</h3><p class="cv2-body ${String(item.body||"").length>420?"cv2-collapsed":""}">${esc(item.body)}</p>${String(item.body||"").length>420?'<button type="button" class="cv2-tool cv2-more-text" data-action="expand">Read more</button>':""}
             <div class="cv2-note">By ${esc(item.author)} · ${item.replies} replies · ${item.upvotes} helpful</div>
@@ -271,7 +272,15 @@
       try{
         if(action==="share"){await window.__pulseShare?.("post-"+id,"VGU Pulse discussion: "+String(item.querySelector("h3")?.textContent||""));return}
         if(action==="expand"){const body=item.querySelector(".cv2-body");if(body){body.classList.remove("cv2-collapsed");button.remove()}return}
-        if(action==="vote")await api("/api/community-v2/vote",{method:"POST",body:JSON.stringify({item_id:id,vote:Number(button.dataset.value)})});
+        if(action==="vote"){
+          const value=Number(button.dataset.value),up=item.querySelector('[data-action="vote"][data-value="1"]'),down=item.querySelector('[data-action="vote"][data-value="-1"]');
+          const oldVote=Number(item.dataset.myVote||0),next=oldVote===value?0:value;
+          const upCount=Number((up?.textContent||"").replace(/[^0-9-]/g,""))||0,downCount=Number((down?.textContent||"").replace(/[^0-9-]/g,""))||0;
+          const nextUp=upCount+(next===1?1:oldVote===1?-1:0),nextDown=downCount+(next===-1?1:oldVote===-1?-1:0);
+          item.dataset.myVote=String(next);if(up)up.textContent="▲ "+nextUp;if(down)down.textContent="▼ "+nextDown;
+          up?.classList.toggle("active",next===1);down?.classList.toggle("active",next===-1);
+          try{await api("/api/community-v2/vote",{method:"POST",body:JSON.stringify({item_id:id,vote:value})});}catch(error){item.dataset.myVote=String(oldVote);if(up)up.textContent="▲ "+upCount;if(down)down.textContent="▼ "+downCount;up?.classList.toggle("active",oldVote===1);down?.classList.toggle("active",oldVote===-1);throw error;}return;
+        }
         if(action==="follow"){const following=item.dataset.following==="1";item.dataset.following=following?"0":"1";button.classList.toggle("active",!following);button.textContent=following?"Follow":"Following";try{await api("/api/community-v2/follow"+(following?"?item_id="+encodeURIComponent(id):""),following?{method:"DELETE"}:{method:"POST",body:JSON.stringify({item_id:id})})}catch(e){item.dataset.following=following?"1":"0";button.classList.toggle("active",following);button.textContent=following?"Following":"Follow";throw e}return}
         if(action==="save"){const saved=item.dataset.saved==="1";item.dataset.saved=saved?"0":"1";button.classList.toggle("active",!saved);button.textContent=saved?"Save":"Saved";try{await api("/api/community-v2/save"+(saved?"?item_id="+encodeURIComponent(id):""),saved?{method:"DELETE"}:{method:"POST",body:JSON.stringify({item_id:id})})}catch(e){item.dataset.saved=saved?"1":"0";button.classList.toggle("active",saved);button.textContent=saved?"Saved":"Save";throw e}return}
         if(action==="edit"){
