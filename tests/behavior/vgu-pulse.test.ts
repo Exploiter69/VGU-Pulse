@@ -233,5 +233,10 @@ describe("VGU-Pulse real D1 behavior",()=>{
     const listing=await request("/api/v4/listing",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"lost_found",title:"Found ID card",body:"Found near library",expires_at:"2026-12-02T00:00:00Z"})});expect(listing.status).toBe(201);
     const review=await request("/api/v4/teacher-review",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({teacher:"Professor X",elective:"AI",teaching:5,workload:3,support:4})});expect(review.status).toBe(201);
     const growth=await request("/api/v4/growth/top",user);expect(growth.status).toBe(200);
+    const events=await request("/api/v4/events",user);expect(events.status).toBe(200);
+    const createdEvent=await request("/api/v4/event",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({title:"Student event",starts_at:"2026-12-05T15:00:00Z"})});expect(createdEvent.status).toBe(201);
+    const pastListing=await request("/api/v4/listing",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"ride",title:"Past ride",body:"No longer needed",expires_at:"2020-01-01T00:00:00Z"})});expect(pastListing.status).toBe(400);
+    for(let n=0;n<5;n++){const review=await request("/api/v4/teacher-review",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({teacher:"Professor Y",elective:"DBMS",teaching:5,workload:3,support:4})});if(n===0)expect(review.status).toBe(201);}
+
   });
 });
