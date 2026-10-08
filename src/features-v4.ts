@@ -108,9 +108,7 @@ export async function handleFeaturesV4(request:Request,env:Env,user:User):Promis
   if(request.method==="POST"&&u.pathname==="/api/v4/teacher-review"){
    const b=await readJson<Record<string,unknown>>(request);if(!b)return json({ok:false,error:"invalid_json"},400);const teacher=text(b.teacher,120),elective=text(b.elective,120);const vals=[Number(b.teaching),Number(b.workload),Number(b.support)];
    if(teacher.length<2||elective.length<2||vals.some(v=>!Number.isInteger(v)||v<1||v>5))return json({ok:false,error:"invalid_review"},400);
-   const existing=await env.DB.prepare("SELECT id FROM teacher_reviews WHERE telegram_user_id=? AND teacher=? AND elective=?").bind(String(user.id),teacher,elective).first();
-   await env.DB.prepare("INSERT INTO teacher_reviews(telegram_user_id,teacher,elective,teaching,workload,support,comment) VALUES(?,?,?,?,?,?,?) ON CONFLICT(telegram_user_id,teacher,elective) DO UPDATE SET teaching=excluded.teaching,workload=excluded.workload,support=excluded.support,comment=excluded.comment,status='pending',created_at=CURRENT_TIMESTAMP").bind(String(user.id),teacher,elective,vals[0],vals[1],vals[2],text(b.comment,500)).run();
-   return json({ok:true,status:"pending"},existing?200:201);
+   await env.DB.prepare("INSERT INTO teacher_reviews(telegram_user_id,teacher,elective,teaching,workload,support,comment) VALUES(?,?,?,?,?,?,?) ON CONFLICT(telegram_user_id,teacher,elective) DO UPDATE SET teaching=excluded.teaching,workload=excluded.workload,support=excluded.support,comment=excluded.comment,status='pending',created_at=CURRENT_TIMESTAMP").bind(String(user.id),teacher,elective,vals[0],vals[1],vals[2],text(b.comment,500)).run();return json({ok:true,status:"pending"},201);
   }
   if(request.method==="GET"&&u.pathname==="/api/v4/teacher-reviews"){
    const teacher=text(u.searchParams.get("teacher"),120),elective=text(u.searchParams.get("elective"),120);if(!teacher||!elective)return json({ok:false,error:"invalid_review_query"},400);
