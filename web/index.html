@@ -1102,7 +1102,7 @@ document.getElementById("telegram-fullscreen")?.addEventListener("click",async()
 const toastNode=document.createElement("div");toastNode.id="pulse-toast";toastNode.className="toast";toastNode.setAttribute("role","status");toastNode.setAttribute("aria-live","polite");document.body.append(toastNode);
 window.__pulseBoot=()=>boot().catch(()=>{status.textContent="Unable to connect to Pulse.";toast("Pulse is temporarily unavailable.")});
 const communityScript=document.createElement("script");
-communityScript.src="/community-v2.js?v=20261007-4";
+communityScript.src="/community-v2.js?v=20261008-1";
 communityScript.onload=()=>window.__pulseBoot?.();
 communityScript.onerror=()=>window.__pulseBoot?.();
 document.body.append(communityScript);
