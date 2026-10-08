@@ -577,7 +577,7 @@ export async function createStudentReply(
   const reply = await db
     .prepare(
       `SELECT r.id, r.post_id, r.body,
-              COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
+              COALESCE(NULLIF(TRIM(sp.display_name), ''), 'VGU student') AS author_name,
               r.created_at, r.report_count
        FROM student_post_replies r
        LEFT JOIN student_profiles sp ON sp.telegram_user_id = r.telegram_user_id
