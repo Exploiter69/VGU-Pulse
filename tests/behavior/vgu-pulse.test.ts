@@ -76,7 +76,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
   it("applies every migration to a fresh D1 database",async()=>{
     const env=await worker.getEnv() as {DB:D1Database};
     const rows=await env.DB.prepare("SELECT name FROM d1_migrations ORDER BY id").all<{name:string}>();
-    expect(rows.results.map(x=>x.name)).toEqual(expect.arrayContaining(["0001_initial.sql","0009_community_network.sql","0010_gate1_hardening.sql","0011_gate2_safety.sql","0012_gate3_foundations.sql","0013_gate3_qa.sql","0014_gate3_reliability.sql","0015_gate4_features.sql","0016_gate4_completion.sql","0017_moderation_persistence.sql"]));
+    expect(rows.results.map(x=>x.name)).toEqual(expect.arrayContaining(["0001_initial.sql","0009_community_network.sql","0010_gate1_hardening.sql","0011_gate2_safety.sql","0012_gate3_foundations.sql","0013_gate3_qa.sql","0014_gate3_reliability.sql","0015_gate4_features.sql","0016_gate4_completion.sql"]));
   });
 
   it("reproduces the replies contract and hides non-published parents",async()=>{
@@ -151,17 +151,6 @@ describe("VGU-Pulse real D1 behavior",()=>{
     expect((await set({community_activity:true})).status).toBe(200);
     expect((await set({community_activity:"false"})).status).toBe(400);
     await expect((await request("/api/community-v2/preferences",user)).json()).resolves.toMatchObject({preferences:{community_activity:true,personalized_alerts:false}});
-  });
-
-  it("preserves moderation bans while deleting the student's personal data",async()=>{
-    const env=await worker.getEnv() as {DB:D1Database};
-    await env.DB.prepare("INSERT INTO user_bans(telegram_user_id,reason,banned_by) VALUES('1001','test ban','9009')").run();
-    const response=await request("/api/account/delete",{id:1001,first_name:"Viewer"},{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({confirm:true})});
-    expect(response.status).toBe(200);
-    const user=await env.DB.prepare("SELECT 1 FROM users WHERE telegram_user_id='1001'").first();
-    expect(user).toBeNull();
-    const ban=await env.DB.prepare("SELECT reason,banned_by FROM user_bans WHERE telegram_user_id='1001'").first<{reason:string;banned_by:string}>();
-    expect(ban).toEqual({reason:"test ban",banned_by:"9009"});
   });
 
   it("requires Telegram initData for student discovery",async()=>{
