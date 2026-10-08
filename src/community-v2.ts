@@ -479,7 +479,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       return json({ok:true,following:true});
     }
     if(request.method==="DELETE" && url.pathname==="/api/community-v2/follow"){
-      const id=Number(url.searchParams.get("item_id"));
+      const id=Number(url.searchParams.get("item_id")); if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
       await env.DB.prepare("DELETE FROM community_follows WHERE item_id=? AND telegram_user_id=?").bind(id,String(user.id)).run();
       return json({ok:true,following:false});
     }
@@ -489,7 +489,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       return json({ok:true,saved:true});
     }
     if(request.method==="DELETE" && url.pathname==="/api/community-v2/save"){
-      const id=Number(url.searchParams.get("item_id"));
+      const id=Number(url.searchParams.get("item_id")); if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
       await env.DB.prepare("DELETE FROM community_saves WHERE item_id=? AND telegram_user_id=?").bind(id,String(user.id)).run();
       return json({ok:true,saved:false});
     }
