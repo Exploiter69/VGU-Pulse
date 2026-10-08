@@ -666,12 +666,13 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       for(const key of keys) if(input[key]!==undefined && typeof input[key]!=="boolean") return json({ok:false,error:"invalid_preferences"},400);
       await env.DB.prepare("INSERT OR IGNORE INTO notification_preferences(telegram_user_id) VALUES(?)").bind(String(user.id)).run();
       const current=await env.DB.prepare("SELECT official_updates,community_replies,community_activity,personalized_alerts FROM notification_preferences WHERE telegram_user_id=?").bind(String(user.id)).first<Record<string,number>>();
-      const next=Object.fromEntries(keys.map(key=>[key,input[key]===undefined?Boolean(current?.[key]):input[key]])) as Record<string,boolean>;
+      const next:Record<string,boolean>={official_updates:current?.official_updates===1,community_replies:current?.community_replies===1,community_activity:current?.community_activity===1,personalized_alerts:current?.personalized_alerts===1};
+      for(const key of keys) if(input[key]!==undefined) next[key]=input[key] as boolean;
       await env.DB.prepare("UPDATE notification_preferences SET official_updates=?,community_replies=?,community_activity=?,personalized_alerts=?,updated_at=CURRENT_TIMESTAMP WHERE telegram_user_id=?").bind(next.official_updates?1:0,next.community_replies?1:0,next.community_activity?1:0,next.personalized_alerts?1:0,String(user.id)).run();
       return json({ok:true,preferences:next});
     }
     return json({ok:false,error:"not_found"},404);
-  }catch(error){
+  } catch (error) {
     const message=error instanceof Error?error.message:"unknown";
     const requestId=crypto.randomUUID();
     console.error(JSON.stringify({event:"community_v2_error",request_id:requestId,error:message}));
