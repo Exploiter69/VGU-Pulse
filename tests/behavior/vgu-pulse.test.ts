@@ -9,6 +9,8 @@ const server = createTestHarness({
       configPath: "./wrangler.jsonc",
       secrets: {
         BOT_TOKEN: BOT_TOKEN,
+      },
+      vars: {
         ANON_ALIAS_SECRET: "gate-2-anon-secret",
         ADMIN_IDS: "9009",
       },
@@ -21,7 +23,7 @@ const server = createTestHarness({
         compatibility_date: "2026-10-01",
       },
     },
-    { configPath: "./tests/behavior/wrangler-compat.jsonc", secrets: { BOT_TOKEN, ANON_ALIAS_SECRET: "gate-2-anon-secret" } },
+    { configPath: "./tests/behavior/wrangler-compat.jsonc", secrets: { BOT_TOKEN }, vars: { ANON_ALIAS_SECRET: "gate-2-anon-secret" } },
   ],
 });
 
