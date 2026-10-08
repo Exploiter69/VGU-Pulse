@@ -164,7 +164,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
     const pollId=createdData.item.id;
     const vote=await request("/api/community-v2/poll-vote",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({item_id:pollId,option_id:3})});
     expect(vote.status).toBe(400);
-    const options=await worker.getEnv().then(async e=>e.DB.prepare("SELECT id FROM community_poll_options WHERE item_id=? ORDER BY id").bind(pollId).all<{id:number}>());
+    const options=await worker.getEnv().then(async e=>e.DB.prepare("SELECT id FROM community_poll_options WHERE item_id=? ORDER BY id").bind(pollId).all());
     const optionId=options.results[0].id;
     expect((await request("/api/community-v2/poll-vote",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({item_id:pollId,option_id:optionId})})).status).toBe(200);
     const poll=await request("/api/community-v2/poll?item_id="+pollId,user);
