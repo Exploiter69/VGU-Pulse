@@ -66,6 +66,60 @@ const server = createTestHarness({
       },
     },
   ],
+
+  it("enforces the content safety policy without rejecting self-harm support requests", async () => {
+    const initData = await signInitData(BOT_TOKEN, { id: 1001, first_name: "Viewer" });
+    const post = async (title:string, body:string) => worker.fetch("https://example.test/api/community-v2/items", {
+      method:"POST",
+      headers:{"content-type":"application/json","x-telegram-init-data":initData},
+      body:JSON.stringify({kind:"discussion",title,body}),
+    });
+    expect((await post("Threat test","i will kill you")).status).toBe(422);
+    const support = await post("Need help","I am thinking about suicide and need support");
+    expect(support.status).toBe(201);
+    await expect(support.json()).resolves.toMatchObject({ok:true,item:{support:true}});
+    const benign = await post("Benign test","Can someone explain the library timings?");
+    expect(benign.status).toBe(201);
+  });
+
+  it("deduplicates reply reports and exposes anonymous blocks without identity", async () => {
+    const viewer = await signInitData(BOT_TOKEN,{id:1001,first_name:"Viewer"});
+    const env = (await worker.getEnv()) as {DB:D1Database};
+    await env.DB.prepare("UPDATE community_items SET anonymous=1 WHERE id=1").run();
+    const block = await worker.fetch("https://example.test/api/community-v2/block",{
+      method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":viewer},
+      body:JSON.stringify({item_id:1}),
+    });
+    expect(block.status).toBe(200);
+    const blocks=await worker.fetch("https://example.test/api/student-profile/blocks",{headers:{"x-telegram-init-data":viewer}});
+    expect(blocks.status).toBe(200);
+    const blockPayload=await blocks.json();
+    expect(blockPayload.profiles[0]).toMatchObject({display_name:"Anonymous author (from post #1)"});
+    expect(blockPayload.profiles[0].public_id).toBeNull();
+
+    const report=async()=>worker.fetch("https://example.test/api/community-v2/report-reply",{
+      method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":viewer},
+      body:JSON.stringify({reply_id:1}),
+    });
+    expect((await report()).status).toBe(200);
+    expect((await report()).status).toBe(200);
+    expect((await report()).status).toBe(200);
+    const row=await env.DB.prepare("SELECT report_count FROM community_replies WHERE id=1").first<{report_count:number}>();
+    expect(Number(row?.report_count)).toBe(1);
+  });
+
+  it("strictly merges notification preferences", async () => {
+    const viewer=await signInitData(BOT_TOKEN,{id:1001,first_name:"Viewer"});
+    const set=async(body:Record<string,unknown>)=>worker.fetch("https://example.test/api/community-v2/preferences",{
+      method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":viewer},body:JSON.stringify(body),
+    });
+    expect((await set({community_activity:true})).status).toBe(200);
+    const invalid=await set({community_activity:"false"});
+    expect(invalid.status).toBe(400);
+    const current=await worker.fetch("https://example.test/api/community-v2/preferences",{headers:{"x-telegram-init-data":viewer}});
+    await expect(current.json()).resolves.toMatchObject({preferences:{community_activity:true,personalized_alerts:false}});
+  });
+
 });
 
 const worker = server.getWorker("vgu-pulse");
@@ -119,6 +173,7 @@ describe("VGU-Pulse real D1 behavior harness", () => {
       expect.arrayContaining([
         "0001_initial.sql",
         "0009_community_network.sql",
+        "0010_gate1_hardening.sql",
       ]),
     );
 
