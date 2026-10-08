@@ -314,7 +314,7 @@ async function reply(db: D1Database, user: CommunityUser, itemId: number, text: 
 
 async function vote(db: D1Database,userId:number,itemId:number,value:number): Promise<void> {
   if (value!==1 && value!==-1) throw new Error("invalid_vote");
-  const item=await db.prepare("SELECT telegram_user_id,anonymous FROM community_items WHERE id=? AND status='published'").bind(itemId).first<{telegram_user_id:string}>();
+  const item=await db.prepare("SELECT telegram_user_id,anonymous FROM community_items WHERE id=? AND status='published'").bind(itemId).first<{telegram_user_id:string;anonymous:number}>();
   if(!item) throw new Error("item_not_found");
   const existing=await db.prepare("SELECT vote FROM community_votes WHERE item_id=? AND telegram_user_id=?").bind(itemId,String(userId)).first<{vote:number}>();
   if(existing?.vote===value){
@@ -653,7 +653,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     const message=error instanceof Error?error.message:"unknown";
     const requestId=crypto.randomUUID();
     console.error(JSON.stringify({event:"community_v2_error",request_id:requestId,error:message}));
-    const status=message==="rate_limited"?429:message==="unsafe_content"?422:message==="forbidden"?403:message==="item_not_found"||message==="reply_not_found"?404:message==="invalid_item"||message==="invalid_reply"||message==="invalid_vote"||message==="invalid_poll"||message==="invalid_option"||message==="cannot_report_own_item"||message==="cannot_report_own_reply"?400:500;
+    const publicErrors=new Set(["rate_limited","unsafe_content","forbidden","item_not_found","reply_not_found","invalid_item","invalid_reply","invalid_vote","invalid_poll","invalid_option","cannot_report_own_item","cannot_report_own_reply","invalid_community","poll_closed","invalid_preferences","invalid_cursor"]);\n    const status=message==="rate_limited"?429:message==="unsafe_content"?422:message==="forbidden"?403:message==="item_not_found"||message==="reply_not_found"?404:publicErrors.has(message)?400:500;
     return json({ok:false,error:publicError.has(message)?message:"internal_error",request_id:requestId},status);
   }
 }
