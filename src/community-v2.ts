@@ -226,7 +226,7 @@ async function getItem(db: D1Database, id: number, viewerId?: number, anonSecret
   return { ...publicRow, author: display, trust: "student-community" };
 }
 
-async function listItems(db: D1Database, viewerId: number, params: URLSearchParams): Promise<Record<string, unknown>[]> {
+async function listItems(db: D1Database, viewerId: number, params: URLSearchParams, anonSecret?:string): Promise<Record<string, unknown>[]> {
   const kind = params.get("kind") as CommunityKind | null;
   const sort = params.get("sort") || "new";
   const community = clamp(params.get("community"), LIMITS.community);
@@ -271,11 +271,12 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
       ORDER BY ${order} LIMIT ? OFFSET ?`;
   const result = await db.prepare(sql).bind(String(viewerId),String(viewerId),String(viewerId),String(viewerId),String(viewerId),...args,String(viewerId),limit,offset).all<Record<string, unknown>>();
   const rows = result.results ?? [];
-  return rows.map(row => {
-    const author = Number(row.anonymous) ? "Anonymous student" : ((row as any).display_name || "VGU student");
+  return Promise.all(rows.map(async row => {
+    const author = Number(row.anonymous) ? await anonymousAlias(anonSecret,Number(row.telegram_user_id),Number(row.id)) : ((row as any).display_name || "VGU student");
     const { telegram_user_id: _private, display_name: _name, ...publicRow } = row as Record<string, unknown>;
+    if(Number(row.anonymous)){ publicRow.audience_program=null; publicRow.audience_branch=null; publicRow.audience_year=null; }
     return { ...publicRow, mine: Boolean(row.mine), author, trust: "student-community" };
-  });
+  }));
 }
 
 async function reply(db: D1Database, user: CommunityUser, itemId: number, text: string, anonymous: boolean, anonAliasSecret?:string): Promise<Record<string, unknown>> {
@@ -369,13 +370,32 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
   if(!url.pathname.startsWith("/api/community-v2")) return null;
 
   try{
+    if(request.method==="GET" && url.pathname==="/api/community-v2/rules"){
+      return json({ok:true,rules:["Be respectful and do not impersonate VGU officials.","Do not share passwords, OTPs, private credentials or personal data.","Report harmful or misleading content instead of brigading it.","Anonymous posts are tied to your account on our server for moderation."]});
+    }
+    if(request.method==="GET" && url.pathname==="/api/community-v2/anonymous-notice"){
+      const row=await env.DB.prepare("SELECT 1 FROM community_anonymous_notices WHERE telegram_user_id=?").bind(String(user.id)).first();
+      return json({ok:true,acknowledged:Boolean(row),notice:"Anonymous to students, still tied to your account on our server; admins may review reports."});
+    }
+    if(request.method==="POST" && url.pathname==="/api/community-v2/anonymous-notice"){
+      await env.DB.prepare("INSERT OR IGNORE INTO community_anonymous_notices(telegram_user_id) VALUES(?)").bind(String(user.id)).run();
+      return json({ok:true,acknowledged:true});
+    }
+    if(request.method==="POST" && url.pathname==="/api/community-v2/rules/ack"){
+      await env.DB.prepare("INSERT OR IGNORE INTO community_rules_ack(telegram_user_id) VALUES(?)").bind(String(user.id)).run();
+      return json({ok:true,acknowledged:true});
+    }
+    if(request.method==="GET" && url.pathname==="/api/community-v2/rules/ack"){
+      const row=await env.DB.prepare("SELECT 1 FROM community_rules_ack WHERE telegram_user_id=?").bind(String(user.id)).first();
+      return json({ok:true,acknowledged:Boolean(row)});
+    }
     if(request.method==="GET" && url.pathname==="/api/community-v2/context"){
       const p=await profile(env.DB,user.id);
       const community=p ? p.branch.toLowerCase().replace(/[^a-z0-9]+/g,"-") + "-year-" + p.year : "campus";
       return json({ok:true,profile:p,community});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/feed"){
-      const items=await listItems(env.DB,user.id,url.searchParams);const requestedLimit=Number(url.searchParams.get("limit")||40);const nextOffset=items.length===Math.min(40,Math.max(1,Number.isFinite(requestedLimit)?requestedLimit:40))?Number(url.searchParams.get("offset")||0)+items.length:null;return json({ok:true,items,next_offset:nextOffset});
+      const items=await listItems(env.DB,user.id,url.searchParams,env.ANON_ALIAS_SECRET);const requestedLimit=Number(url.searchParams.get("limit")||40);const nextOffset=items.length===Math.min(40,Math.max(1,Number.isFinite(requestedLimit)?requestedLimit:40))?Number(url.searchParams.get("offset")||0)+items.length:null;return json({ok:true,items,next_offset:nextOffset});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/reputation"){
       return json({ok:true,reputation:await reputation(env.DB,user.id)});
@@ -425,7 +445,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/search"){
       const q=clamp(url.searchParams.get("q"),120);
-      return json({ok:true,items:await listItems(env.DB,user.id,new URLSearchParams({q,sort:"trending"}))});
+      return json({ok:true,items:await listItems(env.DB,user.id,new URLSearchParams({q,sort:"trending"}),env.ANON_ALIAS_SECRET)});
     }
 
     if(request.method==="GET" && url.pathname==="/api/community-v2/legacy-item"){
@@ -454,6 +474,8 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     }
     if(request.method==="POST" && url.pathname==="/api/community-v2/items"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
+      if(input.anonymous===true || input.kind==="confession"){ const notice=await env.DB.prepare("SELECT 1 FROM community_anonymous_notices WHERE telegram_user_id=?").bind(String(user.id)).first(); if(!notice) return json({ok:false,error:"anonymous_notice_required",notice:"Anonymous to students, still tied to your account on our server; admins may review reports."},428); }
+      const rules=await env.DB.prepare("SELECT 1 FROM community_rules_ack WHERE telegram_user_id=?").bind(String(user.id)).first(); if(!rules) return json({ok:false,error:"rules_ack_required"},428);
       const item=await createItem(env.DB,user,input,env.ANON_ALIAS_SECRET);
       return json({ok:true,item},201);
     }
@@ -471,6 +493,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
       const id=Number(input.item_id); if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
       if(typeof input.anonymous!=="boolean")return json({ok:false,error:"invalid_anonymous"},400);
+      const rules=await env.DB.prepare("SELECT 1 FROM community_rules_ack WHERE telegram_user_id=?").bind(String(user.id)).first(); if(!rules) return json({ok:false,error:"rules_ack_required"},428);
       const r=await reply(env.DB,user,id,clamp(input.body,LIMITS.body),input.anonymous,env.ANON_ALIAS_SECRET);
       return json({ok:true,reply:r},201);
     }
@@ -560,7 +583,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       const id=Number(input.item_id); if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
       const owner=await env.DB.prepare("SELECT telegram_user_id FROM community_items WHERE id=?").bind(id).first<{telegram_user_id:string}>();
       if(!owner || owner.telegram_user_id===String(user.id)) return json({ok:false,error:"invalid_target"},400);
-      await env.DB.prepare("INSERT OR IGNORE INTO student_profile_blocks(blocker_telegram_user_id,blocked_telegram_user_id) VALUES(?,?)").bind(String(user.id),owner.telegram_user_id).run();
+      await env.DB.prepare("INSERT OR IGNORE INTO student_profile_blocks(blocker_telegram_user_id,blocked_telegram_user_id,via_anonymous,source_item_id) VALUES(?,?,?,?)").bind(String(user.id),owner.telegram_user_id,1,id).run();
       return json({ok:true});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/preferences"){
