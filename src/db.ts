@@ -51,6 +51,7 @@ export function validateStudentProfileInput(input: {
       typeof input.branch !== "string" || typeof input.year !== "number" ||
       typeof input.bio !== "string" || typeof input.looking_for !== "string") return null;
   const display_name = input.display_name.trim();
+  if (/\b(?:exam\s*cell|admin|administrator|vgu|official|controller\s*of\s*examinations)\b/i.test(display_name)) return null;
   const program = input.program.trim();
   const branch = input.branch.trim();
   const bio = input.bio.trim();
