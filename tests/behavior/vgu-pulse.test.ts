@@ -6,13 +6,9 @@ const BOT_TOKEN = "gate-2-test-token";
 const server = createTestHarness({
   workers: [
     {
-      configPath: "./wrangler.jsonc",
+      configPath: "./tests/behavior/wrangler-vgu-pulse.jsonc",
       secrets: {
         BOT_TOKEN: BOT_TOKEN,
-      },
-      vars: {
-        ANON_ALIAS_SECRET: "gate-2-anon-secret",
-        ADMIN_IDS: "9009",
       },
       bindingOverrides: { SIGNAL_SERVICE: "signal-mock" },
     },
