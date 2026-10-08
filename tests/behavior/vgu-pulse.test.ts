@@ -157,7 +157,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
   it("preserves 0009 data when Gate 1 and Gate 2 migrations are applied",async()=>{
     await compatWorker.applyD1Migrations("DB");
     const env=await compatWorker.getEnv() as {DB:D1Database};
-    await env.DB.prepare("INSERT INTO users (telegram_user_id,first_name) VALUES ('3003','Legacy')").run();
+    await env.DB.prepare("INSERT INTO users (telegram_user_id,first_name) VALUES ('2002','Legacy target'),('3003','Legacy')").run();
     await env.DB.prepare("INSERT INTO student_profile_blocks(blocker_telegram_user_id,blocked_telegram_user_id) VALUES('3003','2002')").run();
     await env.DB.exec(readFileSync("migrations/0010_gate1_hardening.sql","utf8"));
     await env.DB.exec(readFileSync("migrations/0011_gate2_safety.sql","utf8"));
