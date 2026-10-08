@@ -25,3 +25,6 @@ Behavior tests use Wrangler's real local D1 harness, apply the complete migratio
 - Telegram 403/429 behavior against a real Telegram API response.
 - Mini App behavior on Telegram Desktop/mobile.
 - Production D1 migration state is intentionally not touched by this branch.
+
+## Harness verification note
+The harness follows Wrangler's documented createTestHarness/reset/applyD1Migrations lifecycle; CI remains the authoritative execution environment for this branch.
