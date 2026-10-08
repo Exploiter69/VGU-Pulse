@@ -75,4 +75,4 @@ The following still require explicit CI/manual confirmation before merging this 
 - legacy V1 vote endpoint regression for posts/replies outside the newest page;
 - frontend anonymous-reply toggle and full optimistic vote UI in a real Telegram device.
 
-No later Gate 2/3/4 feature work is claimed in this document.
+Gate 2/3/4 implementation was subsequently completed on the same hardening branch; see GATE_26.md and GATE_27.md for the reconciled status. This document records Gate 1 evidence only.
