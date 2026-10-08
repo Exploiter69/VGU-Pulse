@@ -145,7 +145,7 @@ export async function runNotificationSweep(db:D1Database,signalService:Fetcher,b
   const pending=await db.prepare(
     `SELECT n.id,n.telegram_user_id,n.title,n.body,n.attempts
      FROM student_notifications n JOIN notification_preferences p ON p.telegram_user_id=n.telegram_user_id
-     WHERE n.sent_at IS NULL AND n.failed_at IS NULL AND n.attempts<5 AND (
+     WHERE n.sent_at IS NULL AND n.failed_at IS NULL AND n.attempts<5 AND (n.retry_at IS NULL OR n.retry_at<=CURRENT_TIMESTAMP) AND (
        (n.channel='official' AND ${preferenceSql("official")}) OR
        (n.channel='community_replies' AND ${preferenceSql("community_replies")}) OR
        (n.channel='community_activity' AND ${preferenceSql("community_activity")}) OR
@@ -172,7 +172,7 @@ export async function runNotificationSweep(db:D1Database,signalService:Fetcher,b
       if(response.status===429){
         const payload=await response.clone().json().catch(()=>({})) as {parameters?:{retry_after?:number}};
         const retryAfter=Number(payload.parameters?.retry_after??0);
-        await db.prepare("UPDATE student_notifications SET last_error=? WHERE id=?").bind(`telegram_429_retry_after:${retryAfter}`,notification.id).run();
+        await db.prepare("UPDATE student_notifications SET last_error=?,retry_at=datetime('now', ? || ' seconds') WHERE id=?").bind("telegram_429_retry_after:"+retryAfter,String(Math.max(0,retryAfter)),notification.id).run();
         break;
       }
       if(response.status===403){
