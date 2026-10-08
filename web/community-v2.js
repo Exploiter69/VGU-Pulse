@@ -204,7 +204,7 @@
               <button type="button" class="cv2-tool" data-action="replies">💬 ${item.replies}</button>
               <button type="button" class="cv2-tool ${item.following?'active':''}" data-action="follow">${item.following?'Following':'Follow'}</button>
               <button type="button" class="cv2-tool ${item.saved?'active':''}" data-action="save">${item.saved?'Saved':'Save'}</button><button type="button" class="cv2-tool" data-action="share">Share</button>
-              ${item.mine?'<button type="button" class="cv2-tool" data-action="edit">Edit</button><button type="button" class="cv2-tool" data-action="delete">Delete</button>':'<button type="button" class="cv2-tool" data-action="moderate">More</button>}
+              ${item.mine?'<button type="button" class="cv2-tool" data-action="edit">Edit</button><button type="button" class="cv2-tool" data-action="delete">Delete</button>':'<button type="button" class="cv2-tool" data-action="moderate">More</button>'}
             </div>
             <div class="cv2-replies" hidden></div>
           </article>`}).join("");
