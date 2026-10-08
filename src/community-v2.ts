@@ -228,6 +228,14 @@ export async function listItems(db: D1Database, viewerId: number, params: URLSea
   if(cursorRaw){try{const decoded=JSON.parse(atob(cursorRaw)); if(typeof decoded.created_at==="string"&&Number.isSafeInteger(decoded.id)&&decoded.id>0)cursor=decoded;}catch{throw new Error("invalid_cursor");}}
   queryCounter && (queryCounter.value += 1);
   const p = await profile(db, viewerId);
+  if (forYou && !p) {
+    const fallback = new URLSearchParams(params);
+    fallback.delete("personalized");
+    fallback.set("sort","trending");
+    fallback.set("community","campus");
+    fallback.delete("cursor");
+    return listItems(db, viewerId, fallback, anonSecret, withExtra, queryCounter);
+  }
   const where = ["i.status='published'"];
   const solvedFilter=params.get("solved");
   if(solvedFilter==="solved")where.push("i.solved=1");
