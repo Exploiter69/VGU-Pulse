@@ -284,6 +284,20 @@ export async function deleteAllStudentData(db:D1Database,userId:number):Promise<
   const id=String(userId);
   const statements=[
     "DELETE FROM community_poll_votes WHERE telegram_user_id=?",
+    "DELETE FROM community_reply_votes WHERE telegram_user_id=?",
+    "DELETE FROM community_item_reads WHERE telegram_user_id=?",
+    "DELETE FROM resource_reports WHERE telegram_user_id=?",
+    "DELETE FROM event_reminders WHERE telegram_user_id=?",
+    "DELETE FROM event_rsvps WHERE telegram_user_id=?",
+    "DELETE FROM mess_daily_ratings WHERE telegram_user_id=?",
+    "DELETE FROM exam_countdowns WHERE telegram_user_id=?",
+    "DELETE FROM resources WHERE telegram_user_id=?",
+    "DELETE FROM campus_events WHERE created_by=?",
+    "DELETE FROM teacher_reviews WHERE telegram_user_id=?",
+    "DELETE FROM campus_questions WHERE created_by=?",
+    "DELETE FROM moderation_report_history WHERE reporter_telegram_user_id=?",
+    "DELETE FROM community_poll_votes WHERE telegram_user_id=?",
+
     "DELETE FROM community_votes WHERE telegram_user_id=?",
     "DELETE FROM community_follows WHERE telegram_user_id=?",
     "DELETE FROM community_saves WHERE telegram_user_id=?",
