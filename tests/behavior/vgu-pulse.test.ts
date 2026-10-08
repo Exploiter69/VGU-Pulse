@@ -83,6 +83,24 @@ const server = createTestHarness({
     expect(benign.status).toBe(201);
   });
 
+  it("awards an upvote reputation event only once across repeated toggles", async () => {
+    const viewer=await signInitData(BOT_TOKEN,{id:1001,first_name:"Viewer"});
+    const env=(await worker.getEnv()) as {DB:D1Database};
+    for(let i=0;i<5;i++){
+      const response=await worker.fetch("https://example.test/api/community-v2/vote",{
+        method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":viewer},
+        body:JSON.stringify({item_id:1,vote:1}),
+      });
+      expect(response.status).toBe(200);
+      if(i<4) await worker.fetch("https://example.test/api/community-v2/vote",{
+        method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":viewer},
+        body:JSON.stringify({item_id:1,vote:i%2===0?-1:1}),
+      });
+    }
+    const row=await env.DB.prepare("SELECT points FROM community_reputation WHERE telegram_user_id=?").bind("2002").first<{points:number}>();
+    expect(Number(row?.points)).toBe(2);
+  });
+
   it("deduplicates reply reports and exposes anonymous blocks without identity", async () => {
     const viewer = await signInitData(BOT_TOKEN,{id:1001,first_name:"Viewer"});
     const env = (await worker.getEnv()) as {DB:D1Database};
