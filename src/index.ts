@@ -2,6 +2,8 @@ import {
   createStudentPost,
   deleteStudentPost,
   deleteStudentProfile,
+  deleteAllStudentData,
+  setStudentContactEnabled,
   deleteStudentReply,
   getStudentProfile,
   getPersonalPulse,
@@ -11,11 +13,14 @@ import {
   unblockStudentProfile,
   setStudentProfileVisibility,
   listBlockedProfiles,
+  unblockStudentProfileBlock,
   upsertStudentProfile,
   validateStudentProfileInput,
   createStudentReply,
   getOpenPoll,
   listStudentPosts,
+  getStudentPostById,
+  getStudentReplyById,
   reportStudentPost,
   reportStudentReply,
   listStudentReplies,
@@ -27,9 +32,11 @@ import {
   validateStudentReplyInput,
   voteInPoll,
 } from "./db";
-import { sendMessage } from "./telegram-bot";
+import { sendMessage, telegramApi } from "./telegram-bot";
 import { validateInitData } from "./telegram";
 import { handleCommunityV2 } from "./community-v2";
+import { handleFeaturesV4 } from "./features-v4";
+import { json, readJson, requireUser as requireHttpUser } from "./http";
 import { analyzeAcademicQuery, searchKnowledge } from "./intelligence";
 import {
   getNotificationPreferences,
@@ -48,33 +55,17 @@ interface Env {
   SIGNAL_API_URL?: string;
   SIGNAL_SERVICE: Fetcher;
   APP_NAME: string;
+  ADMIN_IDS?: string;
+  ANON_ALIAS_SECRET?: string;
+  PULSE_CHANNEL_ID?: string;
 }
 
 function getBotToken(env: Env): string {
   return env.BOT_TOKEN ?? env.TELEGRAM_BOT_TOKEN ?? "";
 }
-
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-      "x-content-type-options": "nosniff",
-    },
-  });
-}
-
-async function readJson<T>(request: Request, maxBytes = 32_768): Promise<T | null> {
-  const length = Number(request.headers.get("content-length") ?? "0");
-  if (Number.isFinite(length) && length > maxBytes) return null;
-  try {
-    const body = (await request.json()) as T;
-    return body && typeof body === "object" ? body : null;
-  } catch {
-    return null;
-  }
-}
+function adminIds(raw?:string):Set<string>{return new Set((raw??"").split(",").map(x=>x.trim()).filter(Boolean));}
+function isAdmin(env:Env,userId:number):boolean{return adminIds(env.ADMIN_IDS).has(String(userId));}
+let cachedBotUsername:{value:string;expiresAt:number}|null=null;
 
 function html(): Response {
   return new Response(
@@ -87,6 +78,16 @@ function html(): Response {
   );
 }
 
+export function parseResourceCaption(caption: string): Record<string,string> {
+  const metadata: Record<string,string> = {};
+  const lines = caption.trim().split(/\s+/).slice(1);
+  for (const token of lines) {
+    const [key, ...rest] = token.split("=");
+    if (rest.length) metadata[key.toLowerCase()] = rest.join("=").trim().slice(0, 100);
+  }
+  return metadata;
+}
+
 async function handleTelegramUpdate(request: Request, env: Env): Promise<Response> {
   if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
 
@@ -96,7 +97,7 @@ async function handleTelegramUpdate(request: Request, env: Env): Promise<Respons
   }
 
   const update = await readJson<{
-    message?: { chat?: { id?: number }; text?: string };
+    message?: { from?: { id?: number }; chat?: { id?: number }; text?: string; caption?: string; document?: { file_id?: string; file_unique_id?: string; file_name?: string; mime_type?: string; file_size?: number } };
   }>(request);
   if (!update) return json({ ok: false, error: "invalid_json" }, 400);
 
@@ -105,6 +106,30 @@ async function handleTelegramUpdate(request: Request, env: Env): Promise<Respons
   if (!chatId) return json({ ok: true });
 
   const text = (message.text ?? "").trim();
+  const senderId=message.from?.id ?? chatId;
+  if(message.document && (message.caption??"").trim().startsWith("/resource")){
+    const d=message.document;
+    if(!d.file_id||!d.file_name)return json({ok:true});
+    const metadata=parseResourceCaption(message.caption??"");
+    const resourceType=["PYQ","notes","assignment","other"].includes(metadata.type)?metadata.type:"other";
+    await env.DB.prepare("INSERT INTO resources(telegram_user_id,file_id,file_unique_id,name,mime_type,size_bytes,subject,semester,resource_type,status) VALUES(?,?,?,?,?,?,?,?,?,?)").bind(String(senderId),d.file_id,d.file_unique_id??null,d.file_name,d.mime_type??null,Number.isSafeInteger(d.file_size)?d.file_size:null,metadata.subject??null,metadata.semester??null,resourceType,"pending").run();
+    await sendMessage(getBotToken(env),chatId,"Resource received. It is pending moderation before students can access it.",env.TELEGRAM_WEBAPP_URL);
+    return json({ok:true});
+  }
+  if(isAdmin(env,senderId) && text==="/review"){
+    const rows=await env.DB.prepare("SELECT id,kind,title,report_count FROM community_items WHERE status='review' ORDER BY created_at ASC LIMIT 20").all();
+    await sendMessage(getBotToken(env),chatId,rows.results?.length?rows.results.map((x:any)=>`#${x.id} [${x.kind}] reports=${x.report_count} ${x.title}`).join("\n"):"No items awaiting review.",env.TELEGRAM_WEBAPP_URL);
+    return json({ok:true});
+  }
+  const moderation=text.match(/^\/(restore|hide|ban)\s+(\d+)$/);
+  if(isAdmin(env,senderId)&&moderation){
+    const [,action,target]=moderation;
+    if(action==="ban") await env.DB.prepare("INSERT INTO user_bans(telegram_user_id,reason,banned_by) VALUES(?,?,?) ON CONFLICT(telegram_user_id) DO UPDATE SET reason=excluded.reason,banned_by=excluded.banned_by,created_at=CURRENT_TIMESTAMP").bind(target,"Telegram moderation command",String(senderId)).run();
+    else await env.DB.prepare("UPDATE community_items SET status=? WHERE id=?").bind(action==="restore"?"published":"hidden",Number(target)).run();
+    await env.DB.prepare("INSERT INTO moderation_actions(admin_telegram_user_id,action,target_type,target_id,reason) VALUES(?,?,?,?,?)").bind(String(senderId),action,action==="ban"?"user":"item",target,"Telegram moderation command").run();
+    await sendMessage(getBotToken(env),chatId,`Moderation action applied: /${action} ${target}`,env.TELEGRAM_WEBAPP_URL);
+    return json({ok:true});
+  }
 
   if (text === "/start") {
     await sendMessage(
@@ -133,9 +158,27 @@ async function handleTelegramUpdate(request: Request, env: Env): Promise<Respons
 }
 
 export default {
-  async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
+  async scheduled(controller: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
     try {
       const result = await runNotificationSweep(env.DB, env.SIGNAL_SERVICE, getBotToken(env), env.TELEGRAM_WEBAPP_URL);
+      const weeklyTime=new Date(controller.scheduledTime); const weeklyWindow=weeklyTime.getUTCDay()===1 && weeklyTime.getUTCHours()===4 && weeklyTime.getUTCMinutes()<15;
+      if(env.PULSE_CHANNEL_ID&&weeklyWindow){
+        const rows=await env.DB.prepare("SELECT i.id,i.title,(SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=1) upvotes,(SELECT COUNT(*) FROM community_replies r WHERE r.item_id=i.id AND r.status='published') replies,(SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=-1) downvotes FROM community_items i WHERE i.status='published' ORDER BY (upvotes+2*replies-downvotes) DESC,i.created_at DESC LIMIT 5").all<{id:number;title:string;upvotes:number;replies:number}>();
+        if(rows.results?.length){
+          const digest="VGU Pulse — weekly top threads\\n\\n"+rows.results.map((x,i)=>(i+1)+". "+x.title+" ("+x.upvotes+" helpful, "+x.replies+" replies)").join("\\n");
+          await sendMessage(getBotToken(env),Number(env.PULSE_CHANNEL_ID),digest,env.TELEGRAM_WEBAPP_URL);
+        }
+      }
+      const reminderRows=await env.DB.prepare("SELECT er.event_id,er.telegram_user_id,e.title,e.starts_at,e.location FROM event_reminders er JOIN campus_events e ON e.id=er.event_id WHERE er.enabled=1 AND er.sent_at IS NULL AND e.status='published' AND e.starts_at>CURRENT_TIMESTAMP AND e.starts_at<=datetime('now','+60 minutes') ORDER BY e.starts_at LIMIT 18").all<{event_id:number;telegram_user_id:string;title:string;starts_at:string;location:string|null}>();
+      const reminderUpdates:D1PreparedStatement[]=[];
+      for(const r of reminderRows.results??[]){
+        try{
+          const message="Reminder: "+r.title+" starts at "+r.starts_at+(r.location?" · "+r.location:"");
+          const response=await telegramApi(getBotToken(env),"sendMessage",{chat_id:Number(r.telegram_user_id),text:message});
+          if(response.ok)reminderUpdates.push(env.DB.prepare("UPDATE event_reminders SET sent_at=CURRENT_TIMESTAMP WHERE event_id=? AND telegram_user_id=?").bind(r.event_id,r.telegram_user_id));
+        }catch{}
+      }
+      if(reminderUpdates.length)await env.DB.batch(reminderUpdates);
       console.log(JSON.stringify({ event: "notification_sweep", ...result }));
     } catch (error) {
       console.error(JSON.stringify({
@@ -176,10 +219,12 @@ export default {
       const token = getBotToken(env);
       if (!token) return json({ ok: false, error: "bot_not_configured" }, 503);
       try {
+        if(cachedBotUsername && cachedBotUsername.expiresAt>Date.now()) return json({ok:true,url:`https://t.me/${cachedBotUsername.value}?startapp=${encodeURIComponent(target)}`});
         const response = await fetch(`https://api.telegram.org/bot${token}/getMe`);
         const payload = await response.json() as { ok?: boolean; result?: { username?: string } };
         const username = payload.result?.username;
         if (!response.ok || !payload.ok || !username) return json({ ok: false, error: "bot_username_unavailable" }, 503);
+        cachedBotUsername={value:username,expiresAt:Date.now()+3600000};
         return json({ ok: true, url: `https://t.me/${username}?startapp=${encodeURIComponent(target)}` });
       } catch { return json({ ok: false, error: "share_link_unavailable" }, 503); }
     }
@@ -204,6 +249,37 @@ export default {
     }
 
 
+    if (request.method === "POST" && url.pathname === "/api/moderation/community") {
+      const init=await validateInitData(request.headers.get("x-telegram-init-data")??"",getBotToken(env));
+      if(!init||!isAdmin(env,init.user.id))return json({ok:false,error:"forbidden"},403);
+      const b=await readJson<Record<string,unknown>>(request); if(!b)return json({ok:false,error:"invalid_json"},400);
+      const slug=String(b.slug??"").trim().toLowerCase().replace(/[^a-z0-9_-]/g,"-").slice(0,60);
+      const name=String(b.name??"").trim().slice(0,100); const kind=String(b.kind??"topic");
+      if(!slug||!name||!["club","hostel","batch","branch","topic","campus"].includes(kind))return json({ok:false,error:"invalid_community"},400);
+      await env.DB.prepare("INSERT INTO communities(slug,name,kind,description,rules,owner_telegram_user_id,official,approved) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(slug) DO UPDATE SET name=excluded.name,description=excluded.description,rules=excluded.rules,owner_telegram_user_id=excluded.owner_telegram_user_id,official=excluded.official,approved=excluded.approved").bind(slug,name,kind,String(b.description??"").slice(0,500),String(b.rules??"").slice(0,1000),String(b.owner_telegram_user_id??init.user.id),b.official===true?1:0,b.approved===true?1:0).run();
+      return json({ok:true,slug});
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/moderation/review") {
+      const init=await validateInitData(request.headers.get("x-telegram-init-data")??"",getBotToken(env));
+      if(!init||!isAdmin(env,init.user.id))return json({ok:false,error:"forbidden"},403);
+      const items=await env.DB.prepare("SELECT id,kind,title,body,telegram_user_id,report_count,created_at FROM community_items WHERE status='review' ORDER BY created_at ASC LIMIT 50").all();
+      const replies=await env.DB.prepare("SELECT id,item_id,body,telegram_user_id,report_count,created_at FROM community_replies WHERE status='review' ORDER BY created_at ASC LIMIT 50").all();
+      return json({ok:true,items:items.results??[],replies:replies.results??[]});
+    }
+    if (request.method === "POST" && url.pathname === "/api/moderation/action") {
+      const init=await validateInitData(request.headers.get("x-telegram-init-data")??"",getBotToken(env));
+      if(!init||!isAdmin(env,init.user.id))return json({ok:false,error:"forbidden"},403);
+      const b=await readJson<Record<string,unknown>>(request); if(!b)return json({ok:false,error:"invalid_json"},400);
+      const type=String(b.target_type??""); const action=String(b.action??""); const id=Number(b.target_id);
+      if(!["item","reply","user"].includes(type)||!["restore","hide","ban"].includes(action)||!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_action"},400);
+      if(type==="item"&&(action==="restore"||action==="hide"))await env.DB.prepare("UPDATE community_items SET status=? WHERE id=?").bind(action==="restore"?"published":"hidden",id).run();
+      if(type==="reply"&&(action==="restore"||action==="hide"))await env.DB.prepare("UPDATE community_replies SET status=? WHERE id=?").bind(action==="restore"?"published":"hidden",id).run();
+      if(type==="user"&&action==="ban")await env.DB.prepare("INSERT INTO user_bans(telegram_user_id,reason,banned_by) VALUES(?,?,?) ON CONFLICT(telegram_user_id) DO UPDATE SET reason=excluded.reason,banned_by=excluded.banned_by,created_at=CURRENT_TIMESTAMP").bind(String(id),String(b.reason??"moderation"),String(init.user.id)).run();
+      await env.DB.prepare("INSERT INTO moderation_actions(admin_telegram_user_id,action,target_type,target_id,reason) VALUES(?,?,?,?,?)").bind(String(init.user.id),action,type,String(id),String(b.reason??"")).run();
+      return json({ok:true});
+    }
+
     if (request.method === "GET" && url.pathname === "/api/students") {
       try {
         const q = (url.searchParams.get("q") ?? "").trim().slice(0, 100);
@@ -214,13 +290,9 @@ export default {
         const year = Number.isInteger(parsedYear) && parsedYear >= 1 && parsedYear <= 6
           ? parsedYear
           : undefined;
-        let viewerId: number | undefined;
-        const initData = request.headers.get("x-telegram-init-data") ?? "";
-        if (initData && getBotToken(env)) {
-          const validated = await validateInitData(initData, getBotToken(env));
-          if (validated) viewerId = validated.user.id;
-        }
-        const profiles = await listStudentProfiles(env.DB, 30, viewerId, {
+        const user = await requireHttpUser(request, env);
+        if (!user) return json({ ok: false, error: "unauthorized" }, 401);
+        const profiles = await listStudentProfiles(env.DB, 30, user.id, {
           q,
           program,
           branch,
@@ -228,6 +300,23 @@ export default {
         });
         return json({ ok: true, trust: "student-reported", profiles });
       } catch { return json({ ok: false, error: "student_profiles_unavailable" }, 500); }
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/account/delete") {
+      const user = await requireHttpUser(request, env);
+      if(!user)return json({ok:false,error:"unauthorized"},401);
+      const body=await readJson<{confirm?:unknown}>(request);
+      if(body?.confirm!==true)return json({ok:false,error:"confirmation_required"},400);
+      await deleteAllStudentData(env.DB,user.id);
+      return json({ok:true,deleted:true});
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/student-profile/contact") {
+      const validated=await validateInitData(request.headers.get("x-telegram-init-data")??"",getBotToken(env));
+      if(!validated)return json({ok:false,error:"unauthorized"},401);
+      const body=await readJson<{enabled?:unknown}>(request);
+      if(!body||typeof body.enabled!=="boolean")return json({ok:false,error:"invalid_contact_preference"},400);
+      return json({ok:true,enabled:await setStudentContactEnabled(env.DB,validated.user.id,body.enabled)});
     }
 
     if (request.method === "POST" && url.pathname === "/api/student-profile/visibility") {
@@ -254,10 +343,11 @@ export default {
       if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
       const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
-      const body = await readJson<{ public_id?: unknown }>(request);
+      const body = await readJson<{ block_id?: unknown }>(request);
       if (!body) return json({ ok: false, error: "invalid_json" }, 400);
-      if (typeof body.public_id !== "string" || body.public_id.length > 100) return json({ ok: false, error: "invalid_profile" }, 400);
-      return json({ ok: true, unblocked: await unblockStudentProfile(env.DB, validated.user.id, body.public_id) });
+      const blockId=Number(body.block_id);
+      if (!Number.isSafeInteger(blockId)||blockId<1) return json({ ok: false, error: "invalid_block" }, 400);
+      return json({ ok: true, unblocked: await unblockStudentProfileBlock(env.DB, validated.user.id, blockId) });
     }
 
     if (request.method === "GET" && url.pathname === "/api/student-profile/blocks") {
@@ -286,14 +376,17 @@ export default {
       if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
       const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
-      const body = await readJson<{ official_updates?: unknown; community_replies?: unknown }>(request);
+      const body = await readJson<{ official_updates?: unknown; community_replies?: unknown; community_activity?: unknown; personalized_alerts?: unknown }>(request);
       if (!body) return json({ ok: false, error: "invalid_json" }, 400);
-      if (body.official_updates !== undefined && typeof body.official_updates !== "boolean") return json({ ok: false, error: "invalid_official_updates" }, 400);
-      if (body.community_replies !== undefined && typeof body.community_replies !== "boolean") return json({ ok: false, error: "invalid_community_replies" }, 400);
+      for (const key of ["official_updates","community_replies","community_activity","personalized_alerts"] as const) {
+        if (body[key] !== undefined && typeof body[key] !== "boolean") return json({ ok: false, error: "invalid_preferences" }, 400);
+      }
       try {
         const preferences = await setNotificationPreferences(env.DB, validated.user.id, {
           official_updates: body.official_updates as boolean | undefined,
           community_replies: body.community_replies as boolean | undefined,
+          community_activity: body.community_activity as boolean | undefined,
+          personalized_alerts: body.personalized_alerts as boolean | undefined,
         });
         return json({ ok: true, preferences });
       } catch {
@@ -439,8 +532,8 @@ export default {
       if (!Number.isSafeInteger(postId) || postId < 1 || (body.vote !== 1 && body.vote !== -1)) return json({ ok: false, error: "invalid_vote" }, 400);
       try {
         await voteStudentPost(env.DB, postId, validated.user.id, body.vote as -1 | 1);
-        const posts = await listStudentPosts(env.DB, 20, undefined, validated.user.id, "newest");
-        return json({ ok: true, post: posts.find((item) => item.id === postId) });
+        const post = await getStudentPostById(env.DB, postId, validated.user.id);
+        return json({ ok: true, post });
       } catch (error) {
         if (error instanceof Error && error.message === "post_not_found") return json({ ok: false, error: "post_not_found" }, 404);
         return json({ ok: false, error: "vote_failed" }, 500);
@@ -527,9 +620,8 @@ export default {
       if (!Number.isSafeInteger(replyId) || replyId < 1 || (body.vote !== 1 && body.vote !== -1)) return json({ ok: false, error: "invalid_vote" }, 400);
       try {
         await voteStudentReply(env.DB, replyId, validated.user.id, body.vote as -1 | 1);
-        const owner = await env.DB.prepare("SELECT post_id FROM student_post_replies WHERE id = ?").bind(replyId).first<{ post_id: number }>();
-        const replies = owner ? await listStudentReplies(env.DB, owner.post_id, 50, validated.user.id) : [];
-        return json({ ok: true, reply: replies.find((item) => item.id === replyId) });
+        const reply = await getStudentReplyById(env.DB, replyId, validated.user.id);
+        return json({ ok: true, reply });
       } catch (error) {
         if (error instanceof Error && error.message === "reply_not_found") return json({ ok: false, error: "reply_not_found" }, 404);
         return json({ ok: false, error: "vote_failed" }, 500);
@@ -668,9 +760,12 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/api/home") {
+      let viewerId: number | undefined;
+      const homeInitData = request.headers.get("x-telegram-init-data") ?? "";
+      if (homeInitData && getBotToken(env)) { const validated = await validateInitData(homeInitData, getBotToken(env)); viewerId = validated?.user.id; }
       let poll = null;
       try {
-        poll = await getOpenPoll(env.DB);
+        poll = await getOpenPoll(env.DB, viewerId);
       } catch {
         poll = null;
       }
@@ -757,7 +852,7 @@ export default {
       const body = await readJson<{ poll_id?: unknown; option_id?: unknown }>(request);
       if (!body) return json({ ok: false, error: "invalid_json" }, 400);
 
-      if (!Number.isSafeInteger(body.poll_id) || !Number.isSafeInteger(body.option_id)) {
+      if (!Number.isSafeInteger(body.poll_id) || !Number.isSafeInteger(body.option_id) || (body.poll_id as number) < 1 || (body.option_id as number) < 1) {
         return json({ ok: false, error: "invalid_vote" }, 400);
       }
 
@@ -767,6 +862,7 @@ export default {
       try {
         await voteInPoll(env.DB, pollId, optionId, validated.user.id);
       } catch (error) {
+        if (error instanceof Error && error.message === "poll_closed") return json({ ok: false, error: "poll_closed" }, 400);
         if (error instanceof Error && error.message === "invalid_option") {
           return json({ ok: false, error: "invalid_option" }, 400);
         }
@@ -803,8 +899,12 @@ export default {
       const initData = request.headers.get("x-telegram-init-data") ?? "";
       const validated = getBotToken(env) ? await validateInitData(initData, getBotToken(env)) : null;
       if (validated) {
+        const banned=await env.DB.prepare("SELECT 1 FROM user_bans WHERE telegram_user_id=? AND (expires_at IS NULL OR expires_at>CURRENT_TIMESTAMP)").bind(String(validated.user.id)).first();
+        if(banned)return json({ok:false,error:"user_banned"},403);
         const communityResponse = await handleCommunityV2(request, env, validated.user);
         if (communityResponse) return communityResponse;
+        const featureResponse = await handleFeaturesV4(request, env, validated.user);
+        if (featureResponse) return featureResponse;
       } else if (url.pathname.startsWith("/api/community-v2")) {
         return json({ ok: false, error: "unauthorized" }, 401);
       }
