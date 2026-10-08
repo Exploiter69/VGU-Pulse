@@ -282,6 +282,23 @@ describe("VGU-Pulse real D1 behavior",()=>{
     expect(on.status).toBe(200);
   });
 
+  it("caps personalized fan-out and skips a blocked recipient",async()=>{
+    const author={id:2002,first_name:"Author"};
+    await request("/api/community-v2/rules/ack",author,{method:"POST",body:"{}"});
+    const env=await worker.getEnv() as {DB:D1Database};
+    await env.DB.batch([
+      env.DB.prepare("INSERT OR IGNORE INTO notification_preferences(telegram_user_id,official_updates,community_replies,community_activity,personalized_alerts) VALUES('3003',1,1,1,1)"),
+      env.DB.prepare("INSERT INTO student_profile_blocks(blocker_telegram_user_id,blocked_telegram_user_id) VALUES('1001','2002')"),
+    ]);
+    for(let i=0;i<4;i++){
+      const response=await request("/api/community-v2/items",author,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"discussion",title:"Fanout "+i,body:"Campus update",community_slug:"campus"})});
+      expect(response.status).toBe(201);
+    }
+    const counts=await env.DB.prepare("SELECT telegram_user_id,COUNT(*) count FROM student_notifications WHERE channel='personalized' GROUP BY telegram_user_id ORDER BY telegram_user_id").all<{telegram_user_id:string;count:number}>();
+    expect(counts.results.find(x=>x.telegram_user_id==="1001")).toBeUndefined();
+    expect(Number(counts.results.find(x=>x.telegram_user_id==="3003")?.count)).toBe(3);
+  });
+
   it("notifies a V2 post author when another student replies",async()=>{
     const author={id:2002,first_name:"Author"};
     const viewer={id:1001,first_name:"Viewer"};
