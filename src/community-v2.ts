@@ -138,6 +138,8 @@ async function createItem(db: D1Database, user: CommunityUser, input: Record<str
   const p = await profile(db, user.id);
   const anonymous = kind === "confession" || Boolean(input.anonymous);
   const community = communitySlug(input.community_slug) || "campus";
+  const communityRow=await db.prepare("SELECT slug FROM communities WHERE slug=? AND approved=1").bind(community).first<{slug:string}>();
+  if(!communityRow) throw new Error("invalid_community");
   const program = anonymous ? null : (clamp(input.audience_program, 80) || p?.program || null);
   const branch = anonymous ? null : (clamp(input.audience_branch, 80) || p?.branch || null);
   const yearValue = anonymous ? 0 : Number(input.audience_year ?? p?.year ?? 0);
@@ -439,9 +441,19 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       return json({ok:true,selected_option_id:selected?.option_id??null,options:options.results??[]});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/communities"){
-      const rows=await env.DB.prepare(`SELECT community_slug,COUNT(*) posts FROM community_items
-        WHERE status='published' GROUP BY community_slug ORDER BY posts DESC LIMIT 30`).all();
+      const rows=await env.DB.prepare("SELECT slug,name,kind,description,rules,official FROM communities WHERE approved=1 ORDER BY official DESC,name LIMIT 100").all();
       return json({ok:true,communities:rows.results??[]});
+    }
+    if(request.method==="POST" && url.pathname==="/api/community-v2/communities/join"){
+      const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
+      const slug=communitySlug(input.slug); const row=await env.DB.prepare("SELECT slug FROM communities WHERE slug=? AND approved=1").bind(slug).first();
+      if(!row)return json({ok:false,error:"invalid_community"},404);
+      await env.DB.prepare("INSERT OR IGNORE INTO community_members(community_slug,telegram_user_id) VALUES(?,?)").bind(slug,String(user.id)).run();
+      return json({ok:true,joined:true});
+    }
+    if(request.method==="DELETE" && url.pathname==="/api/community-v2/communities/join"){
+      const slug=communitySlug(url.searchParams.get("slug")); await env.DB.prepare("DELETE FROM community_members WHERE community_slug=? AND telegram_user_id=?").bind(slug,String(user.id)).run();
+      return json({ok:true,joined:false});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/search"){
       const q=clamp(url.searchParams.get("q"),120);
