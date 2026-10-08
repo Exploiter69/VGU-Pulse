@@ -26,3 +26,7 @@ The controlled program seed is based on VGU's current public 2026-27 program pag
 - Profile discovery now returns the username only when contact is enabled.
 - V1 endpoint/table removal only after migration verification.
 - Full cursor coverage for non-new sorting modes.
+
+## Final hardening completion
+
+Gate 3 Q&A, communities, cursor pagination, FTS, opt-in Telegram contact, V1→V2 migration provenance, notification retry state, and moderation report history are implemented in migrations 0012–0014. Real-D1 behavior tests cover the migration chain and the Q&A/contact flows.
