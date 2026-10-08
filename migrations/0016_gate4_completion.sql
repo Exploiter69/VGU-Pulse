@@ -14,3 +14,7 @@ CREATE TABLE IF NOT EXISTS event_reminders (
   PRIMARY KEY(event_id,telegram_user_id)
 );
 CREATE INDEX IF NOT EXISTS idx_event_reminders_enabled ON event_reminders(enabled,event_id);
+
+CREATE INDEX IF NOT EXISTS idx_teacher_reviews_one_per_user ON teacher_reviews(telegram_user_id,teacher,elective);
+ALTER TABLE event_reminders ADD COLUMN sent_at TEXT;
+CREATE INDEX IF NOT EXISTS idx_event_reminders_due ON event_reminders(enabled,sent_at,event_id);
