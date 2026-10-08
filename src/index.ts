@@ -179,6 +179,16 @@ export default {
           await sendMessage(getBotToken(env),Number(env.PULSE_CHANNEL_ID),digest,env.TELEGRAM_WEBAPP_URL);
         }
       }
+      const reminderRows=await env.DB.prepare("SELECT er.event_id,er.telegram_user_id,e.title,e.starts_at,e.location FROM event_reminders er JOIN campus_events e ON e.id=er.event_id WHERE er.enabled=1 AND er.sent_at IS NULL AND e.status='published' AND e.starts_at>CURRENT_TIMESTAMP AND e.starts_at<=datetime('now','+60 minutes') ORDER BY e.starts_at LIMIT 18").all<{event_id:number;telegram_user_id:string;title:string;starts_at:string;location:string|null}>();
+      const reminderUpdates:D1PreparedStatement[]=[];
+      for(const r of reminderRows.results??[]){
+        try{
+          const message="Reminder: "+r.title+" starts at "+r.starts_at+(r.location?" · "+r.location:"");
+          const sent=await sendMessage(getBotToken(env),Number(r.telegram_user_id),message,env.TELEGRAM_WEBAPP_URL);
+          if(sent)reminderUpdates.push(env.DB.prepare("UPDATE event_reminders SET sent_at=CURRENT_TIMESTAMP WHERE event_id=? AND telegram_user_id=?").bind(r.event_id,r.telegram_user_id));
+        }catch{}
+      }
+      if(reminderUpdates.length)await env.DB.batch(reminderUpdates);
       console.log(JSON.stringify({ event: "notification_sweep", ...result }));
     } catch (error) {
       console.error(JSON.stringify({
