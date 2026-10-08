@@ -282,6 +282,16 @@ describe("VGU-Pulse real D1 behavior",()=>{
     expect(next.status).toBe(200);
   });
 
+  it("filters campus feed by branch and year without fragmenting the default",async()=>{
+    const user={id:1001,first_name:"Viewer"};
+    await request("/api/community-v2/rules/ack",user,{method:"POST",body:"{}"});
+    const cse=await request("/api/community-v2/items",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"discussion",title:"CSE filter item",body:"For CSE",community_slug:"campus",audience_branch:"CSE",audience_year:2})});
+    expect(cse.status).toBe(201);
+    const defaultFeed=await request("/api/community-v2/feed?sort=new&limit=40",user);expect(defaultFeed.status).toBe(200);
+    const filtered=await request("/api/community-v2/feed?sort=new&limit=40&branch=CSE&year=2",user);expect(filtered.status).toBe(200);
+    const filteredData=await filtered.json() as {items:Array<{title:string}>};expect(filteredData.items.some(x=>x.title==="CSE filter item")).toBe(true);
+  });
+
   it("keeps Telegram contact opt-in",async()=>{
     const user={id:1001,first_name:"Viewer"};
     const off=await request("/api/student-profile/contact",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({enabled:false})});
