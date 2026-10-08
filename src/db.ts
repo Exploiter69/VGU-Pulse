@@ -346,7 +346,7 @@ export async function listStudentPosts(
   const rows = await db
     .prepare(
       `SELECT p.id, p.category, p.title, p.body,
-              COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
+              COALESCE(NULLIF(TRIM(sp.display_name), ''), 'VGU student') AS author_name,
               p.created_at, p.report_count,
               (SELECT COUNT(*) FROM student_post_replies r WHERE r.post_id = p.id AND r.status = 'published' AND r.report_count < 3) AS reply_count,
               (SELECT COUNT(*) FROM student_post_votes v WHERE v.post_id = p.id AND v.vote = 1) AS upvotes,
@@ -354,7 +354,7 @@ export async function listStudentPosts(
               (SELECT COALESCE(v.vote, 0) FROM student_post_votes v WHERE v.post_id = p.id AND v.telegram_user_id = ?) AS viewer_vote,
               CASE WHEN ? IS NOT NULL AND p.telegram_user_id = ? THEN 1 ELSE 0 END AS owned
        FROM student_posts p
-       JOIN users u ON u.telegram_user_id = p.telegram_user_id
+       LEFT JOIN student_profiles sp ON sp.telegram_user_id = p.telegram_user_id
        WHERE p.status = 'published' AND p.report_count < 3
          AND (? IS NULL OR p.category = ?)
        ORDER BY
