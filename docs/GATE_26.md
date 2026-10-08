@@ -1,32 +1,24 @@
 # Gate 26 — Community & Product Foundations
 
-Status: implementation on hardening branch; production untouched.
+Status: implemented on hardening branch; production untouched.
 
 ## Implemented
-- Gate 3 migration 0012 adds real approved communities, membership, topics, controlled VGU academic values, opt-in Telegram contact, discovery indexes and FTS5 search.
-- The default community remains whole-campus; branch/year are profile/matching attributes rather than invented community slugs.
-- Community post creation now requires an approved community record.
-- Community join/leave endpoints use real community membership.
-- Feed pagination for the default/new ordering uses an opaque (created_at,id) cursor.
-- FTS5-backed title/body search replaces feed-wide LIKE scans.
-- Legacy V1 provenance IDs are stored on migrated V2 items/replies.
-- scripts/migrate-v1-to-v2.sql is rerunnable and maps V1 categories into V2 kinds while preserving votes and reply relationships.
-- /api/share-link caches the bot username in Worker memory for one hour.
-- Telegram contact is explicitly opt-in and defaults off.
+- Default feed is whole-campus; branch/year remain filters and matching attributes.
+- Controlled VGU program/branch options are enforced on profile writes.
+- Migration 0017 maps common legacy free-text academic values and converts remaining unmapped values to Other.
+- Migration 0018 backfills existing V2 posts into FTS5 so search covers pre-migration data as well as new posts.
+- Approved communities, membership and moderator foundations are present; user-created slugs are not accepted as post communities.
+- Cursor pagination uses `(created_at,id)` for the default chronological feed.
+- FTS5 title/body search has insert/update/delete triggers and a legacy-data backfill.
+- Q&A reply voting, accepted answers/Solved, unread markers and capped helpful-answer reputation are implemented.
+- Telegram contact is opt-in and only exposed when enabled.
+- `/api/share-link` caches the bot username in Worker memory.
+- V1→V2 migration script preserves legacy IDs and vote/reply relationships; legacy endpoints remain for compatibility.
 
-## Academic source
-The controlled program seed is based on VGU's current public 2026-27 program pages; Other remains available for values outside the maintained list. The implementation intentionally does not infer a student's program from Telegram identity.
+## Verification
+The behavior suite covers fresh migration application, an existing-0009 upgrade path, controlled-value mapping and FTS backfill, community approval, cursor pagination, contact opt-in and Q&A flows.
 
-## Migration safety
-0012 is additive and does not modify 0001-0011. Existing free-form profile values are retained unless blank; new profile writes are constrained to the maintained controlled set or Other.
-
-## Remaining Gate 3 work
-- Full daily-capped helpful-answer reputation tuning remains to be verified in a later review.
-- Full community moderation UI remains; admin community approval API is implemented.
-- Profile discovery now returns the username only when contact is enabled.
-- V1 endpoint/table removal only after migration verification.
-- Full cursor coverage for non-new sorting modes.
-
-## Final hardening completion
-
-Gate 3 Q&A, communities, cursor pagination, FTS, opt-in Telegram contact, V1→V2 migration provenance, notification retry state, and moderation report history are implemented in migrations 0012–0014. Real-D1 behavior tests cover the migration chain and the Q&A/contact flows.
+## Remaining manual verification
+- Verify the real Telegram Mini App presentation on Desktop/mobile.
+- Verify the V1→V2 migration against a representative legacy export before any production data operation.
+- Do not remove V1 tables/endpoints until that migration is reviewed and validated.
