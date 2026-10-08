@@ -62,6 +62,7 @@ function getBotToken(env: Env): string {
 }
 function adminIds(raw?:string):Set<string>{return new Set((raw??"").split(",").map(x=>x.trim()).filter(Boolean));}
 function isAdmin(env:Env,userId:number):boolean{return adminIds(env.ADMIN_IDS).has(String(userId));}
+let cachedBotUsername:{value:string;expiresAt:number}|null=null;
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -200,10 +201,12 @@ export default {
       const token = getBotToken(env);
       if (!token) return json({ ok: false, error: "bot_not_configured" }, 503);
       try {
+        if(cachedBotUsername && cachedBotUsername.expiresAt>Date.now()) return json({ok:true,url:`https://t.me/${cachedBotUsername.value}?startapp=${encodeURIComponent(target)}`});
         const response = await fetch(`https://api.telegram.org/bot${token}/getMe`);
         const payload = await response.json() as { ok?: boolean; result?: { username?: string } };
         const username = payload.result?.username;
         if (!response.ok || !payload.ok || !username) return json({ ok: false, error: "bot_username_unavailable" }, 503);
+        cachedBotUsername={value:username,expiresAt:Date.now()+3600000};
         return json({ ok: true, url: `https://t.me/${username}?startapp=${encodeURIComponent(target)}` });
       } catch { return json({ ok: false, error: "share_link_unavailable" }, 503); }
     }
