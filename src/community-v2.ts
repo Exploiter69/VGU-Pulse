@@ -644,9 +644,13 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     if(request.method==="POST" && url.pathname==="/api/community-v2/preferences"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
       await env.DB.prepare("INSERT OR IGNORE INTO notification_preferences(telegram_user_id) VALUES(?)").bind(String(user.id)).run();
-      const a=Boolean(input.community_activity),b=Boolean(input.personalized_alerts);
-      await env.DB.prepare("UPDATE notification_preferences SET community_activity=?,personalized_alerts=?,updated_at=CURRENT_TIMESTAMP WHERE telegram_user_id=?").bind(a?1:0,b?1:0,String(user.id)).run();
-      return json({ok:true,preferences:{community_activity:a,personalized_alerts:b}});
+      const keys=["official_updates","community_replies","community_activity","personalized_alerts"] as const;
+      for(const key of keys) if(input[key]!==undefined && typeof input[key]!=="boolean") return json({ok:false,error:"invalid_preferences"},400);
+      await env.DB.prepare("INSERT OR IGNORE INTO notification_preferences(telegram_user_id) VALUES(?)").bind(String(user.id)).run();
+      const current=await env.DB.prepare("SELECT official_updates,community_replies,community_activity,personalized_alerts FROM notification_preferences WHERE telegram_user_id=?").bind(String(user.id)).first<Record<string,number>>();
+      const next=Object.fromEntries(keys.map(key=>[key,input[key]===undefined?Boolean(current?.[key]):input[key]])) as Record<string,boolean>;
+      await env.DB.prepare("UPDATE notification_preferences SET official_updates=?,community_replies=?,community_activity=?,personalized_alerts=?,updated_at=CURRENT_TIMESTAMP WHERE telegram_user_id=?").bind(next.official_updates?1:0,next.community_replies?1:0,next.community_activity?1:0,next.personalized_alerts?1:0,String(user.id)).run();
+      return json({ok:true,preferences:next});
     }
     return json({ok:false,error:"not_found"},404);
   }catch(error){
