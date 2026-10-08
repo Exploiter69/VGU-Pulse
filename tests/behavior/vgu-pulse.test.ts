@@ -81,7 +81,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
   it("applies every migration to a fresh D1 database",async()=>{
     const env=await worker.getEnv() as {DB:D1Database};
     const rows=await env.DB.prepare("SELECT name FROM d1_migrations ORDER BY id").all<{name:string}>();
-    expect(rows.results.map(x=>x.name)).toEqual(expect.arrayContaining(["0001_initial.sql","0009_community_network.sql","0010_gate1_hardening.sql","0011_gate2_safety.sql","0012_gate3_foundations.sql","0013_gate3_qa.sql","0014_gate3_reliability.sql","0015_gate4_features.sql","0016_gate4_completion.sql","0017_gate3_academic_mapping.sql","0018_gate3_fts_backfill.sql","0019_gate4_review_uniqueness.sql"]));
+    expect(rows.results.map(x=>x.name)).toEqual(expect.arrayContaining(["0001_initial.sql","0009_community_network.sql","0010_gate1_hardening.sql","0011_gate2_safety.sql","0012_gate3_foundations.sql","0013_gate3_qa.sql","0014_gate3_reliability.sql","0015_gate4_features.sql","0016_gate4_completion.sql","0017_gate3_academic_mapping.sql","0018_gate3_fts_backfill.sql","0019_gate4_review_uniqueness.sql","0020_moderation_target_identity.sql"]));
   });
 
   it("reproduces the replies contract and hides non-published parents",async()=>{
@@ -224,6 +224,24 @@ describe("VGU-Pulse real D1 behavior",()=>{
       expect(rows.results.filter(x=>x.sent_at).map(x=>x.channel)).toEqual(expect.arrayContaining(["official","community_replies","community_activity"]));
       expect(rows.results.some(x=>x.channel==="personalized")).toBe(false);
     }finally{fetchMock.mockRestore();}
+  });
+
+  it("preserves moderation history when a reported post/profile is recreated",async()=>{
+    const env=await worker.getEnv() as {DB:D1Database};
+    const viewer={id:1001,first_name:"Viewer"};
+    const postReport=await request("/api/community-v2/report",viewer,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({item_id:1,reason:"spam"})});
+    expect(postReport.status).toBe(200);
+    await env.DB.prepare("DELETE FROM community_items WHERE id=1").run();
+    await env.DB.prepare("INSERT INTO community_items(telegram_user_id,kind,title,body,community_slug,status) VALUES('2002','discussion','Recreated post','new body','campus','published')").run();
+    const postHistory=await env.DB.prepare("SELECT COUNT(*) count FROM moderation_report_history WHERE target_type='item' AND target_telegram_user_id='2002'").first<{count:number}>();
+    expect(Number(postHistory?.count)).toBe(1);
+
+    const profileReport=await request("/api/student-profile/report",viewer,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({profile_public_id:"author-2002"})});
+    expect(profileReport.status).toBe(200);
+    await env.DB.prepare("DELETE FROM student_profiles WHERE telegram_user_id='2002'").run();
+    await env.DB.prepare("INSERT INTO student_profiles(public_id,telegram_user_id,display_name,program,branch,year,bio,looking_for) VALUES('author-2002-new','2002','Author Recreated','B.Tech','CSE',2,'','')").run();
+    const profileHistory=await env.DB.prepare("SELECT COUNT(*) count FROM moderation_report_history WHERE target_type='profile' AND target_telegram_user_id='2002'").first<{count:number}>();
+    expect(Number(profileHistory?.count)).toBe(1);
   });
 
   it("requires Telegram initData for student discovery",async()=>{
