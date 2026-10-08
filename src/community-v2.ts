@@ -506,7 +506,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/search"){
       const q=clamp(url.searchParams.get("q"),120);
-      return json({ok:true,items:await listItems(env.DB,user.id,new URLSearchParams({q,sort:"trending"}),env.ANON_ALIAS_SECRET)});
+      return json({ok:true,items:await listItems(env.DB,user.id,new URLSearchParams({q,sort:"trending"}),env.ANON_ALIAS_SECRET ?? env.BOT_TOKEN ?? env.TELEGRAM_BOT_TOKEN)});
     }
 
     if(request.method==="GET" && url.pathname==="/api/community-v2/legacy-item"){
@@ -529,7 +529,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     if(request.method==="GET" && url.pathname==="/api/community-v2/items"){
       const id=Number(url.searchParams.get("item_id"));
       if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
-      const item=await getItem(env.DB,id,user.id,env.ANON_ALIAS_SECRET);
+      const item=await getItem(env.DB,id,user.id,env.ANON_ALIAS_SECRET ?? env.BOT_TOKEN ?? env.TELEGRAM_BOT_TOKEN);
       if(!item)return json({ok:false,error:"item_not_found"},404);
       return json({ok:true,item});
     }
@@ -537,7 +537,8 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
       if(input.anonymous===true || input.kind==="confession"){ const notice=await env.DB.prepare("SELECT 1 FROM community_anonymous_notices WHERE telegram_user_id=?").bind(String(user.id)).first(); if(!notice) return json({ok:false,error:"anonymous_notice_required",notice:"Anonymous to students, still tied to your account on our server; admins may review reports."},428); }
       const rules=await env.DB.prepare("SELECT 1 FROM community_rules_ack WHERE telegram_user_id=?").bind(String(user.id)).first(); if(!rules) return json({ok:false,error:"rules_ack_required"},428);
-      const item=await createItem(env.DB,user,input,env.ANON_ALIAS_SECRET);
+      const aliasSecret=env.ANON_ALIAS_SECRET ?? env.BOT_TOKEN ?? env.TELEGRAM_BOT_TOKEN;
+      const item=await createItem(env.DB,user,input,aliasSecret);
       return json({ok:true,item},201);
     }
     if(request.method==="PATCH" && url.pathname==="/api/community-v2/items"){
