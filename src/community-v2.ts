@@ -187,12 +187,14 @@ async function getItem(db: D1Database, id: number, viewerId?: number): Promise<R
       (SELECT COUNT(*) FROM community_poll_options po WHERE po.item_id=i.id) AS poll_options,
       CASE WHEN EXISTS(SELECT 1 FROM community_follows f WHERE f.item_id=i.id AND f.telegram_user_id=?) THEN 1 ELSE 0 END AS following,
       CASE WHEN EXISTS(SELECT 1 FROM community_saves s WHERE s.item_id=i.id AND s.telegram_user_id=?) THEN 1 ELSE 0 END AS saved,
-      CASE WHEN i.telegram_user_id=? THEN 1 ELSE 0 END AS mine
+      CASE WHEN i.telegram_user_id=? THEN 1 ELSE 0 END AS mine,
+      CASE WHEN EXISTS(SELECT 1 FROM community_votes mv WHERE mv.item_id=i.id AND mv.telegram_user_id=? AND mv.vote=1) THEN 1
+           WHEN EXISTS(SELECT 1 FROM community_votes mv WHERE mv.item_id=i.id AND mv.telegram_user_id=? AND mv.vote=-1) THEN -1 ELSE 0 END AS my_vote
      FROM community_items i
      LEFT JOIN community_votes v ON v.item_id=i.id
      WHERE i.id=? AND i.status='published'
      GROUP BY i.id`,
-  ).bind(String(viewerId ?? -1), String(viewerId ?? -1), String(viewerId ?? -1), id).first<Record<string, unknown>>();
+  ).bind(String(viewerId ?? -1), String(viewerId ?? -1), String(viewerId ?? -1), String(viewerId ?? -1), id).first<Record<string, unknown>>();
   if (!row) return null;
   const ownerId = String(row.telegram_user_id);
   const owner = await db.prepare("SELECT display_name FROM student_profiles WHERE telegram_user_id=?").bind(ownerId).first<{display_name:string}>();
