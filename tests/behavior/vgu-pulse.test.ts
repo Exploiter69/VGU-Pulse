@@ -252,6 +252,10 @@ describe("VGU-Pulse real D1 behavior",()=>{
     const data=await response.json() as {post:{id:number;viewer_vote:number}};
     expect(data.post.id).toBe(1);
     expect(data.post.viewer_vote).toBe(1);
+    const list=await request("/api/student-posts?sort=newest",user);
+    expect(list.status).toBe(200);
+    const listData=await list.json() as {posts:Array<{author_name:string}>};
+    expect(listData.posts[0]?.author_name).not.toBe("Author");
   });
 
   it("keeps a 40-item feed at constant D1 query count",async()=>{
