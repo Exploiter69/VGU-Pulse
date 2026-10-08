@@ -3,6 +3,7 @@ import {
   deleteStudentPost,
   deleteStudentProfile,
   deleteAllStudentData,
+  setStudentContactEnabled,
   deleteStudentReply,
   getStudentProfile,
   getPersonalPulse,
@@ -278,6 +279,14 @@ export default {
       if(body?.confirm!==true)return json({ok:false,error:"confirmation_required"},400);
       await deleteAllStudentData(env.DB,validated.user.id);
       return json({ok:true,deleted:true});
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/student-profile/contact") {
+      const validated=await validateInitData(request.headers.get("x-telegram-init-data")??"",getBotToken(env));
+      if(!validated)return json({ok:false,error:"unauthorized"},401);
+      const body=await readJson<{enabled?:unknown}>(request);
+      if(!body||typeof body.enabled!=="boolean")return json({ok:false,error:"invalid_contact_preference"},400);
+      return json({ok:true,enabled:await setStudentContactEnabled(env.DB,validated.user.id,body.enabled)});
     }
 
     if (request.method === "POST" && url.pathname === "/api/student-profile/visibility") {
