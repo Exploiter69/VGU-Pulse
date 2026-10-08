@@ -127,3 +127,12 @@ They are reachable from Me and retain the Telegram BackButton hierarchy.
 - anonymous content never exposes Telegram identity
 - existing moderation, reporting, blocking, rate limits and privacy behavior remain intact
 - no paid services are introduced
+
+
+## Telegram growth interaction rules
+
+- Deep links must land on the exact entity or meaningful existing section; never on a generic home screen when an entity target is available.
+- Channel cards are sparse, bounded and action-oriented rather than a chronological firehose.
+- Inline actions should complete one lightweight action without forcing a Mini App context switch.
+- Student content cards always carry a visible student-reported label; official information keeps its existing official treatment.
+- Share links use the existing five-tab hierarchy and preserve Telegram safe areas, touch targets and navigation history.
