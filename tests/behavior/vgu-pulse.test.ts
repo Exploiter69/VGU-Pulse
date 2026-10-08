@@ -155,6 +155,16 @@ describe("VGU-Pulse real D1 behavior",()=>{
     await expect((await request("/api/community-v2/preferences",user)).json()).resolves.toMatchObject({preferences:{community_activity:true,personalized_alerts:false}});
   });
 
+  it("retains moderation bans when personal account data is deleted",async()=>{
+    const env=await worker.getEnv() as {DB:D1Database};
+    await env.DB.prepare("INSERT INTO user_bans(telegram_user_id,reason,banned_by) VALUES('1001','test ban','9009')").run();
+    const response=await request("/api/account/delete",{id:1001,first_name:"Viewer"},{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({confirm:true})});
+    expect(response.status).toBe(200);
+    expect(await env.DB.prepare("SELECT 1 FROM users WHERE telegram_user_id='1001'").first()).toBeNull();
+    const ban=await env.DB.prepare("SELECT reason,banned_by FROM user_bans WHERE telegram_user_id='1001'").first<{reason:string;banned_by:string}>();
+    expect(ban).toEqual({reason:"test ban",banned_by:"9009"});
+  });
+
   it("requires Telegram initData for student discovery",async()=>{
     const response=await worker.fetch("https://example.test/api/students");
     expect(response.status).toBe(401);
