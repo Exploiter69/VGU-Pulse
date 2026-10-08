@@ -92,7 +92,7 @@ describe("final Student OS production contract", () => {
   });
 
   it("keeps the Community runtime bundle cache-busted with its interaction contracts", () => {
-    expect(webSource).toMatch(/community-v2\.js\?v=20261008-3/);
+    expect(webSource).toMatch(/community-v2\.js\?v=20261008-4/);
     expect(communityWebSource).toContain("const originalPostBodies=new Map()");
     expect(communityWebSource).toContain("originalPostBodies.set(String(item.id),String(item.body??\"\")");
     expect(communityWebSource).toContain("const original=originalPostBodies.get(String(id))");
