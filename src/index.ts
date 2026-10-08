@@ -286,14 +286,17 @@ export default {
       if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
       const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
-      const body = await readJson<{ official_updates?: unknown; community_replies?: unknown }>(request);
+      const body = await readJson<{ official_updates?: unknown; community_replies?: unknown; community_activity?: unknown; personalized_alerts?: unknown }>(request);
       if (!body) return json({ ok: false, error: "invalid_json" }, 400);
-      if (body.official_updates !== undefined && typeof body.official_updates !== "boolean") return json({ ok: false, error: "invalid_official_updates" }, 400);
-      if (body.community_replies !== undefined && typeof body.community_replies !== "boolean") return json({ ok: false, error: "invalid_community_replies" }, 400);
+      for (const key of ["official_updates","community_replies","community_activity","personalized_alerts"] as const) {
+        if (body[key] !== undefined && typeof body[key] !== "boolean") return json({ ok: false, error: "invalid_preferences" }, 400);
+      }
       try {
         const preferences = await setNotificationPreferences(env.DB, validated.user.id, {
           official_updates: body.official_updates as boolean | undefined,
           community_replies: body.community_replies as boolean | undefined,
+          community_activity: body.community_activity as boolean | undefined,
+          personalized_alerts: body.personalized_alerts as boolean | undefined,
         });
         return json({ ok: true, preferences });
       } catch {
