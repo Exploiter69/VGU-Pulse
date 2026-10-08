@@ -241,6 +241,8 @@ describe("VGU-Pulse real D1 behavior",()=>{
     const createdEvent=await request("/api/v4/event",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({title:"Student event",starts_at:"2026-12-05T15:00:00Z"})});expect(createdEvent.status).toBe(201);
     const pastListing=await request("/api/v4/listing",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"ride",title:"Past ride",body:"No longer needed",expires_at:"2020-01-01T00:00:00Z"})});expect(pastListing.status).toBe(400);
     for(const reviewer of [{id:1001},{id:3003},{id:4004},{id:5005},{id:6006}]){const review=await request("/api/v4/teacher-review",reviewer as Record<string,unknown>,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({teacher:"Professor Y",elective:"DBMS",teaching:5,workload:3,support:4})});expect(review.status).toBe(201);}
+    const moderated=await request("/api/v4/moderate",{id:9009},{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({type:"review",id:1,status:"published"})});expect(moderated.status).toBe(200);
+    await (await worker.getEnv() as {DB:D1Database}).DB.prepare("UPDATE teacher_reviews SET status='published' WHERE teacher='Professor Y' AND elective='DBMS'").run();
     const aggregate=await request("/api/v4/teacher-reviews?teacher=Professor%20Y&elective=DBMS",user);expect(aggregate.status).toBe(200);const aggregateData=await aggregate.json() as {ratings:unknown};expect(aggregateData.ratings).not.toBeNull();
 
   });
