@@ -113,6 +113,20 @@
           <div class="cv2-actions-row"><span id="cv2-compose-status" class="cv2-note" aria-live="polite"></span><button class="cv2-post-btn" id="cv2-publish" type="button">Publish</button></div>
         </form>
       </dialog>
+      <dialog class="cv2-dialog" id="cv2-rules-dialog">
+        <div class="cv2-sheet">
+          <div class="cv2-sheet-head"><h3>Community rules</h3><button class="cv2-close" id="cv2-rules-close" type="button" aria-label="Close">×</button></div>
+          <div id="cv2-rules-copy" class="cv2-note">Loading rules…</div>
+          <div class="cv2-actions-row"><button class="cv2-tool" id="cv2-rules-ack" type="button">I understand</button></div>
+        </div>
+      </dialog>
+      <dialog class="cv2-dialog" id="cv2-anon-notice-dialog">
+        <div class="cv2-sheet">
+          <div class="cv2-sheet-head"><h3>Before you post anonymously</h3><button class="cv2-close" id="cv2-anon-notice-close" type="button" aria-label="Close">×</button></div>
+          <p class="cv2-note">Anonymous to students, still tied to your account on our server; admins may review reports.</p>
+          <div class="cv2-actions-row"><button class="cv2-tool" id="cv2-anon-notice-ack" type="button">I understand</button></div>
+        </div>
+      </dialog>
       <dialog class="cv2-dialog cv2-more-dialog" id="cv2-more-dialog">
         <div class="cv2-sheet">
           <div class="cv2-sheet-head"><h3>Post actions</h3><button class="cv2-close" id="cv2-more-close" type="button" aria-label="Close">×</button></div>
@@ -232,7 +246,17 @@
     $("#cv2-filter-close").onclick=()=>$("#cv2-filter-dialog").close();
     $("#cv2-filter-clear").onclick=()=>{$("#cv2-kind-filter").value="";$("#cv2-community-filter").value="campus"};
     $("#cv2-filter-apply").onclick=async()=>{kind=$("#cv2-kind-filter").value;community=$("#cv2-community-filter").value.trim()||"campus";$("#cv2-current-community").textContent=community==="campus"?"VGU campus":community;$("#cv2-filter-dialog").close();syncTabs();await loadFeed()};
-    $("#cv2-compose-open").onclick=()=>{editingId=null;$("#cv2-compose-heading").textContent="Start a student post";$("#cv2-publish").textContent="Publish";$("#cv2-compose-status").textContent="";const dialog=$("#cv2-compose-dialog");if(dialog?.showModal)dialog.showModal();else dialog?.setAttribute("open","");$("#cv2-title").focus()};
+    $("#cv2-compose-open").onclick=async()=>{
+      try{
+        const ack=await api("/api/community-v2/rules/ack");
+        if(!ack.acknowledged){const rules=await api("/api/community-v2/rules");$("#cv2-rules-copy").innerHTML=(rules.rules||[]).map(x=>"<p>• "+esc(x)+"</p>").join("");$("#cv2-rules-dialog").showModal?.();return;}
+      }catch(e){$("#cv2-compose-status").textContent=e.message==="reopen_telegram"?"Reopen Pulse from Telegram.":"Could not load community rules.";return;}
+      editingId=null;$("#cv2-compose-heading").textContent="Start a student post";$("#cv2-publish").textContent="Publish";$("#cv2-compose-status").textContent="";const dialog=$("#cv2-compose-dialog");if(dialog?.showModal)dialog.showModal();else dialog?.setAttribute("open","");$("#cv2-title").focus();
+    };
+    $("#cv2-rules-close").onclick=()=>$("#cv2-rules-dialog")?.close?.();
+    $("#cv2-rules-ack").onclick=async()=>{try{await api("/api/community-v2/rules/ack",{method:"POST",body:"{}"});$("#cv2-rules-dialog")?.close?.();$("#cv2-compose-open").click()}catch(e){$("#cv2-rules-copy").textContent=e.message==="reopen_telegram"?"Reopen Pulse from Telegram.":"Could not save your acknowledgement."}};
+    $("#cv2-anon-notice-close").onclick=()=>$("#cv2-anon-notice-dialog")?.close?.();
+    $("#cv2-anon-notice-ack").onclick=async()=>{try{await api("/api/community-v2/anonymous-notice",{method:"POST",body:"{}"});$("#cv2-anon-notice-dialog")?.close?.();$("#cv2-publish").click()}catch(e){$("#cv2-compose-status").textContent=e.message==="reopen_telegram"?"Reopen Pulse from Telegram.":"Could not save the anonymous notice."}};
     $("#cv2-compose-close").onclick=()=>{$("#cv2-compose-dialog")?.close?.()};
     $("#cv2-kind").onchange=e=>{$("#cv2-anon").checked=e.target.value==="confession";$("#cv2-poll-fields").hidden=e.target.value!=="discussion"};
     $("#cv2-publish").onclick=async()=>{
@@ -240,6 +264,10 @@
       try{
         button.disabled=true;status.textContent=editingId?"Saving…":"Publishing…";
         const postKind=$("#cv2-kind").value,options=$("#cv2-options").value.split(/[\n,]/).map(x=>x.trim()).filter(Boolean);
+        if(!editingId && $("#cv2-anon").checked){
+          const notice=await api("/api/community-v2/anonymous-notice");
+          if(!notice.acknowledged){button.disabled=false;status.textContent="";$("#cv2-anon-notice-dialog")?.showModal?.();return;}
+        }
         if(!$("#cv2-title").value.trim()||!$("#cv2-body").value.trim()) throw new Error("invalid_item");
         if(editingId) await api("/api/community-v2/items",{method:"PATCH",body:JSON.stringify({item_id:editingId,title:$("#cv2-title").value,body:$("#cv2-body").value})});
         else if(postKind==="discussion"&&options.length>=2) await api("/api/community-v2/polls",{method:"POST",body:JSON.stringify({kind:postKind,title:$("#cv2-title").value,body:$("#cv2-body").value,community_slug:$("#cv2-community").value,anonymous:$("#cv2-anon").checked,options})});
