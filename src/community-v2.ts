@@ -1,5 +1,5 @@
 import { SUPPORT_RESOURCES } from "./support";
-type CommunityEnv = { DB: D1Database };
+type CommunityEnv = { DB: D1Database; ANON_ALIAS_SECRET?: string; ADMIN_IDS?: string };
 
 type CommunityUser = {
   id: number;
@@ -189,7 +189,17 @@ async function updateItem(db: D1Database, user: CommunityUser, id: number, input
   return (await getItem(db,id,user.id))!;
 }
 
-async function getItem(db: D1Database, id: number, viewerId?: number): Promise<Record<string, unknown> | null> {
+
+async function anonymousAlias(secret:string|undefined,userId:number,itemId:number):Promise<string>{
+  const key=secret||"vgu-pulse-anonymous-alias-fallback";
+  const cryptoKey=await crypto.subtle.importKey("raw",new TextEncoder().encode(key),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
+  const digest=await crypto.subtle.sign("HMAC",cryptoKey,new TextEncoder().encode(userId+":"+itemId));
+  const bytes=new Uint8Array(digest); let n=0; for(let i=0;i<4;i++) n=(n*256)+bytes[i];
+  return "Anon-"+((n%9999)+1);
+}
+function adminIds(raw?:string):Set<string>{return new Set((raw??"").split(",").map(x=>x.trim()).filter(Boolean));}
+
+async function getItem(db: D1Database, id: number, viewerId?: number, anonSecret?:string): Promise<Record<string, unknown> | null> {
   const row = await db.prepare(
     `SELECT i.id, i.kind, i.title, i.body, i.community_slug, i.audience_program, i.audience_branch,
       i.audience_year, i.anonymous, i.created_at, i.telegram_user_id,
@@ -210,8 +220,9 @@ async function getItem(db: D1Database, id: number, viewerId?: number): Promise<R
   if (!row) return null;
   const ownerId = String(row.telegram_user_id);
   const owner = await db.prepare("SELECT display_name FROM student_profiles WHERE telegram_user_id=?").bind(ownerId).first<{display_name:string}>();
-  const display = Number(row.anonymous) ? "Anonymous student" : (owner?.display_name || "VGU student");
+  const display = Number(row.anonymous) ? await anonymousAlias(anonSecret,Number(ownerId),id) : (owner?.display_name || "VGU student");
   const { telegram_user_id: _private, ...publicRow } = row;
+  if(Number(row.anonymous)){ publicRow.audience_program=null; publicRow.audience_branch=null; publicRow.audience_year=null; }
   return { ...publicRow, author: display, trust: "student-community" };
 }
 
@@ -437,13 +448,13 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     if(request.method==="GET" && url.pathname==="/api/community-v2/items"){
       const id=Number(url.searchParams.get("item_id"));
       if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
-      const item=await getItem(env.DB,id,user.id);
+      const item=await getItem(env.DB,id,user.id,env.ANON_ALIAS_SECRET);
       if(!item)return json({ok:false,error:"item_not_found"},404);
       return json({ok:true,item});
     }
     if(request.method==="POST" && url.pathname==="/api/community-v2/items"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
-      const item=await createItem(env.DB,user,input);
+      const item=await createItem(env.DB,user,input,env.ANON_ALIAS_SECRET);
       return json({ok:true,item},201);
     }
     if(request.method==="PATCH" && url.pathname==="/api/community-v2/items"){
@@ -460,7 +471,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
       const id=Number(input.item_id); if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
       if(typeof input.anonymous!=="boolean")return json({ok:false,error:"invalid_anonymous"},400);
-      const r=await reply(env.DB,user,id,clamp(input.body,LIMITS.body),input.anonymous);
+      const r=await reply(env.DB,user,id,clamp(input.body,LIMITS.body),input.anonymous,env.ANON_ALIAS_SECRET);
       return json({ok:true,reply:r},201);
     }
     if(request.method==="DELETE" && url.pathname==="/api/community-v2/items"){
@@ -569,6 +580,6 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     const requestId=crypto.randomUUID();
     console.error(JSON.stringify({event:"community_v2_error",request_id:requestId,error:message}));
     const status=message==="rate_limited"?429:message==="unsafe_content"?422:message==="forbidden"?403:message==="item_not_found"||message==="reply_not_found"?404:message==="invalid_item"||message==="invalid_reply"||message==="invalid_vote"||message==="invalid_poll"||message==="invalid_option"||message==="cannot_report_own_item"||message==="cannot_report_own_reply"?400:500;
-    return json({ok:false,error:message},status);
+    return json({ok:false,error:publicError.has(message)?message:"internal_error",request_id:requestId},status);
   }
 }
