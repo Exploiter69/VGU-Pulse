@@ -427,7 +427,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       return json({ok:true,profile:p,community});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/feed"){
-      const itemsWithExtra=await listItems(env.DB,user.id,url.searchParams,env.ANON_ALIAS_SECRET,true); const items=itemsWithExtra.slice(0,Math.min(40,Math.max(1,Number(url.searchParams.get("limit")||40)))); const last=itemsWithExtra.at(-1) as Record<string,unknown>|undefined; const requestedLimit=Math.min(40,Math.max(1,Number(url.searchParams.get("limit")||40))); const nextCursor=(url.searchParams.get("sort")||"new")==="new" && itemsWithExtra.length>requestedLimit && last ? btoa(JSON.stringify({created_at:last.created_at,id:last.id})) : null; return json({ok:true,items,next_cursor:nextCursor});
+      const itemsWithExtra=await listItems(env.DB,user.id,url.searchParams,env.ANON_ALIAS_SECRET,true); const items=itemsWithExtra.slice(0,Math.min(40,Math.max(1,Number(url.searchParams.get("limit")||40)))); const last=items.at(-1) as Record<string,unknown>|undefined; const requestedLimit=Math.min(40,Math.max(1,Number(url.searchParams.get("limit")||40))); const nextCursor=(url.searchParams.get("sort")||"new")==="new" && itemsWithExtra.length>requestedLimit && last ? btoa(JSON.stringify({created_at:last.created_at,id:last.id})) : null; return json({ok:true,items,next_cursor:nextCursor});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/reputation"){
       return json({ok:true,reputation:await reputation(env.DB,user.id)});
