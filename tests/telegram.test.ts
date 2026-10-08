@@ -17,7 +17,7 @@ describe("validateInitData", () => {
 describe("validateStudentProfileInput", () => {
   it("accepts a bounded opt-in profile", () => {
     expect(validateStudentProfileInput({
-      display_name: "Alok", program: "B.Tech CSE", branch: "CSE",
+      display_name: "Alok", program: "B.Tech", branch: "CSE",
       year: 2, bio: "Building with friends.", looking_for: "DSA study group",
     })?.looking_for).toBe("DSA study group");
   });

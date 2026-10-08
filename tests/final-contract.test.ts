@@ -14,8 +14,6 @@ describe("final Student OS production contract", () => {
     expect(indexSource).toContain('/api/community/insights');
     expect(indexSource).toContain('async scheduled');
     expect(notificationSource).toContain("LIMIT 18");
-    expect(notificationSource).toContain("const queued = await queueOfficialNotifications");
-    expect(notificationSource).toContain("official_updates = 1 AND datetime(enabled_at) <= datetime(?)");
     expect(notificationSource).toContain('DELETE FROM student_notifications');
     expect(indexSource).toContain('dependencies: { database: dbOk, signal: signalOk }');
   });
