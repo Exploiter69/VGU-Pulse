@@ -81,7 +81,8 @@
           <button class="cv2-post-btn" id="cv2-compose-open" type="button">＋ Create</button>
         </div>
         <div class="cv2-tabs" role="tablist" aria-label="Community feed">
-          <button type="button" class="cv2-tab active" data-sort="trending">Trending</button>
+          <button type="button" class="cv2-tab active" data-sort="for_you" role="tab" aria-selected="true">For You</button>
+          <button type="button" class="cv2-tab" role="tab" aria-selected="false" data-sort="trending">Trending</button>
           <button type="button" class="cv2-tab" role="tab" aria-selected="false" data-sort="new">Latest</button>
           <button type="button" class="cv2-tab" role="tab" aria-selected="false" data-kind="confession">Confessions</button>
           <button type="button" class="cv2-tab" role="tab" aria-selected="false" data-kind="campus">Campus</button>
@@ -90,8 +91,8 @@
         </div>
         <div class="cv2-context">
           <span class="cv2-context-label">Showing</span>
-          <button class="cv2-community" id="cv2-current-community" type="button">VGU campus</button>
-          <button class="cv2-tool" id="cv2-personalize" type="button">For me</button><button class="cv2-tool" id="cv2-people" type="button">Find people</button>
+          <button class="cv2-community" id="cv2-current-community" type="button">For you</button>
+          <button class="cv2-tool" id="cv2-personalize" type="button">Personalized</button><button class="cv2-tool" id="cv2-people" type="button">Find people</button>
         </div>
         <details class="cv2-discovery">
           <summary>More communities & topics</summary>
