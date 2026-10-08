@@ -21,8 +21,8 @@ The controlled program seed is based on VGU's current public 2026-27 program pag
 0012 is additive and does not modify 0001-0011. Existing free-form profile values are retained unless blank; new profile writes are constrained to the maintained controlled set or Other.
 
 ## Remaining Gate 3 work
-- Q&A accepted answers / solved state / unread replies / capped helpful-answer reputation.
-- Full community moderation UI and admin community approval workflow.
-- Real profile Telegram contact link display using the user's opt-in username.
+- Full daily-capped helpful-answer reputation tuning remains to be verified in a later review.
+- Full community moderation UI remains; admin community approval API is implemented.
+- Profile discovery now returns the username only when contact is enabled.
 - V1 endpoint/table removal only after migration verification.
 - Full cursor coverage for non-new sorting modes.
