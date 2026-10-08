@@ -283,6 +283,7 @@ export async function createStudentPost(
 export async function deleteAllStudentData(db:D1Database,userId:number):Promise<void>{
   const id=String(userId);
   const statements=[
+    "UPDATE communities SET owner_telegram_user_id=NULL WHERE owner_telegram_user_id=?",
     "DELETE FROM community_reply_votes WHERE telegram_user_id=?",
     "DELETE FROM community_item_reads WHERE telegram_user_id=?",
     "DELETE FROM resource_reports WHERE telegram_user_id=?",
