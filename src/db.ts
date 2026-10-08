@@ -203,6 +203,7 @@ export async function reportStudentProfile(db: D1Database, profilePublicId: stri
        status=CASE WHEN report_count+1 >= 3 THEN 'hidden' ELSE status END
        WHERE public_id=?`,
     ).bind(profilePublicId).run();
+    await db.prepare("INSERT INTO moderation_report_history(reporter_telegram_user_id,target_type,target_id,reason,target_telegram_user_id) VALUES(?,?,?,?,?)").bind(String(reporterUserId),"profile",profilePublicId,"other",profile.telegram_user_id).run();
   }
 }
 
@@ -628,6 +629,7 @@ export async function reportStudentReply(
       )
       .bind(replyId)
       .run();
+    await db.prepare("INSERT INTO moderation_report_history(reporter_telegram_user_id,target_type,target_id,reason,target_telegram_user_id) VALUES(?,?,?,?,?)").bind(String(userId),"reply",String(replyId),"other",owner.telegram_user_id).run();
   }
 }
 
@@ -662,6 +664,7 @@ export async function reportStudentPost(
       )
       .bind(postId)
       .run();
+    await db.prepare("INSERT INTO moderation_report_history(reporter_telegram_user_id,target_type,target_id,reason,target_telegram_user_id) VALUES(?,?,?,?,?)").bind(String(userId),"item",String(postId),"other",owner.telegram_user_id).run();
   }
 }
 
