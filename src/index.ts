@@ -170,7 +170,7 @@ export default {
   async scheduled(controller: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
     try {
       const result = await runNotificationSweep(env.DB, env.SIGNAL_SERVICE, getBotToken(env), env.TELEGRAM_WEBAPP_URL);
-      const weeklyWindow=controller.scheduledTime.getUTCDay()===1 && controller.scheduledTime.getUTCHours()===4 && controller.scheduledTime.getUTCMinutes()<15;
+      const weeklyTime=new Date(controller.scheduledTime); const weeklyWindow=weeklyTime.getUTCDay()===1 && weeklyTime.getUTCHours()===4 && weeklyTime.getUTCMinutes()<15;
       if(env.PULSE_CHANNEL_ID&&weeklyWindow){
         const rows=await env.DB.prepare("SELECT i.id,i.title,(SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=1) upvotes,(SELECT COUNT(*) FROM community_replies r WHERE r.item_id=i.id AND r.status='published') replies,(SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=-1) downvotes FROM community_items i WHERE i.status='published' ORDER BY (upvotes+2*replies-downvotes) DESC,i.created_at DESC LIMIT 5").all<{id:number;title:string;upvotes:number;replies:number}>();
         if(rows.results?.length){
