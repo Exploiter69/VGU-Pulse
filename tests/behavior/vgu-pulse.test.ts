@@ -23,17 +23,8 @@ const server = createTestHarness({
     },
     { configPath: "./tests/behavior/wrangler-compat.jsonc", secrets: { BOT_TOKEN, ANON_ALIAS_SECRET: "gate-2-anon-secret" } },
   ],
-  it("covers Gate 4 student feature flows",async()=>{
-    const user={id:1001,first_name:"Viewer"};
-    const mess=await request("/api/v4/mess-rating",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({rating:4,meal:"lunch"})});expect(mess.status).toBe(200);
-    const countdown=await request("/api/v4/exam-countdown",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({title:"DSA",exam_at:"2026-12-01T10:00:00Z"})});expect(countdown.status).toBe(200);
-    const resource=await request("/api/v4/resource",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({file_id:"telegram-file",name:"DSA PYQ.pdf",resource_type:"PYQ"})});expect(resource.status).toBe(201);
-    const event=await request("/api/v4/event",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({title:"Study meetup",starts_at:"2026-12-01T15:00:00Z"})});expect(event.status).toBe(201);
-    const listing=await request("/api/v4/listing",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"lost_found",title:"Found ID card",body:"Found near library",expires_at:"2026-12-02T00:00:00Z"})});expect(listing.status).toBe(201);
-    const review=await request("/api/v4/teacher-review",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({teacher:"Professor X",elective:"AI",teaching:5,workload:3,support:4})});expect(review.status).toBe(201);
-    const growth=await request("/api/v4/growth/top",user);expect(growth.status).toBe(200);
-  });
 });
+
 const worker = server.getWorker("vgu-pulse");
 const compatWorker = server.getWorker("vgu-pulse-migration-compat");
 
@@ -232,4 +223,16 @@ describe("VGU-Pulse real D1 behavior",()=>{
     const author=await request("/api/community-v2/solve",{id:2002,first_name:"Author"},{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({item_id:1,reply_id:1})});
     expect(author.status).toBe(200);
   });
+
+  it("covers Gate 4 student feature flows",async()=>{
+    const user={id:1001,first_name:"Viewer"};
+    const mess=await request("/api/v4/mess-rating",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({rating:4,meal:"lunch"})});expect(mess.status).toBe(200);
+    const countdown=await request("/api/v4/exam-countdown",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({title:"DSA",exam_at:"2026-12-01T10:00:00Z"})});expect(countdown.status).toBe(200);
+    const resource=await request("/api/v4/resource",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({file_id:"telegram-file",name:"DSA PYQ.pdf",resource_type:"PYQ"})});expect(resource.status).toBe(201);
+    const event=await request("/api/v4/event",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({title:"Study meetup",starts_at:"2026-12-01T15:00:00Z"})});expect(event.status).toBe(201);
+    const listing=await request("/api/v4/listing",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"lost_found",title:"Found ID card",body:"Found near library",expires_at:"2026-12-02T00:00:00Z"})});expect(listing.status).toBe(201);
+    const review=await request("/api/v4/teacher-review",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({teacher:"Professor X",elective:"AI",teaching:5,workload:3,support:4})});expect(review.status).toBe(201);
+    const growth=await request("/api/v4/growth/top",user);expect(growth.status).toBe(200);
+  });
+});
 });
