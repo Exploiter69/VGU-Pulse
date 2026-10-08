@@ -142,7 +142,7 @@
             <div class="cv2-field"><label for="cv2-kind-filter">Topic</label><select id="cv2-kind-filter">
               <option value="">Everything</option><option value="discussion">Discussions</option><option value="confession">Confessions</option><option value="campus">Campus</option><option value="exam">Exam survival</option><option value="senior">Senior → junior</option><option value="teammate">Find teammates</option><option value="notes">Notes / resources</option><option value="pyq">PYQ / exam material</option><option value="teacher">Teacher / elective advice</option><option value="lost_found">Lost & found</option><option value="ride">Ride sharing</option><option value="roommate">Room / roommate</option><option value="listing">Student exchange</option><option value="opportunity">Opportunity</option>
             </select></div>
-            <div class="cv2-field"><label for="cv2-community-filter">Community</label><input id="cv2-community-filter" value="campus" maxlength="60"></div>
+            <div class="cv2-field"><label for="cv2-community-filter">Community</label><input id="cv2-community-filter" value="campus" maxlength="60"></div><div class="cv2-field"><label for="cv2-solved-filter">Q&A status</label><select id="cv2-solved-filter"><option value="">All</option><option value="unanswered">Unanswered</option><option value="solved">Solved</option></select></div>
           </div>
           <div class="cv2-actions-row"><button class="cv2-tool" id="cv2-filter-clear" type="button">Clear</button><button class="cv2-post-btn" id="cv2-filter-apply" type="button">Apply filters</button></div>
         </div>
@@ -156,7 +156,7 @@
     intentButtons[0]?.classList.add("active");
     const tg=window.Telegram?.WebApp;
     const initData=tg?.initData||"";
-    let sort="trending",kind="",personalized=false,community="campus",savedOnly=false,editingId=null,moderationItemId=null;
+    let sort="trending",kind="",personalized=false,community="campus",savedOnly=false,solvedFilter="",editingId=null,moderationItemId=null;
 
     async function api(path,options={}){
       const headers={"content-type":"application/json"};
@@ -178,7 +178,7 @@
         if(kind)params.set("kind",kind);
         if(personalized)params.set("personalized","1");
         if(!savedOnly&&community)params.set("community",community);
-        if(savedOnly)params.set("saved","1");
+        if(savedOnly)params.set("saved","1");if(solvedFilter)params.set("solved",solvedFilter);
         const q=$("#cv2-search").value.trim();if(q)params.set("q",q);
         const data=await api("/api/community-v2/feed?"+params);
         if(!append)feed.replaceChildren();
@@ -242,10 +242,10 @@
     $("#cv2-personalize").onclick=async()=>{personalized=!personalized;$("#cv2-personalize").textContent=personalized?"For you":"For me";await loadFeed()};
     $("#cv2-current-community").onclick=()=>{$("#cv2-filter-dialog").showModal()};
     $("#cv2-people").onclick=()=>document.querySelector("[data-view=\"people\"]")?.click();
-    $("#cv2-filter-open").onclick=()=>{$("#cv2-kind-filter").value=kind;$("#cv2-community-filter").value=community;$("#cv2-filter-dialog").showModal()};
+    $("#cv2-filter-open").onclick=()=>{$("#cv2-kind-filter").value=kind;$("#cv2-community-filter").value=community;$("#cv2-solved-filter").value=solvedFilter;$("#cv2-filter-dialog").showModal()};
     $("#cv2-filter-close").onclick=()=>$("#cv2-filter-dialog").close();
-    $("#cv2-filter-clear").onclick=()=>{$("#cv2-kind-filter").value="";$("#cv2-community-filter").value="campus"};
-    $("#cv2-filter-apply").onclick=async()=>{kind=$("#cv2-kind-filter").value;community=$("#cv2-community-filter").value.trim()||"campus";$("#cv2-current-community").textContent=community==="campus"?"VGU campus":community;$("#cv2-filter-dialog").close();syncTabs();await loadFeed()};
+    $("#cv2-filter-clear").onclick=()=>{$("#cv2-kind-filter").value="";$("#cv2-community-filter").value="campus";$("#cv2-solved-filter").value=""};
+    $("#cv2-filter-apply").onclick=async()=>{kind=$("#cv2-kind-filter").value;community=$("#cv2-community-filter").value.trim()||"campus";solvedFilter=$("#cv2-solved-filter").value;$("#cv2-current-community").textContent=community==="campus"?"VGU campus":community;$("#cv2-filter-dialog").close();syncTabs();await loadFeed()};
     $("#cv2-compose-open").onclick=async()=>{
       try{
         const ack=await api("/api/community-v2/rules/ack");
