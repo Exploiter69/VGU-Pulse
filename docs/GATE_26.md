@@ -25,3 +25,7 @@ The behavior suite covers fresh migration application, an existing-0009 upgrade 
 
 ## Telegram framing
 The Mini App CSP intentionally does not use `frame-ancestors 'none'`; Telegram Mini App embedding is an explicit requirement. Keep framing policy reviewed together with Telegram Desktop/mobile behavior when changing CSP.
+
+## Owner decisions — not implemented
+- Student verification under ₹0: preferred future option is admin-issued batch invite codes tied to a VGU batch/branch, with one-time use and no paid verification provider. Do not infer enrollment from Telegram identity alone.
+- Age handling: VGU Pulse remains a general student community and does not introduce an 18+ mode in this gate. Any future age-restricted surface requires an explicit age policy and verification decision before implementation.
