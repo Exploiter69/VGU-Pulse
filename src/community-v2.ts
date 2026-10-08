@@ -137,19 +137,22 @@ async function createItem(db: D1Database, user: CommunityUser, input: Record<str
   const id = Number(result.meta.last_row_id);
   await award(db, user.id, 3, "created_item", `item:${id}`);
   await db.prepare(
-    `INSERT OR IGNORE INTO student_notifications (telegram_user_id, kind, title, body, reference_key)
-     SELECT p.telegram_user_id, 'community', 'New discussion for your community',
+    `INSERT OR IGNORE INTO student_notifications (telegram_user_id, kind, channel, title, body, reference_key)
+     SELECT p.telegram_user_id, 'community', 'personalized', 'New discussion for your community',
        ?, ?
      FROM notification_preferences n
      JOIN student_profiles p ON p.telegram_user_id = n.telegram_user_id AND p.status = 'published'
      WHERE n.personalized_alerts = 1
        AND p.telegram_user_id <> ?
+       AND NOT EXISTS (SELECT 1 FROM student_profile_blocks b WHERE b.blocker_telegram_user_id=p.telegram_user_id AND b.blocked_telegram_user_id=?)
+       AND (SELECT COUNT(*) FROM student_notifications sn WHERE sn.telegram_user_id=p.telegram_user_id AND sn.channel='personalized' AND sn.created_at>=date('now')) < 3
        AND (? IS NULL OR p.program = ?)
        AND (? IS NULL OR p.branch = ?)
        AND (? IS NULL OR p.year = ?)`,
   ).bind(
     `New ${kind.replaceAll("_"," ")}: ${title.slice(0, 140)}`,
     `v2-personal:${id}`,
+    String(user.id),
     String(user.id),
     program, program,
     branch, branch,
@@ -465,7 +468,8 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     }
     if(request.method==="POST" && url.pathname==="/api/community-v2/follow"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
-      const id=Number(input.item_id);
+      const id=Number(input.item_id); if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
+      const exists=await env.DB.prepare("SELECT id FROM community_items WHERE id=? AND status='published'").bind(id).first(); if(!exists)return json({ok:false,error:"item_not_found"},404);
       await env.DB.prepare("INSERT OR IGNORE INTO community_follows(item_id,telegram_user_id) VALUES(?,?)").bind(id,String(user.id)).run();
       return json({ok:true,following:true});
     }
@@ -486,13 +490,16 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     }
     if(request.method==="POST" && url.pathname==="/api/community-v2/report"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
-      const id=Number(input.item_id); const reason=clamp(input.reason,LIMITS.reason)||"other";
+      const id=Number(input.item_id); if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
+      const recent=await env.DB.prepare("SELECT COUNT(*) count FROM community_reports WHERE telegram_user_id=? AND created_at>=datetime('now','-1 hour')").bind(String(user.id)).first<{count:number}>();
+      if(Number(recent?.count??0)>=10)return json({ok:false,error:"rate_limited"},429);
+      const reason=clamp(input.reason,LIMITS.reason)||"other";
       const owner=await env.DB.prepare("SELECT telegram_user_id FROM community_items WHERE id=? AND status='published'").bind(id).first<{telegram_user_id:string}>();
       if(!owner)return json({ok:false,error:"item_not_found"},404);
       if(owner.telegram_user_id===String(user.id))return json({ok:false,error:"cannot_report_own_item"},400);
       const result=await env.DB.prepare("INSERT OR IGNORE INTO community_reports(item_id,telegram_user_id,reason) VALUES(?,?,?)").bind(id,String(user.id),reason).run();
       if(Number(result.meta.changes??0)) await env.DB.prepare(
-        "UPDATE community_items SET report_count=report_count+1,status=CASE WHEN report_count+1>=3 THEN 'hidden' ELSE status END WHERE id=?",
+        "UPDATE community_items SET report_count=report_count+1,status=CASE WHEN report_count+1>=3 THEN 'review' ELSE status END WHERE id=?",
       ).bind(id).run();
       return json({ok:true});
     }
@@ -502,8 +509,10 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       const owner=await env.DB.prepare("SELECT telegram_user_id FROM community_replies WHERE id=? AND status='published'").bind(id).first<{telegram_user_id:string}>();
       if(!owner)return json({ok:false,error:"reply_not_found"},404);
       if(owner.telegram_user_id===String(user.id))return json({ok:false,error:"cannot_report_own_reply"},400);
-      const result=await env.DB.prepare("UPDATE community_replies SET report_count=report_count+1,status=CASE WHEN report_count+1>=3 THEN 'hidden' ELSE status END WHERE id=? AND status='published'").bind(id).run();
-      if(!Number(result.meta.changes??0)) return json({ok:false,error:"reply_not_found"},404);
+      const recent=await env.DB.prepare("SELECT COUNT(*) count FROM community_reply_reports WHERE telegram_user_id=? AND created_at>=datetime('now','-1 hour')").bind(String(user.id)).first<{count:number}>();
+      if(Number(recent?.count??0)>=10)return json({ok:false,error:"rate_limited"},429);
+      const result=await env.DB.prepare("INSERT OR IGNORE INTO community_reply_reports(reply_id,telegram_user_id) VALUES(?,?)").bind(id,String(user.id)).run();
+      if(Number(result.meta.changes??0)) await env.DB.prepare("UPDATE community_replies SET report_count=report_count+1,status=CASE WHEN report_count+1>=3 THEN 'review' ELSE status END WHERE id=? AND status='published'").bind(id).run();
       return json({ok:true});
     }
     if(request.method==="POST" && url.pathname==="/api/community-v2/block"){
