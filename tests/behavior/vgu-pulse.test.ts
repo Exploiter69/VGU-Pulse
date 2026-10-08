@@ -103,6 +103,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
     const post=async(body:string)=>request("/api/community-v2/items",{id:1001,first_name:"Viewer"},{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"discussion",title:"Safety test",body})});
     expect((await post("i will kill you")).status).toBe(422);
     const support=await post("I am thinking about suicide and need support");
+    if(support.status===500) console.log("SUPPORT_LOGS",JSON.stringify(server.getLogs()));
     expect(support.status).toBe(201);
     await expect(support.json()).resolves.toMatchObject({ok:true,item:{support:true}});
     expect((await post("Can someone explain library timings?")).status).toBe(201);
@@ -140,6 +141,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
     expect(second.status).toBe(428);
     await request("/api/community-v2/anonymous-notice",user,{method:"POST",body:"{}"});
     const third=await request("/api/community-v2/items",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"confession",title:"Anonymous post",body:"hello"})});
+    if(third.status===500) console.log("ANON_LOGS",JSON.stringify(server.getLogs()));
     expect(third.status).toBe(201);
     const payload=await third.json() as any;
     expect(payload.item.author).toMatch(/^Anon-\d+$/);
