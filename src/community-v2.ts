@@ -1,6 +1,6 @@
 import { SUPPORT_RESOURCES } from "./support";
 import { clamp, json, readJson as body, safePositiveId } from "./http";
-type CommunityEnv = { DB: D1Database; ANON_ALIAS_SECRET?: string; ADMIN_IDS?: string };
+type CommunityEnv = { DB: D1Database; ANON_ALIAS_SECRET?: string; BOT_TOKEN?: string; TELEGRAM_BOT_TOKEN?: string; ADMIN_IDS?: string };
 
 type CommunityUser = {
   id: number;
