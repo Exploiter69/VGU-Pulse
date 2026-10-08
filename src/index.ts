@@ -100,7 +100,7 @@ async function handleTelegramUpdate(request: Request, env: Env): Promise<Respons
   if(message.document && (message.caption??"").trim().startsWith("/resource")){
     const d=message.document;
     if(!d.file_id||!d.file_name)return json({ok:true});
-    const lines=(message.caption??"").trim().split(/\\s+/).slice(1);
+    const lines=(message.caption??"").trim().split(/\s+/).slice(1);
     const metadata:Record<string,string>={};
     for(const token of lines){const [key,...rest]=token.split("=");if(rest.length)metadata[key.toLowerCase()]=rest.join("=").trim().slice(0,100);}
     const resourceType=["PYQ","notes","assignment","other"].includes(metadata.type)?metadata.type:"other";
