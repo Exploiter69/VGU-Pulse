@@ -91,6 +91,16 @@ describe("final Student OS production contract", () => {
     expect(webSource).toContain('/api/share-link?target=');
   });
 
+  it("keeps the Community runtime bundle cache-busted with its interaction contracts", () => {
+    expect(webSource).toMatch(/community-v2\.js\?v=20261008-2/);
+    expect(communityWebSource).toContain("const originalPostBodies=new Map()");
+    expect(communityWebSource).toContain("originalPostBodies.set(String(item.id),String(item.body??\"\")");
+    expect(communityWebSource).toContain("const original=originalPostBodies.get(String(id))");
+    expect(communityWebSource).toContain("replyData.reply?.id||replyData.id");
+    expect(communityWebSource).toContain("encodeURIComponent(id)");
+    expect(communityWebSource).toContain(".cv2-grid>.cv2-field:first-child{grid-column:1/-1}");
+  });
+
   it("keeps Community Phase 1 For You and action-first UX wired", () => {
     const community = readFileSync("src/community-v2.ts", "utf8");
     expect(community).toContain('sort === "for_you"');
