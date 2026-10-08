@@ -228,7 +228,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
 
     const personalTables=[
       "users","student_profiles","community_items","community_replies","community_votes",
-      "community_follows","community_saves","community_reports","community_reply_reports",
+      "community_members","community_follows","community_saves","community_reports","community_reply_reports",
       "student_notifications","notification_preferences","community_badges",
       "community_reputation_events","community_reputation","community_anonymous_notices",
       "community_rules_ack","mess_daily_ratings","exam_countdowns","resources","teacher_reviews",
