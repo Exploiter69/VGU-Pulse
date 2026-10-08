@@ -217,7 +217,7 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
   const where = ["i.status='published'"];
   const solvedFilter=params.get("solved");
   if(solvedFilter==="solved")where.push("i.solved=1");
-  if(solvedFilter==="unanswered")where.push("i.solved=0 AND NOT EXISTS (SELECT 1 FROM community_replies ur WHERE ur.item_id=i.id AND ur.status='published')");
+  if(solvedFilter==="unanswered")where.push("i.solved=0");
   const args: unknown[] = [];
   if (kind && KINDS.has(kind)) { where.push("i.kind=?"); args.push(kind); }
   if (community) { where.push("i.community_slug=?"); args.push(community); }
