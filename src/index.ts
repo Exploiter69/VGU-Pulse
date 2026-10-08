@@ -167,10 +167,11 @@ async function handleTelegramUpdate(request: Request, env: Env): Promise<Respons
 }
 
 export default {
-  async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
+  async scheduled(controller: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
     try {
       const result = await runNotificationSweep(env.DB, env.SIGNAL_SERVICE, getBotToken(env), env.TELEGRAM_WEBAPP_URL);
-      if(env.PULSE_CHANNEL_ID){
+      const weeklyWindow=controller.scheduledTime.getUTCDay()===1 && controller.scheduledTime.getUTCHours()===4 && controller.scheduledTime.getUTCMinutes()<15;
+      if(env.PULSE_CHANNEL_ID&&weeklyWindow){
         const rows=await env.DB.prepare("SELECT id,title,upvotes,replies FROM community_items WHERE status='published' ORDER BY (upvotes+2*replies-downvotes) DESC,created_at DESC LIMIT 5").all<{id:number;title:string;upvotes:number;replies:number}>();
         if(rows.results?.length){
           const digest="VGU Pulse — weekly top threads\\n\\n"+rows.results.map((x,i)=>(i+1)+". "+x.title+" ("+x.upvotes+" helpful, "+x.replies+" replies)").join("\\n");
