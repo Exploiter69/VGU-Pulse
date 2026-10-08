@@ -398,14 +398,22 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       const replyId=Number(input.reply_id), value=Number(input.vote);
       if(!Number.isSafeInteger(replyId)||replyId<1)return json({ok:false,error:"invalid_reply"},400);
       if(value!==1&&value!==-1)return json({ok:false,error:"invalid_vote"},400);
-      const replyRow=await env.DB.prepare("SELECT id FROM community_replies WHERE id=? AND status='published'").bind(replyId).first();
+      const replyRow=await env.DB.prepare("SELECT id,telegram_user_id FROM community_replies WHERE id=? AND status='published'").bind(replyId).first<{id:number;telegram_user_id:string}>();
       if(!replyRow)return json({ok:false,error:"reply_not_found"},404);
+      if(replyRow.telegram_user_id===String(user.id))return json({ok:false,error:"cannot_vote_own_reply"},400);
       const existing=await env.DB.prepare("SELECT vote FROM community_reply_votes WHERE reply_id=? AND telegram_user_id=?").bind(replyId,String(user.id)).first<{vote:number}>();
-      if(existing?.vote===value) await env.DB.prepare("DELETE FROM community_reply_votes WHERE reply_id=? AND telegram_user_id=?").bind(replyId,String(user.id)).run();
-      else await env.DB.prepare("INSERT INTO community_reply_votes(reply_id,telegram_user_id,vote) VALUES(?,?,?) ON CONFLICT(reply_id,telegram_user_id) DO UPDATE SET vote=excluded.vote,created_at=CURRENT_TIMESTAMP").bind(replyId,String(user.id),value).run();
-      return json({ok:true});
-    }
-    if(request.method==="POST" && url.pathname==="/api/community-v2/read"){
+      const ref="reply-upvote:"+replyId+":"+user.id;
+      if(existing?.vote===value){
+        await env.DB.prepare("DELETE FROM community_reply_votes WHERE reply_id=? AND telegram_user_id=?").bind(replyId,String(user.id)).run();
+        if(value===1){
+          const voided=await env.DB.prepare("UPDATE community_reputation_events SET delta=0,reason='helpful_answer_voided' WHERE telegram_user_id=? AND reference_key=? AND delta>0").bind(replyRow.telegram_user_id,ref).run();
+          if(Number(voided.meta.changes??0)) await env.DB.prepare("UPDATE community_reputation SET points=MAX(0,points-1),updated_at=CURRENT_TIMESTAMP WHERE telegram_user_id=?").bind(replyRow.telegram_user_id).run();
+        }
+      } else {
+        await env.DB.prepare("INSERT INTO community_reply_votes(reply_id,telegram_user_id,vote) VALUES(?,?,?) ON CONFLICT(reply_id,telegram_user_id) DO UPDATE SET vote=excluded.vote,created_at=CURRENT_TIMESTAMP").bind(replyId,String(user.id),value).run();
+        if(value===1) await award(env.DB,Number(replyRow.telegram_user_id),1,"helpful_answer",ref);
+      }
+      return json({ok:true});   if(request.method==="POST" && url.pathname==="/api/community-v2/read"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
       const itemId=Number(input.item_id); if(!Number.isSafeInteger(itemId)||itemId<1)return json({ok:false,error:"invalid_item"},400);
       await env.DB.prepare("INSERT INTO community_item_reads(item_id,telegram_user_id,last_read_at) VALUES(?,?,CURRENT_TIMESTAMP) ON CONFLICT(item_id,telegram_user_id) DO UPDATE SET last_read_at=CURRENT_TIMESTAMP").bind(itemId,String(user.id)).run();
