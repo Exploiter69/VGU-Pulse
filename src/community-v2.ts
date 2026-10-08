@@ -1,3 +1,4 @@
+import { SUPPORT_RESOURCES } from "./support";
 type CommunityEnv = { DB: D1Database };
 
 type CommunityUser = {
@@ -160,7 +161,7 @@ async function createItem(db: D1Database, user: CommunityUser, input: Record<str
     branch, branch,
     year, year,
   ).run();
-  return { ...(await getItem(db, id, user.id))!, support: support.support };
+  return { ...(await getItem(db, id, user.id))!, support: support.support, support_resources: support.support ? SUPPORT_RESOURCES.india : [] };
 }
 
 async function updateItem(db: D1Database, user: CommunityUser, id: number, input: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -278,7 +279,7 @@ async function reply(db: D1Database, user: CommunityUser, itemId: number, text: 
        FROM notification_preferences WHERE telegram_user_id=? AND community_replies=1`,
     ).bind(`Someone replied to “${item.title.slice(0,120)}”: ${clean.slice(0,500)}`,`v2-author-reply:${id}`,item.telegram_user_id).run();
   }
-  return { id, item_id:itemId, body:clean, support:support.support, author:anonymous ? "Anonymous student" : (await db.prepare("SELECT display_name FROM student_profiles WHERE telegram_user_id=?").bind(String(user.id)).first<{display_name:string}>())?.display_name || "VGU student", anonymous };
+  return { id, item_id:itemId, body:clean, support:support.support, support_resources:support.support ? SUPPORT_RESOURCES.india : [], author:anonymous ? "Anonymous student" : (await db.prepare("SELECT display_name FROM student_profiles WHERE telegram_user_id=?").bind(String(user.id)).first<{display_name:string}>())?.display_name || "VGU student", anonymous };
 }
 
 async function vote(db: D1Database,userId:number,itemId:number,value:number): Promise<void> {
