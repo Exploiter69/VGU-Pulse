@@ -81,14 +81,20 @@ async function profile(db: D1Database, userId: number): Promise<{ program: strin
 }
 
 async function award(db: D1Database, userId: number, delta: number, reason: string, reference: string): Promise<void> {
-  await db.batch([
-    db.prepare(
-      "INSERT OR IGNORE INTO community_reputation_events (telegram_user_id, delta, reason, reference_key) VALUES (?, ?, ?, ?)",
-    ).bind(String(userId), delta, reason, reference),
-    db.prepare(
-      "INSERT INTO community_reputation (telegram_user_id, points, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(telegram_user_id) DO UPDATE SET points = points + excluded.points, updated_at = CURRENT_TIMESTAMP",
-    ).bind(String(userId), delta),
-  ]);
+  if (delta > 0) {
+    const row = await db.prepare("SELECT COALESCE(SUM(delta),0) points FROM community_reputation_events WHERE telegram_user_id=? AND delta>0 AND created_at>=date('now')")
+      .bind(String(userId)).first<{ points:number }>();
+    const remaining = Math.max(0, DAILY_REPUTATION_CAP - Number(row?.points ?? 0));
+    if (remaining <= 0) return;
+    delta = Math.min(delta, remaining);
+  }
+  const inserted = await db.prepare(
+    "INSERT OR IGNORE INTO community_reputation_events (telegram_user_id, delta, reason, reference_key) VALUES (?, ?, ?, ?)",
+  ).bind(String(userId), delta, reason, reference).run();
+  if (Number(inserted.meta.changes ?? 0) !== 1) return;
+  await db.prepare(
+    "INSERT INTO community_reputation (telegram_user_id, points, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(telegram_user_id) DO UPDATE SET points = points + excluded.points, updated_at = CURRENT_TIMESTAMP",
+  ).bind(String(userId), delta).run();
 }
 
 function badges(points: number): string[] {
@@ -277,7 +283,7 @@ async function vote(db: D1Database,userId:number,itemId:number,value:number): Pr
   await db.prepare(
     "INSERT INTO community_votes(item_id,telegram_user_id,vote) VALUES(?,?,?) ON CONFLICT(item_id,telegram_user_id) DO UPDATE SET vote=excluded.vote,created_at=CURRENT_TIMESTAMP",
   ).bind(itemId,String(userId),value).run();
-  if(value===1 && item.telegram_user_id!==String(userId)) await award(db,Number(item.telegram_user_id),2,"received_upvote",`upvote:${itemId}:${userId}`);
+  if(item.telegram_user_id!==String(userId)){ const ref=`upvote:${itemId}:${userId}`; if(value===1) await award(db,Number(item.telegram_user_id),2,"received_upvote",ref); else if(existing?.vote===1) await award(db,Number(item.telegram_user_id),-2,"reversed_upvote",ref+":reverse"); }
 }
 
 async function poll(db:D1Database,user:CommunityUser,input:Record<string,unknown>):Promise<Record<string,unknown>>{
