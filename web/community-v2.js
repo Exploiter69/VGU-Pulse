@@ -156,7 +156,11 @@
     intentButtons[0]?.classList.add("active");
     const tg=window.Telegram?.WebApp;
     const initData=tg?.initData||"";
-    let sort="trending",kind="",personalized=false,community="campus",savedOnly=false,solvedFilter="",branchFilter="",yearFilter="",editingId=null,moderationItemId=null;
+    const haptic=type=>{try{tg?.HapticFeedback?.impactOccurred?.(type||"light")}catch{}};
+    const intentButtons=[...root.querySelectorAll("[data-intent]")];
+    intentButtons.forEach(btn=>btn.onclick=()=>{const kind=$("#cv2-kind");kind.value=btn.dataset.intent==="question"?"discussion":btn.dataset.intent;intentButtons.forEach(x=>x.classList.toggle("active",x===btn));kind.dispatchEvent(new Event("change"));haptic("light")});
+    $("#cv2-intent-more").onclick=()=>{const box=$("#cv2-intent-secondary"),more=$("#cv2-intent-more"),open=box.hidden;box.hidden=!open;more.querySelector("strong").textContent=open?"Less":"More…";haptic("light")};
+    let sort="for_you",kind="",personalized=true,community="",savedOnly=false,solvedFilter="",branchFilter="",yearFilter="",editingId=null,moderationItemId=null;
 
     async function api(path,options={}){
       const headers={"content-type":"application/json"};
