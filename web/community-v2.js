@@ -149,18 +149,18 @@
       if(initData) headers["x-telegram-init-data"]=initData;
       const r=await fetch(path,{...options,headers:{...headers,...(options.headers||{})}});
       const d=await r.json().catch(()=>({}));
-      if(r.status===401) throw new Error("unauthorized");
+      if(r.status===401) throw new Error("reopen_telegram");
       if(!r.ok) throw new Error(d.error||"request_failed");
       return d;
     }
     const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
     const parsePulseDate=s=>{const raw=String(s??"");if(!raw)return new Date(NaN);return new Date(/^\d{4}-\d{2}-\d{2}T/.test(raw)&&!/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw)?raw+"Z":raw)};const pretty=s=>{try{const d=parsePulseDate(s);return Number.isFinite(d.getTime())?d.toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}):String(s??"")}catch{return String(s??"")}};
 
-    let feedOffset=0;
+    let feedCursor=null;
     async function loadFeed({append=false}={}){
       const feed=$("#cv2-feed");
       try{
-        const params=new URLSearchParams({sort,limit:"40",offset:String(append?feedOffset:0)});
+        if(!append)feedCursor=null;const params=new URLSearchParams({sort,limit:"40"});if(append&&feedCursor)params.set("cursor",feedCursor);
         if(kind)params.set("kind",kind);
         if(personalized)params.set("personalized","1");
         if(!savedOnly&&community)params.set("community",community);
@@ -188,8 +188,8 @@
           </article>`).join("");
         feed.insertAdjacentHTML("beforeend",html);
         feed.querySelector("#cv2-load-more-wrap")?.remove();
-        feedOffset=Number.isFinite(Number(data.next_offset))?Number(data.next_offset):0;
-        if(data.next_offset!==null&&data.next_offset!==undefined){
+        feedCursor=data.next_cursor||null;
+        if(feedCursor){
           feed.insertAdjacentHTML("beforeend",'<div id="cv2-load-more-wrap" style="padding:14px 0;text-align:center"><button type="button" class="cv2-tool" id="cv2-load-more">Load more discussions</button></div>');
           $("#cv2-load-more").onclick=async()=>{const b=$("#cv2-load-more");b.disabled=true;b.textContent="Loading…";try{await loadFeed({append:true})}catch{b.disabled=false;b.textContent="Try again"}};
         }
@@ -246,7 +246,7 @@
         else await api("/api/community-v2/items",{method:"POST",body:JSON.stringify({kind:postKind,title:$("#cv2-title").value,body:$("#cv2-body").value,community_slug:$("#cv2-community").value,anonymous:$("#cv2-anon").checked})});
         $("#cv2-title").value="";$("#cv2-body").value="";$("#cv2-options").value="";status.textContent=editingId?"Saved.":"Published.";editingId=null;$("#cv2-compose-heading").textContent="Start a student post";$("#cv2-publish").textContent="Publish";$("#cv2-compose-dialog").close();await loadFeed();
       }catch(e){
-        const messages={unsafe_content:"That content needs editing before it can be published.",invalid_item:"Add a title and a little more detail.",invalid_poll:"A poll needs at least two options.",rate_limited:"You have posted a lot recently. Try again later.",unauthorized:"Open Pulse from Telegram to post.",forbidden:"You can only edit your own post.",item_not_found:"That post is no longer available."};
+        const messages={unsafe_content:"That content needs editing before it can be published.",invalid_item:"Add a title and a little more detail.",invalid_poll:"A poll needs at least two options.",rate_limited:"You have posted a lot recently. Try again later.",reopen_telegram:"Reopen Pulse from Telegram.",forbidden:"You can only edit your own post.",item_not_found:"That post is no longer available."};
         status.textContent=messages[e.message]||"Could not save this post. Please try again.";
       }finally{button.disabled=false}
     };
@@ -304,7 +304,7 @@
         }
         if(action==="replies"){
           const box=item.querySelector(".cv2-replies");if(!box.hidden){box.hidden=true;return}
-          const renderReplies=async()=>{const d=await api("/api/community-v2/replies?item_id="+id);box.innerHTML=(d.replies||[]).map(r=>`<div class="cv2-reply" data-reply-id="${r.id}"><strong>${esc(r.author)}</strong><div>${esc(r.body)}</div><span class="cv2-note">${pretty(r.created_at)}</span> ${r.mine?'<button class="cv2-tool" data-reply-delete="'+r.id+'" type="button">Delete</button>':'<button class="cv2-tool" data-reply-report="'+r.id+'" type="button">Report</button>'}</div>`).join("")||'<span class="cv2-note">No replies yet.</span>';box.insertAdjacentHTML("beforeend",`<div class="cv2-reply-compose"><textarea class="cv2-reply-input" placeholder="Reply to this discussion…"></textarea><button class="cv2-post-btn cv2-reply-send" type="button">Reply</button></div>`);box.hidden=false;box.querySelector(".cv2-reply-send").onclick=async()=>{const input=box.querySelector(".cv2-reply-input"),send=box.querySelector(".cv2-reply-send");if(!input.value.trim())return;send.disabled=true;try{await api("/api/community-v2/replies",{method:"POST",body:JSON.stringify({item_id:id,body:input.value,anonymous:false})});input.value="";await renderReplies()}catch{send.disabled=false;send.textContent="Try again";setTimeout(()=>{if(send.isConnected)send.textContent="Reply"},2200)}}};await renderReplies();return;
+          const renderReplies=async()=>{const d=await api("/api/community-v2/replies?item_id="+id);box.innerHTML=(d.replies||[]).map(r=>`<div class="cv2-reply" data-reply-id="${r.id}"><strong>${esc(r.author)}</strong><div>${esc(r.body)}</div><span class="cv2-note">${pretty(r.created_at)}</span> ${r.mine?'<button class="cv2-tool" data-reply-delete="'+r.id+'" type="button">Delete</button>':'<button class="cv2-tool" data-reply-report="'+r.id+'" type="button">Report</button>'}</div>`).join("")||'<span class="cv2-note">No replies yet.</span>';box.insertAdjacentHTML("beforeend",`<div class="cv2-reply-compose"><textarea class="cv2-reply-input" placeholder="Reply to this discussion…"></textarea><label class="cv2-anon-toggle"><input class="cv2-reply-anon" type="checkbox" checked><span>Reply anonymously</span></label><button class="cv2-post-btn cv2-reply-send" type="button">Reply</button></div>`);box.hidden=false;box.querySelector(".cv2-reply-send").onclick=async()=>{const input=box.querySelector(".cv2-reply-input"),send=box.querySelector(".cv2-reply-send");if(!input.value.trim())return;send.disabled=true;try{await api("/api/community-v2/replies",{method:"POST",body:JSON.stringify({item_id:id,body:input.value,anonymous:box.querySelector(".cv2-reply-anon")?.checked!==false})});input.value="";await renderReplies()}catch{send.disabled=false;send.textContent="Try again";setTimeout(()=>{if(send.isConnected)send.textContent="Reply"},2200)}}};await renderReplies();return;
         }
         await loadFeed();
       }catch{const original=button.textContent;button.textContent="Try again";setTimeout(()=>{if(button.isConnected&&button.textContent==="Try again")button.textContent=original},2200)}
