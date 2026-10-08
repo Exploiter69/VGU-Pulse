@@ -392,6 +392,8 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     if(request.method==="POST" && url.pathname==="/api/community-v2/read"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
       const itemId=Number(input.item_id); if(!Number.isSafeInteger(itemId)||itemId<1)return json({ok:false,error:"invalid_item"},400);
+      const item=await env.DB.prepare("SELECT id FROM community_items WHERE id=? AND status='published'").bind(itemId).first();
+      if(!item)return json({ok:false,error:"item_not_found"},404);
       await env.DB.prepare("INSERT INTO community_item_reads(item_id,telegram_user_id,last_read_at) VALUES(?,?,CURRENT_TIMESTAMP) ON CONFLICT(item_id,telegram_user_id) DO UPDATE SET last_read_at=CURRENT_TIMESTAMP").bind(itemId,String(user.id)).run();
       return json({ok:true});
     }
