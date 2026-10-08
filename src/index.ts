@@ -122,7 +122,11 @@ async function handleTelegramUpdate(request: Request, env: Env): Promise<Respons
   if(message.document && (message.caption??"").trim().startsWith("/resource")){
     const d=message.document;
     if(!d.file_id||!d.file_name)return json({ok:true});
-    await env.DB.prepare("INSERT INTO resources(telegram_user_id,file_id,file_unique_id,name,mime_type,size_bytes,subject,semester,resource_type,status) VALUES(?,?,?,?,?,?,?,?,?,?)").bind(String(senderId),d.file_id,d.file_unique_id??null,d.file_name,d.mime_type??null,Number.isSafeInteger(d.file_size)?d.file_size:null,null,null,"other","pending").run();
+    const lines=(message.caption??"").trim().split(/\\s+/).slice(1);
+    const metadata:Record<string,string>={};
+    for(const token of lines){const [key,...rest]=token.split("=");if(rest.length)metadata[key.toLowerCase()]=rest.join("=").trim().slice(0,100);}
+    const resourceType=["PYQ","notes","assignment","other"].includes(metadata.type)?metadata.type:"other";
+    await env.DB.prepare("INSERT INTO resources(telegram_user_id,file_id,file_unique_id,name,mime_type,size_bytes,subject,semester,resource_type,status) VALUES(?,?,?,?,?,?,?,?,?,?)").bind(String(senderId),d.file_id,d.file_unique_id??null,d.file_name,d.mime_type??null,Number.isSafeInteger(d.file_size)?d.file_size:null,metadata.subject??null,metadata.semester??null,resourceType,"pending").run();
     await sendMessage(getBotToken(env),chatId,"Resource received. It is pending moderation before students can access it.",env.TELEGRAM_WEBAPP_URL);
     return json({ok:true});
   }
