@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createTestHarness } from "wrangler";
 
@@ -123,6 +124,7 @@ const server = createTestHarness({
 });
 
 const worker = server.getWorker("vgu-pulse");
+const migrationWorker = server.getWorker("migration-pre-gate1");
 
 describe("VGU-Pulse real D1 behavior harness", () => {
   beforeAll(async () => {
@@ -182,6 +184,19 @@ describe("VGU-Pulse real D1 behavior harness", () => {
     ).first() as { name?: string } | null;
 
     expect(table?.name).toBe("community_items");
+  });
+
+  it("applies 0010 cleanly to a database that already contains 0009 data", async () => {
+    const env = await migrationWorker.getEnv() as {DB:D1Database};
+    await migrationWorker.applyD1Migrations("DB");
+    await env.DB.prepare("INSERT INTO users (telegram_user_id,first_name) VALUES (?,?)").bind("3003","Legacy").run();
+    await env.DB.prepare("INSERT INTO student_profile_blocks (blocker_telegram_user_id,blocked_telegram_user_id) VALUES (?,?)").bind("3003","2002").run();
+    const migration = readFileSync("migrations/0010_gate1_hardening.sql","utf8");
+    await env.DB.exec(migration);
+    const row=await env.DB.prepare("SELECT id,via_anonymous,source_item_id FROM student_profile_blocks WHERE blocker_telegram_user_id=? AND blocked_telegram_user_id=?").bind("3003","2002").first<{id:number;via_anonymous:number;source_item_id:number|null}>();
+    expect(row?.id).toBeTypeOf("number");
+    expect(Number(row?.via_anonymous)).toBe(0);
+    expect(row?.source_item_id).toBeNull();
   });
 
   it("returns the published replies for the requested item and viewer", async () => {
