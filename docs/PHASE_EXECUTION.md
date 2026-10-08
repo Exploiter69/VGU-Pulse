@@ -120,8 +120,8 @@ Baseline repository reviewed on 2026-10-08:
 - [x] Notification sweep remains opt-in and bounded.
 - [x] No paid dependency or forbidden infrastructure added.
 - [x] Contract tests added.
-- [x] `npm run check` — CI run `37782297059` PASS.
-- [x] `npm test` — 71/71 tests PASS in CI run `37782297059`.
+- [x] `npm run check` — Final CI run `37783349823` PASS.
+- [x] `npm test` — 71/71 tests PASS in Final CI run `37783349823`.
 - [x] `npx vitest run tests/behavior` — behavior suite PASS in CI run `37782297059`.
 - [ ] Real Telegram channel/mobile/Desktop smoke — manual verification remains.
 
@@ -133,12 +133,13 @@ Baseline repository reviewed on 2026-10-08:
 - `7756505` / `7c21ea0` / `53bfc1f` / `83aaa26` — Mini App target resolution and cache-bust
 - `747f942` / `9af429e` — contract tests
 - `9186bdf` / `5190d3f` — Telegram growth documentation
-- `f009e30` / `84a9df8` — CI assertion correction for the new Community cache key
+- `f009e30` / `84a9df8` / `39d57cd` / `59f7725` — regression-test alignment for Community cache keys and deep-link assertions
+- `b7acdf0` / `014dd89` / `fd26cd2` — exact poll deep-link resolution and cache-bust
 
 ### CI verification
-- Temporary verification PR #20 validated the current main tree.
+- Temporary verification PR #23 validated the current main tree after the final poll/deep-link test corrections.
 - CI run `37782297059`: typecheck, Wrangler dry-run, web syntax, static guards, unit tests, and real-D1 behavior tests all PASS.
-- Temporary verification PR was closed; no verification-only product change was merged to `main`.
+- Temporary verification PR #23 was closed; no verification-only product change was merged to `main`.
 
 ## Phase 3 — Home Daily Magnet
 
