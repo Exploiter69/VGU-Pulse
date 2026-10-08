@@ -35,6 +35,7 @@ import {
 import { sendMessage } from "./telegram-bot";
 import { validateInitData } from "./telegram";
 import { handleCommunityV2 } from "./community-v2";
+import { handleFeaturesV4 } from "./features-v4";
 import { analyzeAcademicQuery, searchKnowledge } from "./intelligence";
 import {
   getNotificationPreferences,
@@ -887,6 +888,8 @@ export default {
         if(banned)return json({ok:false,error:"user_banned"},403);
         const communityResponse = await handleCommunityV2(request, env, validated.user);
         if (communityResponse) return communityResponse;
+        const featureResponse = await handleFeaturesV4(request, env, validated.user);
+        if (featureResponse) return featureResponse;
       } else if (url.pathname.startsWith("/api/community-v2")) {
         return json({ ok: false, error: "unauthorized" }, 401);
       }
