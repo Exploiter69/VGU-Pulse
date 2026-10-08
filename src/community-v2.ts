@@ -110,8 +110,6 @@ async function award(db: D1Database, userId: number, delta: number, reason: stri
     ).bind(String(userId), delta),
   ]);
 
-    "INSERT INTO community_reputation (telegram_user_id, points, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(telegram_user_id) DO UPDATE SET points = points + excluded.points, updated_at = CURRENT_TIMESTAMP",
-  ).bind(String(userId), delta).run();
 }
 
 function badges(points: number): string[] {
