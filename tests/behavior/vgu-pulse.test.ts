@@ -159,7 +159,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
     const env=await compatWorker.getEnv() as {DB:D1Database};
     await env.DB.prepare("INSERT INTO users (telegram_user_id,first_name) VALUES ('2002','Legacy target'),('3003','Legacy')").run();
     await env.DB.prepare("INSERT INTO student_profile_blocks(blocker_telegram_user_id,blocked_telegram_user_id) VALUES('3003','2002')").run();
-    const applySql=async(file:string)=>env.DB.exec(readFileSync("migrations/"+file,"utf8").replace(/^--[^\\n]*\\n/gm,""));
+    const applySql=async(file:string)=>env.DB.exec(readFileSync("migrations/"+file,"utf8").replace(/^--.*\n/gm,""));
     await applySql("0010_gate1_hardening.sql");
     await applySql("0011_gate2_safety.sql");
     await applySql("0012_gate3_foundations.sql");
