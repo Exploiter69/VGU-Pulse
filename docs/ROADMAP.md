@@ -160,3 +160,10 @@ The final gate validates core student journeys, privacy, failure behavior, moder
 ## Current product boundary
 
 VGU Pulse does not replace Student ERP/Digicampus, VGU-Signal, WhatsApp, Telegram itself or university administrative systems. It is the student-facing layer that connects trusted public information, useful campus navigation, personal planning and opt-in student participation.
+
+
+## Telegram growth execution — Phase 2
+
+Phase 2 shifts Telegram from a launch shell into a bounded discovery and action layer. Shareable Mini App links now resolve to exact posts, polls, events and communities as well as core sections. The Channel publishes one high-signal card at a time on the existing 15-minute cron, with D1 dedupe and no unbounded fan-out. Poll voting and event RSVP/reminders can be completed directly from Telegram inline buttons, while the Mini App remains the primary product surface.
+
+See `docs/TELEGRAM_GROWTH.md` for the stable deep-link and Channel card contract.
