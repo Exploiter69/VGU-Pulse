@@ -154,7 +154,7 @@ describe("final Student OS production contract", () => {
     expect(migration).toContain("+24 hours");
     expect(communityWebSource).toContain("window.__pulseCommunityOpenCommunity");
     expect(communityWebSource).toContain("startapp");
-    expect(communityWebSource).toContain("post|poll");
+    expect(communityWebSource).toContain("post:\\d+");
     expect(webSource).toContain("window.__pulseResolveStartApp");
     expect(webSource).toContain("data-poll-id");
     expect(webSource).toContain("data-event-id");
