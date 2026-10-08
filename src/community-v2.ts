@@ -17,6 +17,8 @@ const KINDS = new Set<CommunityKind>([
   "lost_found","notes","pyq","teammate","ride","roommate","teacher","elective","opportunity",
 ]);
 
+const DAILY_REPUTATION_CAP = 25;
+
 const LIMITS: Record<string, number> = {
   title: 180,
   body: 4000,
@@ -50,13 +52,19 @@ async function body<T>(request: Request): Promise<T | null> {
   } catch { return null; }
 }
 
-function unsafeText(value: string): boolean {
+function unsafeText(value: string): { threat: boolean; credential: boolean; support: boolean } {
   const s = value.toLowerCase();
-  return [
-    /\\b(?:kill|murder)\\s+(?:you|him|her|them)\\b/,
-    /\\b(?:suicide|self[- ]?harm)\\b/,
-    /\\b(?:otp|password|cvv|card number)\\b.{0,40}\\d{4,}/,
-  ].some((pattern) => pattern.test(s));
+  return {
+    threat: /\b(?:kill|murder)\s+(?:you|him|her|them)\b/.test(s),
+    credential: /\b(?:otp|one[- ]time password|password|cvv|card number)\b.{0,40}\d{4,}/.test(s),
+    support: /\b(?:suicide|self[- ]?harm|kill myself|end my life)\b/.test(s),
+  };
+}
+
+function requireSafeContent(value: string): { support: boolean } {
+  const result = unsafeText(value);
+  if (result.threat || result.credential) throw new Error("unsafe_content");
+  return { support: result.support };
 }
 
 async function rateLimited(db: D1Database, userId: number, table: "community_items" | "community_replies", hours: number, limit: number): Promise<boolean> {
@@ -103,7 +111,7 @@ async function createItem(db: D1Database, user: CommunityUser, input: Record<str
   const title = clamp(input.title, LIMITS.title);
   const text = clamp(input.body, LIMITS.body);
   if (!KINDS.has(kind) || title.length < 4 || text.length < 2) throw new Error("invalid_item");
-  if (unsafeText(title + " " + text)) throw new Error("unsafe_content");
+  const support = requireSafeContent(title + " " + text);
   if (await rateLimited(db, user.id, "community_items", 1, 20)) throw new Error("rate_limited");
 
   const p = await profile(db, user.id);
@@ -141,7 +149,7 @@ async function createItem(db: D1Database, user: CommunityUser, input: Record<str
     branch, branch,
     year, year,
   ).run();
-  return (await getItem(db, id, user.id))!;
+  return { ...(await getItem(db, id, user.id))!, support: support.support };
 }
 
 async function updateItem(db: D1Database, user: CommunityUser, id: number, input: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -149,7 +157,7 @@ async function updateItem(db: D1Database, user: CommunityUser, id: number, input
   const title = clamp(input.title, LIMITS.title);
   const text = clamp(input.body, LIMITS.body);
   if (title.length < 4 || text.length < 2) throw new Error("invalid_item");
-  if (unsafeText(title + " " + text)) throw new Error("unsafe_content");
+  requireSafeContent(title + " " + text);
   const item = await db.prepare("SELECT telegram_user_id,kind FROM community_items WHERE id=? AND status='published'").bind(id).first<{telegram_user_id:string;kind:string}>();
   if (!item) throw new Error("item_not_found");
   if (item.telegram_user_id !== String(user.id)) throw new Error("forbidden");
@@ -236,7 +244,8 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
 
 async function reply(db: D1Database, user: CommunityUser, itemId: number, text: string, anonymous: boolean): Promise<Record<string, unknown>> {
   const clean = clamp(text, LIMITS.body);
-  if (clean.length < 2 || unsafeText(clean)) throw new Error("invalid_reply");
+  if (clean.length < 2) throw new Error("invalid_reply");
+  const support = requireSafeContent(clean);
   if (await rateLimited(db, user.id, "community_replies", 1, 60)) throw new Error("rate_limited");
   const item = await db.prepare("SELECT id,telegram_user_id,title FROM community_items WHERE id=? AND status='published'").bind(itemId).first<{id:number;telegram_user_id:string;title:string}>();
   if (!item) throw new Error("item_not_found");
@@ -253,7 +262,7 @@ async function reply(db: D1Database, user: CommunityUser, itemId: number, text: 
        WHERE f.item_id=? AND p.community_activity=1 AND f.telegram_user_id<>?`,
     ).bind(`New reply in “${item.title.slice(0,120)}”.`,`v2-reply:${id}`,itemId,String(user.id)).run();
   }
-  return { id, item_id:itemId, body:clean, author:anonymous ? "Anonymous student" : (await db.prepare("SELECT display_name FROM student_profiles WHERE telegram_user_id=?").bind(String(user.id)).first<{display_name:string}>())?.display_name || "VGU student", anonymous };
+  return { id, item_id:itemId, body:clean, support:support.support, author:anonymous ? "Anonymous student" : (await db.prepare("SELECT display_name FROM student_profiles WHERE telegram_user_id=?").bind(String(user.id)).first<{display_name:string}>())?.display_name || "VGU student", anonymous };
 }
 
 async function vote(db: D1Database,userId:number,itemId:number,value:number): Promise<void> {
