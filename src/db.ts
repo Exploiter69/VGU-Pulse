@@ -316,7 +316,7 @@ export async function setStudentContactEnabled(db:D1Database,userId:number,enabl
   const result=await db.prepare("UPDATE student_profiles SET contact_enabled=? WHERE telegram_user_id=?").bind(enabled?1:0,String(userId)).run();
   return Number(result.meta.changes??0)>0;
 }
-\nexport async function deleteStudentProfile(db: D1Database, userId: number): Promise<boolean> {
+export async function deleteStudentProfile(db: D1Database, userId: number): Promise<boolean> {
   const result = await db.prepare(
     `DELETE FROM student_profiles WHERE telegram_user_id = ?`,
   ).bind(String(userId)).run();
