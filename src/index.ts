@@ -36,7 +36,7 @@ import { sendMessage, telegramApi } from "./telegram-bot";
 import { validateInitData } from "./telegram";
 import { handleCommunityV2 } from "./community-v2";
 import { handleFeaturesV4 } from "./features-v4";
-import { requireUser as requireHttpUser } from "./http";
+import { json, readJson, requireUser as requireHttpUser } from "./http";
 import { analyzeAcademicQuery, searchKnowledge } from "./intelligence";
 import {
   getNotificationPreferences,
@@ -66,28 +66,6 @@ function getBotToken(env: Env): string {
 function adminIds(raw?:string):Set<string>{return new Set((raw??"").split(",").map(x=>x.trim()).filter(Boolean));}
 function isAdmin(env:Env,userId:number):boolean{return adminIds(env.ADMIN_IDS).has(String(userId));}
 let cachedBotUsername:{value:string;expiresAt:number}|null=null;
-
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-      "x-content-type-options": "nosniff",
-    },
-  });
-}
-
-async function readJson<T>(request: Request, maxBytes = 32_768): Promise<T | null> {
-  const length = Number(request.headers.get("content-length") ?? "0");
-  if (Number.isFinite(length) && length > maxBytes) return null;
-  try {
-    const body = (await request.json()) as T;
-    return body && typeof body === "object" ? body : null;
-  } catch {
-    return null;
-  }
-}
 
 function html(): Response {
   return new Response(
