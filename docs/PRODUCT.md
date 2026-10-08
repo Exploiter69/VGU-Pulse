@@ -124,6 +124,8 @@ Students should return because:
 - an event is approaching
 - someone answered their question
 - a community has activity
+- Community opens on a personalized For You feed when a published student profile provides cohort context; sparse cohorts fall back to campus Trending.
+- Community creation starts with seven common student intents, while the broader taxonomy remains available behind More….
 - a campus result is worth seeing
 
 Gamification is optional reinforcement, never the reason the product exists.
