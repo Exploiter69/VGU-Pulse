@@ -316,13 +316,24 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     if(request.method==="GET" && url.pathname==="/api/community-v2/replies"){
       const id=Number(url.searchParams.get("item_id"));
       if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
+      const viewerId=String(user.id);
       const rows=await env.DB.prepare(`SELECT r.id,r.body,r.anonymous,r.created_at,
         CASE WHEN r.anonymous=1 THEN 'Anonymous student' ELSE COALESCE(sp.display_name,'VGU student') END author,
         CASE WHEN r.telegram_user_id=? THEN 1 ELSE 0 END AS mine
-        FROM community_replies r LEFT JOIN student_profiles sp ON sp.telegram_user_id=r.telegram_user_id
+        FROM community_replies r
+        JOIN community_items i ON i.id=r.item_id
+          AND i.status='published'
+          AND NOT EXISTS (
+            SELECT 1 FROM student_profile_blocks b
+            WHERE b.blocker_telegram_user_id=? AND b.blocked_telegram_user_id=i.telegram_user_id
+          )
+        LEFT JOIN student_profiles sp ON sp.telegram_user_id=r.telegram_user_id
         WHERE r.item_id=? AND r.status='published'
-          AND NOT EXISTS (SELECT 1 FROM student_profile_blocks b WHERE b.blocker_telegram_user_id=? AND b.blocked_telegram_user_id=r.telegram_user_id)
-        ORDER BY r.created_at ASC LIMIT 100`).bind(id,String(user.id)).all();
+          AND NOT EXISTS (
+            SELECT 1 FROM student_profile_blocks b
+            WHERE b.blocker_telegram_user_id=? AND b.blocked_telegram_user_id=r.telegram_user_id
+          )
+        ORDER BY r.created_at ASC LIMIT 100`).bind(viewerId,viewerId,id,viewerId).all();
       return json({ok:true,replies:rows.results??[]});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/poll"){
