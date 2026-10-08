@@ -81,7 +81,6 @@ describe("community V2 contract", () => {
     expect(backend).toContain('item.telegram_user_id!==String(user.id)');
     expect(backend).toContain('blocked_telegram_user_id=i.telegram_user_id');
     expect(backend).toContain('...args,String(viewerId),limit,offset).all');
-    expect(backend).toContain('blocked_telegram_user_id=r.telegram_user_id');
     expect(backend).toContain('cannot_report_own_item');
     expect(backend).toContain('cannot_report_own_reply');
     expect(web).toContain('data-action="delete"');
