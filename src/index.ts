@@ -17,6 +17,8 @@ import {
   createStudentReply,
   getOpenPoll,
   listStudentPosts,
+  getStudentPostById,
+  getStudentReplyById,
   reportStudentPost,
   reportStudentReply,
   listStudentReplies,
@@ -442,8 +444,8 @@ export default {
       if (!Number.isSafeInteger(postId) || postId < 1 || (body.vote !== 1 && body.vote !== -1)) return json({ ok: false, error: "invalid_vote" }, 400);
       try {
         await voteStudentPost(env.DB, postId, validated.user.id, body.vote as -1 | 1);
-        const posts = await listStudentPosts(env.DB, 20, undefined, validated.user.id, "newest");
-        return json({ ok: true, post: posts.find((item) => item.id === postId) });
+        const post = await getStudentPostById(env.DB, postId, validated.user.id);
+        return json({ ok: true, post });
       } catch (error) {
         if (error instanceof Error && error.message === "post_not_found") return json({ ok: false, error: "post_not_found" }, 404);
         return json({ ok: false, error: "vote_failed" }, 500);
@@ -530,9 +532,8 @@ export default {
       if (!Number.isSafeInteger(replyId) || replyId < 1 || (body.vote !== 1 && body.vote !== -1)) return json({ ok: false, error: "invalid_vote" }, 400);
       try {
         await voteStudentReply(env.DB, replyId, validated.user.id, body.vote as -1 | 1);
-        const owner = await env.DB.prepare("SELECT post_id FROM student_post_replies WHERE id = ?").bind(replyId).first<{ post_id: number }>();
-        const replies = owner ? await listStudentReplies(env.DB, owner.post_id, 50, validated.user.id) : [];
-        return json({ ok: true, reply: replies.find((item) => item.id === replyId) });
+        const reply = await getStudentReplyById(env.DB, replyId, validated.user.id);
+        return json({ ok: true, reply });
       } catch (error) {
         if (error instanceof Error && error.message === "reply_not_found") return json({ ok: false, error: "reply_not_found" }, 404);
         return json({ ok: false, error: "vote_failed" }, 500);
