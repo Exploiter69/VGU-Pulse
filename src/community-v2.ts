@@ -157,7 +157,7 @@ async function createItem(db: D1Database, user: CommunityUser, input: Record<str
     branch, branch,
     year, year,
   ).run()); } catch (error) { console.error(JSON.stringify({event:"community_v2_stage",stage:"personalized_notification_query",error:error instanceof Error?error.message:"unknown"})); throw error; }
-  return { ...(await getItem(db, id, user.id))!, support: support.support, support_resources: support.support ? SUPPORT_RESOURCES.india : [] };
+  try { return { ...(await getItem(db, id, user.id))!, support: support.support, support_resources: support.support ? SUPPORT_RESOURCES.india : [] }; } catch (error) { console.error(JSON.stringify({event:"community_v2_stage",stage:"get_item_after_create",error:error instanceof Error?error.message:"unknown"})); throw error; }
 }
 
 async function updateItem(db: D1Database, user: CommunityUser, id: number, input: Record<string, unknown>): Promise<Record<string, unknown>> {
