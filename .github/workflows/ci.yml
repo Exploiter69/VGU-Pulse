@@ -19,6 +19,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Detect lockfile
+        id: lockfile
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Install
         run: npm install
       - name: Typecheck
@@ -55,7 +63,7 @@ jobs:
       - name: Behavior tests
         run: npx vitest run tests/behavior
       - name: Bootstrap committed lockfile
-        if: ${{ !hashFiles('package-lock.json') }}
+        if: ${{ steps.lockfile.outputs.present == 'false' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
