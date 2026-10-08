@@ -152,9 +152,6 @@
     view.querySelector("#community-v2-mount")?.appendChild(root) || view.appendChild(root);
 
     const $=s=>root.querySelector(s);
-    const intentButtons=[...root.querySelectorAll("[data-intent]")];
-    intentButtons.forEach(btn=>btn.onclick=()=>{const kind=$("#cv2-kind");kind.value=btn.dataset.intent==="question"?"discussion":btn.dataset.intent;intentButtons.forEach(x=>x.classList.toggle("active",x===btn));kind.dispatchEvent(new Event("change"))});
-    intentButtons[0]?.classList.add("active");
     const tg=window.Telegram?.WebApp;
     const initData=tg?.initData||"";
     const haptic=type=>{try{tg?.HapticFeedback?.impactOccurred?.(type||"light")}catch{}};
