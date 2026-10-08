@@ -247,12 +247,13 @@ describe("VGU-Pulse real D1 behavior",()=>{
   it("returns the specific legacy post after it falls outside the first page",async()=>{
     const env=await worker.getEnv() as {DB:D1Database};
     await env.DB.batch(Array.from({length:25},(_,i)=>env.DB.prepare("INSERT INTO student_posts(telegram_user_id,category,title,body,status) VALUES('2002','question',?,?,?)").bind("Legacy "+i,"Body","published")));
-    const response=await request("/api/student-posts/vote",{id:1001,first_name:"Viewer"},{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({post_id:1,vote:1})});
+    const viewer={id:1001,first_name:"Viewer"};
+    const response=await request("/api/student-posts/vote",viewer,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({post_id:1,vote:1})});
     expect(response.status).toBe(200);
     const data=await response.json() as {post:{id:number;viewer_vote:number}};
     expect(data.post.id).toBe(1);
     expect(data.post.viewer_vote).toBe(1);
-    const list=await request("/api/student-posts?sort=newest",user);
+    const list=await request("/api/student-posts?sort=newest",viewer);
     expect(list.status).toBe(200);
     const listData=await list.json() as {posts:Array<{author_name:string}>};
     expect(listData.posts[0]?.author_name).not.toBe("Author");
