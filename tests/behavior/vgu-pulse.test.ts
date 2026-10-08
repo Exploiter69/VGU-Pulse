@@ -1,6 +1,7 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestHarness } from "wrangler";
 import { listItems } from "../../src/community-v2";
+import { runNotificationSweep } from "../../src/notifications";
 
 const BOT_TOKEN = "gate-2-test-token";
 const server = createTestHarness({
@@ -166,6 +167,26 @@ describe("VGU-Pulse real D1 behavior",()=>{
     expect(await env.DB.prepare("SELECT 1 FROM users WHERE telegram_user_id='1001'").first()).toBeNull();
     const ban=await env.DB.prepare("SELECT reason,banned_by FROM user_bans WHERE telegram_user_id='1001'").first<{reason:string;banned_by:string}>();
     expect(ban).toEqual({reason:"test ban",banned_by:"9009"});
+  });
+
+  it("sweeps notification channels independently after malformed Signal JSON",async()=>{
+    const env=await worker.getEnv() as {DB:D1Database};
+    await env.DB.prepare("INSERT OR IGNORE INTO notification_preferences(telegram_user_id,official_updates,community_replies,community_activity,personalized_alerts) VALUES('1001',1,1,1,0)").run();
+    await env.DB.batch([
+      env.DB.prepare("INSERT INTO student_notifications(telegram_user_id,kind,channel,title,body,reference_key) VALUES('1001','official','official','Official','A & B','official:test')"),
+      env.DB.prepare("INSERT INTO student_notifications(telegram_user_id,kind,channel,title,body,reference_key) VALUES('1001','community','community_replies','Reply','Reply body','reply:test')"),
+      env.DB.prepare("INSERT INTO student_notifications(telegram_user_id,kind,channel,title,body,reference_key) VALUES('1001','community','community_activity','Activity','Activity body','v2-reply:test')"),
+      env.DB.prepare("INSERT INTO student_notifications(telegram_user_id,kind,channel,title,body,reference_key) VALUES('1001','community','personalized','Personal','Personal body','v2-personal:test')"),
+    ]);
+    const fetchMock=vi.spyOn(globalThis,"fetch").mockResolvedValue(new Response(JSON.stringify({ok:true,result:{}}),{status:200,headers:{"content-type":"application/json"}}));
+    const signal={fetch:async()=>new Response("{malformed",{status:200})} as unknown as Fetcher;
+    try{
+      const result=await runNotificationSweep(env.DB,signal,"test-token");
+      expect(result.sent).toBe(3);
+      const rows=await env.DB.prepare("SELECT channel,sent_at,failed_at FROM student_notifications WHERE telegram_user_id='1001' ORDER BY channel").all<{channel:string;sent_at:string|null;failed_at:string|null}>();
+      expect(rows.results.filter(x=>x.sent_at).map(x=>x.channel)).toEqual(expect.arrayContaining(["official","community_replies","community_activity"]));
+      expect(rows.results.some(x=>x.channel==="personalized")).toBe(false);
+    }finally{fetchMock.mockRestore();}
   });
 
   it("requires Telegram initData for student discovery",async()=>{
