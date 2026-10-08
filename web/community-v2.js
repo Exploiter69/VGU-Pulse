@@ -287,8 +287,8 @@
       }finally{button.disabled=false}
     };
     root.querySelectorAll(".cv2-tab").forEach(tab=>tab.onclick=async()=>{
-      if(tab.dataset.special==="saved"){savedOnly=true;sort="new";kind="";personalized=false;syncTabs();await loadFeed();return}
-      savedOnly=false;sort=tab.dataset.sort||"new";kind=tab.dataset.kind||"";syncTabs();await loadFeed()
+      if(tab.dataset.special==="saved"){savedOnly=true;sort="new";kind="";personalized=false;community="";syncTabs();haptic("light");await loadFeed();return}
+      savedOnly=false;sort=tab.dataset.sort||"new";kind=tab.dataset.kind||"";personalized=sort==="for_you";if(personalized)community="";else if(!community)community="campus";syncTabs();haptic("light");await loadFeed()
     });
 
     root.addEventListener("click",async e=>{
@@ -406,7 +406,11 @@
     if(/^(post|poll)-\d+$/.test(startParam)){const id=startParam.split("-")[1];setTimeout(()=>{document.querySelector('[data-view="community"]')?.click();setTimeout(()=>window.__pulseCommunityOpenItem?.(id),300)},900)}
     window.__pulseCommunitySaved=async()=>{savedOnly=true;sort="new";kind="";personalized=false;$("#cv2-search").value="";syncTabs();await loadFeed()};
     window.__pulseCommunityAll=async()=>{savedOnly=false;sort="trending";kind="";personalized=false;syncTabs();await loadFeed()};
+    async function openComposer(prefill=""){try{const ack=await api("/api/community-v2/rules/ack");if(!ack.acknowledged){const rules=await api("/api/community-v2/rules");$("#cv2-rules-copy").innerHTML=(rules.rules||[]).map(x=>"<p>• "+esc(x)+"</p>").join("");$("#cv2-rules-dialog").showModal?.();return;}}catch(e){$("#cv2-compose-status").textContent=e.message==="reopen_telegram"?"Reopen Pulse from Telegram.":"Could not load community rules.";return;}editingId=null;$("#cv2-compose-heading").textContent="Start a student post";$("#cv2-publish").textContent="Publish";$("#cv2-compose-status").textContent="";$("#cv2-title").value=prefill;$("#cv2-body").value="";const dialog=$("#cv2-compose-dialog");if(dialog?.showModal)dialog.showModal();else dialog?.setAttribute("open","");$("#cv2-title").focus();haptic("light")}
+    async function loadCampusPulse(){const host=$("#cv2-campus-pulse");if(!host)return;const dismissed=key=>{try{return localStorage.getItem("cv2:pulse:"+key)==="1"}catch{return false}};const dismiss=key=>{try{localStorage.setItem("cv2:pulse:"+key,"1")}catch{}host.querySelector('[data-pulse="'+key+'"]')?.remove()};try{const [mess,events,question]=await Promise.all([api("/api/v4/mess-rating"),api("/api/v4/events"),api("/api/v4/campus-question")]);const cards=[];if(!dismissed("mess")){const summary=(mess.items||[]).map(x=>x.meal+" "+Number(x.rating||0)+"/5").join(" · ")||"No ratings yet today";cards.push('<article class="cv2-pulse-card" data-pulse="mess"><button class="cv2-pulse-dismiss" data-dismiss-pulse="mess" type="button" aria-label="Dismiss mess pulse">×</button><strong>🍽 Mess today</strong><p>'+esc(summary)+'</p></article>')}if(!dismissed("event")){const next=(events.items||[])[0];cards.push('<article class="cv2-pulse-card" data-pulse="event"><button class="cv2-pulse-dismiss" data-dismiss-pulse="event" type="button" aria-label="Dismiss next event">×</button><strong>📅 Next on campus</strong><p>'+esc(next?next.title:"No upcoming event posted yet.")+'</p></article>')}if(!dismissed("question")){cards.push('<article class="cv2-pulse-card" data-pulse="question"><button class="cv2-pulse-dismiss" data-dismiss-pulse="question" type="button" aria-label="Dismiss daily question">×</button><strong>❓ Campus question</strong><p>'+esc(question.question||"What should Pulse ask students today?")+'</p></article>')}host.innerHTML=cards.join("");host.querySelectorAll("[data-dismiss-pulse]").forEach(b=>b.onclick=()=>{dismiss(b.dataset.dismissPulse);haptic("light")})}
+    catch{host.replaceChildren()}}
     loadCommunities();
+    loadCampusPulse();
     loadFeed().catch(()=>{$("#cv2-feed").innerHTML='<div class="cv2-empty">Community is temporarily unavailable. Try again in a moment.</div>'});
   };
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});else boot();
