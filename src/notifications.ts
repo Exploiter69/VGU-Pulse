@@ -56,10 +56,10 @@ export async function getNotificationPreferences(db: D1Database,userId:number):P
 }
 
 export async function setNotificationPreferences(
-  db:D1Database,userId:number,input:Partial<Record<NotificationChannel|"official_updates",boolean>>
+  db:D1Database,userId:number,input:Partial<Record<"official_updates"|"community_replies"|"community_activity"|"personalized_alerts",boolean>>
 ):Promise<NotificationPreferences>{
   const current=await getNotificationPreferences(db,userId);
-  const read=(key:keyof NotificationPreferences)=>input[key]===undefined
+  const read=(key:"official_updates"|"community_replies"|"community_activity"|"personalized_alerts")=>input[key]===undefined
     ? Boolean(current[key])
     : typeof input[key]==="boolean" ? Boolean(input[key]) : (()=>{throw new Error("invalid_preferences")})();
   const next={
