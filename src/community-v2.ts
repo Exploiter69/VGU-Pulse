@@ -264,7 +264,7 @@ export async function listItems(db: D1Database, viewerId: number, params: URLSea
          THEN 12 ELSE 0 END
        + CASE WHEN i.telegram_user_id=? THEN 6 ELSE 0 END
        + MAX(0.0, 10.0 - (julianday('now')-julianday(i.created_at))*2.0)
-      ) DESC, i.created_at DESC, i.id DESC"
+      ) DESC, i.created_at DESC, i.id DESC`
     : sort === "trending"
       ? "((CAST((SELECT COUNT(*) FROM community_votes vv WHERE vv.item_id=i.id AND vv.vote=1) AS REAL) - CAST((SELECT COUNT(*) FROM community_votes vv WHERE vv.item_id=i.id AND vv.vote=-1) AS REAL) + 2.0*(SELECT COUNT(*) FROM community_replies rr WHERE rr.item_id=i.id AND rr.status='published') + 1.0) / pow((MAX(0.0,(julianday('now')-julianday(i.created_at))*24.0) + 2.0),1.5)) DESC"
       : sort === "active"
