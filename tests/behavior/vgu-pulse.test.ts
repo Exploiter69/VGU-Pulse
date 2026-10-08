@@ -240,6 +240,16 @@ describe("VGU-Pulse real D1 behavior",()=>{
     const search=await upgraded.DB.prepare("SELECT rowid FROM community_items_fts WHERE community_items_fts MATCH ?").bind("LegacySearchPost*").all();
     expect(search.results.length).toBe(1);
   });
+  it("returns the specific legacy post after it falls outside the first page",async()=>{
+    const env=await worker.getEnv() as {DB:D1Database};
+    await env.DB.batch(Array.from({length:25},(_,i)=>env.DB.prepare("INSERT INTO student_posts(telegram_user_id,category,title,body,status) VALUES('2002','question',?,?,?)").bind("Legacy "+i,"Body","published")));
+    const response=await request("/api/student-posts/vote",{id:1001,first_name:"Viewer"},{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({post_id:1,vote:1})});
+    expect(response.status).toBe(200);
+    const data=await response.json() as {post:{id:number;viewer_vote:number}};
+    expect(data.post.id).toBe(1);
+    expect(data.post.viewer_vote).toBe(1);
+  });
+
   it("keeps a 40-item feed at constant D1 query count",async()=>{
     const env=await worker.getEnv() as {DB:D1Database};
     await env.DB.batch(Array.from({length:40},(_,i)=>env.DB.prepare("INSERT INTO community_items(telegram_user_id,kind,title,body,community_slug,status) VALUES(?,?,?,?,?,?)").bind("2002","discussion","Feed item "+i,"body","campus","published")));
