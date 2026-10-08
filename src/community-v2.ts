@@ -242,19 +242,38 @@ export async function listItems(db: D1Database, viewerId: number, params: URLSea
     where.push("EXISTS (SELECT 1 FROM community_saves sx WHERE sx.item_id=i.id AND sx.telegram_user_id=?)");
     args.push(String(viewerId));
   }
-  const audience = params.get("personalized") === "1";
+  const audience = params.get("personalized") === "1" || sort === "for_you";
+  const forYou = sort === "for_you";
   if (sort==="new" && cursor) { where.push("(i.created_at < ? OR (i.created_at = ? AND i.id < ?))"); args.push(cursor.created_at,cursor.created_at,cursor.id); }
   if (audience && p) {
     where.push("(i.audience_branch IS NULL OR i.audience_branch=? OR i.community_slug='campus')");
     args.push(p.branch);
+    where.push("(i.audience_year IS NULL OR i.audience_year=? OR i.community_slug='campus')");
+    args.push(p.year);
   }
-  const order = sort === "trending"
-    ? "((CAST((SELECT COUNT(*) FROM community_votes vv WHERE vv.item_id=i.id AND vv.vote=1) AS REAL) - CAST((SELECT COUNT(*) FROM community_votes vv WHERE vv.item_id=i.id AND vv.vote=-1) AS REAL) + 2.0*(SELECT COUNT(*) FROM community_replies rr WHERE rr.item_id=i.id AND rr.status='published') + 1.0) / pow((MAX(0.0,(julianday('now')-julianday(i.created_at))*24.0) + 2.0),1.5)) DESC"
-    : sort === "active"
-      ? "(SELECT COUNT(*) FROM community_replies rr WHERE rr.item_id=i.id AND rr.status='published') DESC, i.created_at DESC"
-      : "i.created_at DESC";
+  const order = forYou && p
+    ? "(CASE WHEN i.audience_branch=? THEN 45 ELSE 0 END
+       + CASE WHEN i.audience_year=? THEN 25 ELSE 0 END
+       + CASE WHEN i.kind='discussion' AND i.solved=0
+           AND NOT EXISTS (SELECT 1 FROM community_replies qr WHERE qr.item_id=i.id AND qr.status='published')
+         THEN 30 ELSE 0 END
+       + CASE WHEN EXISTS (SELECT 1 FROM community_replies ar WHERE ar.item_id=i.id AND ar.telegram_user_id=?)
+           OR EXISTS (SELECT 1 FROM community_votes av WHERE av.item_id=i.id AND av.telegram_user_id=?)
+           OR EXISTS (SELECT 1 FROM community_saves asv WHERE asv.item_id=i.id AND asv.telegram_user_id=?)
+           OR EXISTS (SELECT 1 FROM community_follows af WHERE af.item_id=i.id AND af.telegram_user_id=?)
+         THEN 12 ELSE 0 END
+       + CASE WHEN i.telegram_user_id=? THEN 6 ELSE 0 END
+       + MAX(0.0, 10.0 - (julianday('now')-julianday(i.created_at))*2.0)
+      ) DESC, i.created_at DESC, i.id DESC"
+    : sort === "trending"
+      ? "((CAST((SELECT COUNT(*) FROM community_votes vv WHERE vv.item_id=i.id AND vv.vote=1) AS REAL) - CAST((SELECT COUNT(*) FROM community_votes vv WHERE vv.item_id=i.id AND vv.vote=-1) AS REAL) + 2.0*(SELECT COUNT(*) FROM community_replies rr WHERE rr.item_id=i.id AND rr.status='published') + 1.0) / pow((MAX(0.0,(julianday('now')-julianday(i.created_at))*24.0) + 2.0),1.5)) DESC"
+      : sort === "active"
+        ? "(SELECT COUNT(*) FROM community_replies rr WHERE rr.item_id=i.id AND rr.status='published') DESC, i.created_at DESC"
+        : "i.created_at DESC";
   const sql = `SELECT i.id,i.kind,i.title,i.body,i.community_slug,i.audience_program,i.audience_branch,i.audience_year,
       i.anonymous,i.created_at,i.updated_at,i.telegram_user_id,sp.display_name,i.solved,i.accepted_reply_id,
+      (SELECT points FROM community_reputation crp WHERE crp.telegram_user_id=i.telegram_user_id) AS author_reputation,
+      (SELECT badge FROM community_badges cb WHERE cb.telegram_user_id=i.telegram_user_id ORDER BY CASE cb.badge WHEN 'Pulse Veteran' THEN 4 WHEN 'Campus Guide' THEN 3 WHEN 'Helpful' THEN 2 ELSE 1 END DESC, cb.created_at DESC LIMIT 1) AS author_badge,
       CASE WHEN i.telegram_user_id=? THEN 1 ELSE 0 END AS mine,
       (SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=1) AS upvotes,
       (SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=-1) AS downvotes,
@@ -268,12 +287,22 @@ export async function listItems(db: D1Database, viewerId: number, params: URLSea
         AND NOT EXISTS (SELECT 1 FROM student_profile_blocks b WHERE b.blocker_telegram_user_id=? AND b.blocked_telegram_user_id=i.telegram_user_id)
       ORDER BY ${order} LIMIT ?`;
   queryCounter && (queryCounter.value += 1);
-  const result = await db.prepare(sql).bind(String(viewerId),String(viewerId),String(viewerId),String(viewerId),String(viewerId),...args,String(viewerId),limit+1).all<Record<string, unknown>>();
-  const rows = (result.results ?? []).slice(0,withExtra?limit+1:limit);
+  const orderArgs = forYou && p ? [p.branch, p.year, String(viewerId), String(viewerId), String(viewerId), String(viewerId), String(viewerId)] : [];
+  const result = await db.prepare(sql).bind(String(viewerId),String(viewerId),String(viewerId),String(viewerId),String(viewerId),...args,String(viewerId),...orderArgs,limit+1).all<Record<string, unknown>>();
+  let rows = (result.results ?? []).slice(0,withExtra?limit+1:limit);
+  if (forYou && p && !cursor && rows.length < Math.min(6, limit)) {
+    const fallback = new URLSearchParams(params);
+    fallback.delete("personalized");
+    fallback.set("sort","trending");
+    fallback.set("community","campus");
+    fallback.delete("cursor");
+    rows = await listItems(db, viewerId, fallback, anonSecret, withExtra, queryCounter);
+  }
   return Promise.all(rows.map(async row => {
     const author = Number(row.anonymous) ? await anonymousAlias(anonSecret,Number(row.telegram_user_id),Number(row.id)) : ((row as any).display_name || "VGU student");
     const { telegram_user_id: _private, display_name: _name, ...publicRow } = row as Record<string, unknown>;
     if(Number(row.anonymous)){ publicRow.audience_program=null; publicRow.audience_branch=null; publicRow.audience_year=null; }
+    if(Number(row.anonymous)){ publicRow.author_reputation=null; publicRow.author_badge=null; }
     return { ...publicRow, mine: Boolean(row.mine), author, trust: "student-community" };
   }));
 }
@@ -440,7 +469,13 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       return json({ok:true,profile:p,community});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/feed"){
-      const itemsWithExtra=await listItems(env.DB,user.id,url.searchParams,env.ANON_ALIAS_SECRET,true); const items=itemsWithExtra.slice(0,Math.min(40,Math.max(1,Number(url.searchParams.get("limit")||40)))); const last=items.at(-1) as Record<string,unknown>|undefined; const requestedLimit=Math.min(40,Math.max(1,Number(url.searchParams.get("limit")||40))); const nextCursor=(url.searchParams.get("sort")||"new")==="new" && itemsWithExtra.length>requestedLimit && last ? btoa(JSON.stringify({created_at:last.created_at,id:last.id})) : null; return json({ok:true,items,next_cursor:nextCursor});
+      const requestedLimit=Math.min(40,Math.max(1,Number(url.searchParams.get("limit")||40)));
+      const itemsWithExtra=await listItems(env.DB,user.id,url.searchParams,env.ANON_ALIAS_SECRET,true);
+      const items=itemsWithExtra.slice(0,requestedLimit);
+      const last=items.at(-1) as Record<string,unknown>|undefined;
+      const requestedForYou=url.searchParams.get("sort")==="for_you" || url.searchParams.get("personalized")==="1";
+      const nextCursor=(url.searchParams.get("sort")||"new")==="new" && itemsWithExtra.length>requestedLimit && last ? btoa(JSON.stringify({created_at:last.created_at,id:last.id})) : null;
+      return json({ok:true,items,next_cursor:nextCursor,feed_mode:requestedForYou && items.length ? "for_you" : requestedForYou ? "trending_fallback" : "standard"});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/reputation"){
       return json({ok:true,reputation:await reputation(env.DB,user.id)});
