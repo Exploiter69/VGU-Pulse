@@ -181,19 +181,19 @@
       try{
         if(!append)feedCursor=null;const params=new URLSearchParams({sort,limit:"40"});if(append&&feedCursor)params.set("cursor",feedCursor);
         if(kind)params.set("kind",kind);
-        if(personalized)params.set("personalized","1");
+        if(personalized||sort==="for_you")params.set("personalized","1");
         if(!savedOnly&&community)params.set("community",community);
         if(savedOnly)params.set("saved","1");if(solvedFilter)params.set("solved",solvedFilter);if(branchFilter)params.set("branch",branchFilter);if(yearFilter)params.set("year",yearFilter);
         const q=$("#cv2-search").value.trim();if(q)params.set("q",q);
         const data=await api("/api/community-v2/feed?"+params);
         if(!append)feed.replaceChildren();
         const items=data.items||[];
-        if(!items.length&&!append){feed.innerHTML='<div class="cv2-empty">Nothing here yet. Be the first student to start a conversation.</div>';return}
+        if(!items.length&&!append){feed.innerHTML='<div class="cv2-empty"><strong>No strong signal here yet.</strong><p>Start with something students can answer, rate, or improve today.</p><div class="cv2-empty-actions"><button type="button" class="cv2-tool" data-prefill-intent="question">Ask your batch</button><button type="button" class="cv2-tool" data-prefill-intent="exam">Share an exam tip</button><button type="button" class="cv2-tool" data-prefill-intent="campus">Rate something on campus</button></div></div>';return}
         const html=items.map(item=>`
           <article class="cv2-item ${item.kind==="confession"?"cv2-kind-confession":item.kind==="exam"?"cv2-kind-exam":""}" data-id="${item.id}" data-my-vote="${Number(item.my_vote)||0}" data-anonymous="${Number(item.anonymous)||0}" data-following="${Number(item.following)?1:0}" data-saved="${Number(item.saved)?1:0}" data-solved="${Number(item.solved)?1:0}" data-accepted-reply="${Number(item.accepted_reply_id)||0}">
             <div class="cv2-meta"><div class="cv2-wrap"><span class="cv2-badge">${esc(item.kind.replaceAll("_"," "))}</span>${Number(item.anonymous)?'<span class="cv2-badge anon">Anonymous</span>':(item.author_badge?'<span class="cv2-badge rep">'+esc(item.author_badge)+'</span>':'')}${Number(item.solved)?'<span class="cv2-badge cv2-solved">Solved · accepted</span>':(!Number(item.replies)&&item.kind==="discussion"&&!item.mine?'<span class="cv2-badge">Needs an answer</span>':'')}<span class="cv2-note">${esc(item.community_slug)}</span>${item.updated_at?'<span class="cv2-item-edited">Edited</span>':''}</div><span class="cv2-note">${pretty(item.created_at)}</span></div>
             <h3>${esc(item.title)}</h3><p class="cv2-body ${String(item.body||"").length>420?"cv2-collapsed":""}">${esc(item.body)}</p>${String(item.body||"").length>420?'<button type="button" class="cv2-tool cv2-more-text" data-action="expand">Show more</button>':""}
-            <div class="cv2-note">By ${esc(item.author)} · ${item.replies} replies · ${item.upvotes} helpful</div>
+            <div class="cv2-note">By ${esc(item.author)} · ${item.replies} replies · ${item.upvotes} helpful</div>${!Number(item.replies)&&item.kind==="discussion"&&!item.mine&&!Number(item.solved)?'<button type="button" class="cv2-tool cv2-answer-now" data-action="answer">Answer this →</button>':""}
             ${Number(item.poll_options)?'<button type="button" class="cv2-tool" data-action="poll">📊 Poll</button><div class="cv2-poll-options" hidden></div>':''}
             <div class="cv2-actions">
               <button type="button" class="cv2-tool ${Number(item.my_vote)===1?'active':''}" data-action="vote" data-value="1">▲ ${item.upvotes}</button>
@@ -247,7 +247,7 @@
 
     $("#cv2-search-btn").onclick=loadFeed;
     $("#cv2-search").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();loadFeed()}};
-    $("#cv2-personalize").onclick=async()=>{personalized=!personalized;$("#cv2-personalize").textContent=personalized?"For you":"For me";await loadFeed()};
+    $("#cv2-personalize").onclick=async()=>{personalized=true;sort="for_you";kind="";savedOnly=false;community="";syncTabs();$("#cv2-current-community").textContent="For you";$("#cv2-personalize").textContent="Personalized";haptic("light");await loadFeed()};
     $("#cv2-current-community").onclick=()=>{$("#cv2-filter-dialog").showModal()};
     $("#cv2-people").onclick=()=>document.querySelector("[data-view=\"people\"]")?.click();
     $("#cv2-filter-open").onclick=()=>{$("#cv2-kind-filter").value=kind;$("#cv2-community-filter").value=community;$("#cv2-solved-filter").value=solvedFilter;$("#cv2-branch-filter").value=branchFilter;$("#cv2-year-filter").value=yearFilter;$("#cv2-filter-dialog").showModal()};
@@ -296,6 +296,7 @@
       if(chip){community=chip.dataset.community;$("#cv2-current-community").textContent=community==="campus"?"VGU campus":community;$("#cv2-community").value=community;$("#cv2-communities").closest("details")?.removeAttribute("open");await loadFeed();return}
       const button=e.target.closest("button[data-action]"),item=e.target.closest(".cv2-item");
       const id=Number(item?.dataset.id||0);
+       if(button?.dataset.action==="answer"&&item){const replies=item.querySelector(".cv2-replies"),repliesButton=item.querySelector('[data-action="replies"]');if(repliesButton&&!replies.dataset.loaded)repliesButton.click();setTimeout(()=>replies.querySelector(".cv2-reply-input")?.focus(),120);haptic("light");return}
       const replyDelete=e.target.closest("[data-reply-delete]");
       if(replyDelete){try{
         if(replyDelete.dataset.confirming!=="1"){replyDelete.dataset.confirming="1";replyDelete.textContent="Confirm delete";return}
