@@ -131,6 +131,34 @@ describe("final Student OS production contract", () => {
     expect(communityWebSource).toContain('localStorage.getItem("cv2:pulse:"');
   });
 
+  it("keeps Phase 2 Telegram growth contracts bounded and exact", () => {
+    expect(indexSource).toContain("DEEP_LINK_RE");
+    expect(indexSource).toContain("post:\\d+");
+    expect(indexSource).toContain("event:\\d+");
+    expect(indexSource).toContain("community:[a-z0-9_-]{1,60}");
+    expect(indexSource).toContain("botUsernamePromise");
+    expect(indexSource).toContain("expiresAt:Date.now()+6*60*60*1000");
+    expect(indexSource).toContain("callback_query");
+    expect(indexSource).toContain("vote:\\d+:\\d+");
+    expect(indexSource).toContain("rsvp:\\d+");
+    expect(indexSource).toContain("remind:\\d+");
+    expect(indexSource).toContain("share:card");
+    expect(indexSource).toContain("telegram_channel_cards");
+    expect(indexSource).toContain("telegram_channel_candidates");
+    expect(indexSource).toContain("Today's campus poll");
+    expect(indexSource).toContain("Student-reported discussion — not an official VGU announcement.");
+    const migration=readFileSync("migrations/0021_telegram_growth_engine.sql","utf8");
+    expect(migration).toContain("telegram_channel_cards");
+    expect(migration).toContain("telegram_channel_candidates");
+    expect(migration).toContain("COUNT(*)>=5");
+    expect(migration).toContain("+24 hours");
+    expect(communityWebSource).toContain("window.__pulseCommunityOpenCommunity");
+    expect(communityWebSource).toContain("startapp");
+    expect(communityWebSource).toContain("post|poll");
+    expect(webSource).toContain("window.__pulseResolveStartApp");
+    expect(webSource).toContain("data-event-id");
+  });
+
   it("keeps Telegram sharing, deep links, theme and security headers wired", () => {
     expect(indexSource).toContain('/api/share-link');
     expect(indexSource).toContain('https://api.telegram.org/bot');
