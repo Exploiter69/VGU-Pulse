@@ -175,6 +175,7 @@
     const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
     const parsePulseDate=s=>{const raw=String(s??"");if(!raw)return new Date(NaN);return new Date(/^\d{4}-\d{2}-\d{2}T/.test(raw)&&!/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw)?raw+"Z":raw)};const pretty=s=>{try{const d=parsePulseDate(s);return Number.isFinite(d.getTime())?d.toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}):String(s??"")}catch{return String(s??"")}};
 
+    const originalPostBodies=new Map();
     let feedCursor=null;
     async function loadFeed({append=false}={}){
       const feed=$("#cv2-feed");
@@ -189,6 +190,7 @@
         if(!append)feed.replaceChildren();
         const items=data.items||[];
         if(!items.length&&!append){feed.innerHTML='<div class="cv2-empty"><strong>No strong signal here yet.</strong><p>Start with something students can answer, rate, or improve today.</p><div class="cv2-empty-actions"><button type="button" class="cv2-tool" data-prefill-intent="question">Ask your batch</button><button type="button" class="cv2-tool" data-prefill-intent="exam">Share an exam tip</button><button type="button" class="cv2-tool" data-prefill-intent="campus">Rate something on campus</button></div></div>';return}
+        originalPostBodies.clear();items.forEach(item=>originalPostBodies.set(String(item.id),String(item.body??"")));
         const html=items.map(item=>`
           <article class="cv2-item ${item.kind==="confession"?"cv2-kind-confession":item.kind==="exam"?"cv2-kind-exam":""}" data-id="${item.id}" data-my-vote="${Number(item.my_vote)||0}" data-anonymous="${Number(item.anonymous)||0}" data-following="${Number(item.following)?1:0}" data-saved="${Number(item.saved)?1:0}" data-solved="${Number(item.solved)?1:0}" data-accepted-reply="${Number(item.accepted_reply_id)||0}">
             <div class="cv2-meta"><div class="cv2-wrap"><span class="cv2-badge">${esc(item.kind.replaceAll("_"," "))}</span>${Number(item.anonymous)?'<span class="cv2-badge anon">Anonymous</span>':(item.author_badge?'<span class="cv2-badge rep">'+esc(item.author_badge)+'</span>':'')}${Number(item.solved)?'<span class="cv2-badge cv2-solved">Solved · accepted</span>':(!Number(item.replies)&&item.kind==="discussion"&&!item.mine?'<span class="cv2-badge">Needs an answer</span>':'')}<span class="cv2-note">${esc(item.community_slug)}</span>${item.updated_at?'<span class="cv2-item-edited">Edited</span>':''}</div><span class="cv2-note">${pretty(item.created_at)}</span></div>
@@ -315,7 +317,7 @@
       const action=button.dataset.action;
       try{
         if(action==="share"){await window.__pulseShare?.("post-"+id,"VGU Pulse discussion: "+String(item.querySelector("h3")?.textContent||""));return}
-        if(action==="expand"){const body=item.querySelector(".cv2-body");if(body){const collapsed=body.classList.contains("cv2-collapsed");if(body.dataset.fullBody){try{body.textContent=decodeURIComponent(body.dataset.fullBody)}catch{}}body.classList.remove("cv2-collapsed");item.querySelector(".cv2-more-text")?.remove();button.setAttribute("aria-expanded","true");if(collapsed)haptic("light")}return}
+        if(action==="expand"){const body=item.querySelector(".cv2-body");if(body){const collapsed=body.classList.contains("cv2-collapsed");const original=originalPostBodies.get(String(id));if(original!==undefined)body.textContent=original;body.classList.remove("cv2-collapsed");item.querySelector(".cv2-more-text")?.remove();button.setAttribute("aria-expanded","true");if(collapsed)haptic("light")}return}
         if(action==="vote"){
           const value=Number(button.dataset.value),up=item.querySelector('[data-action="vote"][data-value="1"]'),down=item.querySelector('[data-action="vote"][data-value="-1"]');
           const oldVote=Number(item.dataset.myVote||0),next=oldVote===value?0:value;
