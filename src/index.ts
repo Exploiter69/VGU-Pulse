@@ -56,6 +56,7 @@ interface Env {
   APP_NAME: string;
   ADMIN_IDS?: string;
   ANON_ALIAS_SECRET?: string;
+  PULSE_CHANNEL_ID?: string;
 }
 
 function getBotToken(env: Env): string {
@@ -169,6 +170,13 @@ export default {
   async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
     try {
       const result = await runNotificationSweep(env.DB, env.SIGNAL_SERVICE, getBotToken(env), env.TELEGRAM_WEBAPP_URL);
+      if(env.PULSE_CHANNEL_ID){
+        const rows=await env.DB.prepare("SELECT id,title,upvotes,replies FROM community_items WHERE status='published' ORDER BY (upvotes+2*replies-downvotes) DESC,created_at DESC LIMIT 5").all<{id:number;title:string;upvotes:number;replies:number}>();
+        if(rows.results?.length){
+          const digest="VGU Pulse — weekly top threads\\n\\n"+rows.results.map((x,i)=>(i+1)+". "+x.title+" ("+x.upvotes+" helpful, "+x.replies+" replies)").join("\\n");
+          await sendMessage(getBotToken(env),Number(env.PULSE_CHANNEL_ID),digest,env.TELEGRAM_WEBAPP_URL);
+        }
+      }
       console.log(JSON.stringify({ event: "notification_sweep", ...result }));
     } catch (error) {
       console.error(JSON.stringify({
