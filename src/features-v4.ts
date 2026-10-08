@@ -99,7 +99,7 @@ export async function handleFeaturesV4(request:Request,env:Env,user:User):Promis
    return json({ok:true,card:{title:"VGU Pulse student card",points:Number(points?.points??0),posts:Number(posts?.count??0),replies:Number(replies?.count??0),trust:"student-community"}});
   }
   if(request.method==="GET"&&u.pathname==="/api/v4/growth/top"){
-   const rows=await env.DB.prepare("SELECT id,title,upvotes,replies,created_at FROM community_items WHERE status='published' ORDER BY (upvotes+2*replies-downvotes) DESC,created_at DESC LIMIT 5").all();return json({ok:true,items:rows.results??[],share_prefix:"vgu-pulse"});
+   const rows=await env.DB.prepare("SELECT i.id,i.title,(SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=1) upvotes,(SELECT COUNT(*) FROM community_replies r WHERE r.item_id=i.id AND r.status='published') replies,(SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=-1) downvotes,i.created_at FROM community_items i WHERE i.status='published' ORDER BY (upvotes+2*replies-downvotes) DESC,i.created_at DESC LIMIT 5").all();return json({ok:true,items:rows.results??[],share_prefix:"vgu-pulse"});
   }
   if(request.method==="POST"&&u.pathname==="/api/v4/teacher-review"){
    const b=await body<Record<string,unknown>>(request);if(!b)return json({ok:false,error:"invalid_json"},400);const teacher=text(b.teacher,120),elective=text(b.elective,120);const vals=[Number(b.teaching),Number(b.workload),Number(b.support)];
