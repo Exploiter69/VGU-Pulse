@@ -585,6 +585,7 @@ async function vote(optionId){
 }
 function renderPoll(next){
  poll=next;
+ question.dataset.pollId=poll?String(poll.id):"";
  if(!poll){question.textContent="No open poll right now.";options.replaceChildren();voteTotal.textContent="";return}
  question.textContent=poll.question;voteTotal.textContent=poll.total_votes+" vote"+(poll.total_votes===1?"":"s");options.replaceChildren();
  for(const option of poll.options){
@@ -1108,6 +1109,7 @@ window.__pulseResolveStartApp=async target=>{
   const show=name=>{document.querySelector('[data-view="'+name+'"]')?.click();};
   if(/^(home|ask|community|campus|academics|people|tools|me|exam|mess)$/.test(raw)){const map={me:"pulse",exam:"academics",mess:"tools"};show(map[raw]||raw);return;}
   if(/^event:\d+$/.test(raw)){show("campus");const id=raw.split(":")[1];for(let i=0;i<20;i++){const el=document.querySelector('[data-event-id="'+id+'"]');if(el){el.scrollIntoView({block:"center",behavior:"smooth"});return}await new Promise(r=>setTimeout(r,100));}return;}
+  if(/^poll:\d+$/.test(raw)){show("home");const id=raw.split(":")[1];for(let i=0;i<30;i++){const el=document.querySelector('[data-poll-id="'+id+'"]');if(el){el.scrollIntoView({block:"center",behavior:"smooth"});return}await new Promise(r=>setTimeout(r,100));}return;}
   if(/^community:[a-z0-9_-]{1,60}$/.test(raw)){show("community");window.__pulseCommunityOpenCommunity?.(raw.slice(10));return;}
 };
 if(startAppTarget&&!/^(post|poll):\d+$/.test(startAppTarget))setTimeout(()=>window.__pulseResolveStartApp?.(startAppTarget),700);
