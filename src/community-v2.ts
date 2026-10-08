@@ -204,7 +204,7 @@ function adminIds(raw?:string):Set<string>{return new Set((raw??"").split(",").m
 async function getItem(db: D1Database, id: number, viewerId?: number, anonSecret?:string): Promise<Record<string, unknown> | null> {
   const row = await db.prepare(
     `SELECT i.id, i.kind, i.title, i.body, i.community_slug, i.audience_program, i.audience_branch,
-      i.audience_year, i.anonymous, i.created_at, i.telegram_user_id,
+      i.audience_year, i.anonymous, i.created_at, i.telegram_user_id, i.solved, i.accepted_reply_id,
       COALESCE(SUM(CASE WHEN v.vote = 1 THEN 1 ELSE 0 END),0) AS upvotes,
       COALESCE(SUM(CASE WHEN v.vote = -1 THEN 1 ELSE 0 END),0) AS downvotes,
       (SELECT COUNT(*) FROM community_replies r WHERE r.item_id=i.id AND r.status='published') AS replies,
