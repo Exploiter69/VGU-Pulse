@@ -582,7 +582,10 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     }
     if(request.method==="POST" && url.pathname==="/api/community-v2/save"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
-      await env.DB.prepare("INSERT OR IGNORE INTO community_saves(item_id,telegram_user_id) VALUES(?,?)").bind(Number(input.item_id),String(user.id)).run();
+      const id=Number(input.item_id); if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
+      const exists=await env.DB.prepare("SELECT id FROM community_items WHERE id=? AND status='published'").bind(id).first();
+      if(!exists)return json({ok:false,error:"item_not_found"},404);
+      await env.DB.prepare("INSERT OR IGNORE INTO community_saves(item_id,telegram_user_id) VALUES(?,?)").bind(id,String(user.id)).run();
       return json({ok:true,saved:true});
     }
     if(request.method==="DELETE" && url.pathname==="/api/community-v2/save"){
