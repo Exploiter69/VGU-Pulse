@@ -135,10 +135,10 @@ export async function runNotificationSweep(db:D1Database,signalService:Fetcher,b
     `DELETE FROM student_notifications
      WHERE sent_at IS NULL AND failed_at IS NULL
        AND NOT EXISTS (SELECT 1 FROM notification_preferences p WHERE p.telegram_user_id=student_notifications.telegram_user_id AND (
-         (n.channel='official' AND ${preferenceSql("official")}) OR
-         (n.channel='community_replies' AND ${preferenceSql("community_replies")}) OR
-         (n.channel='community_activity' AND ${preferenceSql("community_activity")}) OR
-         (n.channel='personalized' AND ${preferenceSql("personalized")})
+         (student_notifications.channel='official' AND ${preferenceSql("official")}) OR
+         (student_notifications.channel='community_replies' AND ${preferenceSql("community_replies")}) OR
+         (student_notifications.channel='community_activity' AND ${preferenceSql("community_activity")}) OR
+         (student_notifications.channel='personalized' AND ${preferenceSql("personalized")})
        ))`
   ).run();
 
