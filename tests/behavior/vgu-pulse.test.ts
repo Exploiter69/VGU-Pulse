@@ -325,6 +325,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
   it("caps personalized fan-out and skips a blocked recipient",async()=>{
     const author={id:2002,first_name:"Author"};
     await request("/api/community-v2/rules/ack",author,{method:"POST",body:"{}"});
+    await request("/api/community-v2/rules/ack",viewer,{method:"POST",body:"{}"});
     const env=await worker.getEnv() as {DB:D1Database};
     await env.DB.batch([
       env.DB.prepare("INSERT OR IGNORE INTO notification_preferences(telegram_user_id,official_updates,community_replies,community_activity,personalized_alerts) VALUES('3003',1,1,1,1)"),
