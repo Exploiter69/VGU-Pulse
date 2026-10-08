@@ -113,6 +113,21 @@ async function handleTelegramUpdate(request: Request, env: Env): Promise<Respons
   if (!chatId) return json({ ok: true });
 
   const text = (message.text ?? "").trim();
+  const senderId=chatId;
+  if(isAdmin(env,senderId) && text==="/review"){
+    const rows=await env.DB.prepare("SELECT id,kind,title,report_count FROM community_items WHERE status='review' ORDER BY created_at ASC LIMIT 20").all();
+    await sendMessage(getBotToken(env),chatId,rows.results?.length?rows.results.map((x:any)=>`#${x.id} [${x.kind}] reports=${x.report_count} ${x.title}`).join("\n"):"No items awaiting review.",env.TELEGRAM_WEBAPP_URL);
+    return json({ok:true});
+  }
+  const moderation=text.match(/^\/(restore|hide|ban)\s+(\d+)$/);
+  if(isAdmin(env,senderId)&&moderation){
+    const [,action,target]=moderation;
+    if(action==="ban") await env.DB.prepare("INSERT INTO user_bans(telegram_user_id,reason,banned_by) VALUES(?,?,?) ON CONFLICT(telegram_user_id) DO UPDATE SET reason=excluded.reason,banned_by=excluded.banned_by,created_at=CURRENT_TIMESTAMP").bind(target,"Telegram moderation command",String(senderId)).run();
+    else await env.DB.prepare("UPDATE community_items SET status=? WHERE id=?").bind(action==="restore"?"published":"hidden",Number(target)).run();
+    await env.DB.prepare("INSERT INTO moderation_actions(admin_telegram_user_id,action,target_type,target_id,reason) VALUES(?,?,?,?,?)").bind(String(senderId),action,action==="ban"?"user":"item",target,"Telegram moderation command").run();
+    await sendMessage(getBotToken(env),chatId,`Moderation action applied: /${action} ${target}`,env.TELEGRAM_WEBAPP_URL);
+    return json({ok:true});
+  }
 
   if (text === "/start") {
     await sendMessage(
