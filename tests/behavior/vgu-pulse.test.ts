@@ -140,8 +140,9 @@ describe("VGU-Pulse real D1 behavior harness", () => {
       { headers: { "x-telegram-init-data": initData } },
     );
 
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({
+    const payload = await response.json();
+    expect(response.status, JSON.stringify(payload)).toBe(200);
+    expect(payload).toMatchObject({
       ok: true,
       replies: [
         { id: 1, author: "Author Student", mine: 0 },
