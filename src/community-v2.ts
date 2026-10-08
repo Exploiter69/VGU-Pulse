@@ -213,7 +213,7 @@ async function getItem(db: D1Database, id: number, viewerId?: number, anonSecret
   return { ...publicRow, author: display, trust: "student-community" };
 }
 
-async function listItems(db: D1Database, viewerId: number, params: URLSearchParams, anonSecret?:string, withExtra=false): Promise<Record<string, unknown>[]> {
+export async function listItems(db: D1Database, viewerId: number, params: URLSearchParams, anonSecret?:string, withExtra=false, metrics?:{value:number}): Promise<Record<string, unknown>[]> {
   const kind = params.get("kind") as CommunityKind | null;
   const sort = params.get("sort") || "new";
   const community = clamp(params.get("community"), LIMITS.community);
@@ -223,7 +223,7 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
   const cursorRaw=params.get("cursor");
   let cursor:{created_at:string;id:number}|null=null;
   if(cursorRaw){try{const decoded=JSON.parse(atob(cursorRaw)); if(typeof decoded.created_at==="string"&&Number.isSafeInteger(decoded.id)&&decoded.id>0)cursor=decoded;}catch{throw new Error("invalid_cursor");}}
-  queryCounter && (queryCounter.value += 1);
+  metrics && (metrics.value += 1);
   const p = await profile(db, viewerId);
   const where = ["i.status='published'"];
   const solvedFilter=params.get("solved");
