@@ -21,10 +21,21 @@ const server = createTestHarness({
         compatibility_date: "2026-10-01",
       },
     },
+    {
+      config: {
+        name: "migration-compat",
+        main: "src/index.ts",
+        compatibility_date: "2026-10-01",
+        d1_databases: [{ binding: "DB", database_name: "gate-2-compat", database_id: "gate-2-compat" }],
+        vars: { APP_NAME: "VGU Pulse" },
+      },
+      secrets: { BOT_TOKEN, ANON_ALIAS_SECRET: "gate-2-anon-secret" },
+    },
   ],
 });
 
 const worker = server.getWorker("vgu-pulse");
+const compatWorker = server.getWorker("migration-compat");
 
 async function signInitData(user: Record<string, unknown>, authDate = Math.floor(Date.now() / 1000)): Promise<string> {
   const params = new URLSearchParams({
@@ -150,14 +161,9 @@ describe("VGU-Pulse real D1 behavior",()=>{
   });
 
   it("preserves 0009 data when Gate 1 and Gate 2 migrations are applied",async()=>{
-    const env=await worker.getEnv() as {DB:D1Database};
-    await env.DB.prepare("DELETE FROM community_items").run();
-    await env.DB.prepare("DELETE FROM student_profile_blocks").run();
+    const env=await compatWorker.getEnv() as {DB:D1Database};
     const migrationFiles=readdirSync("migrations").filter(x=>/^000[1-9]_.*\\.sql$/.test(x)).sort();
-    for(const file of migrationFiles){
-      const sql=readFileSync("migrations/"+file,"utf8");
-      await env.DB.exec(sql);
-    }
+    for(const file of migrationFiles) await env.DB.exec(readFileSync("migrations/"+file,"utf8"));
     await env.DB.prepare("INSERT INTO users (telegram_user_id,first_name) VALUES ('3003','Legacy')").run();
     await env.DB.prepare("INSERT INTO student_profile_blocks(blocker_telegram_user_id,blocked_telegram_user_id) VALUES('3003','2002')").run();
     await env.DB.exec(readFileSync("migrations/0010_gate1_hardening.sql","utf8"));
