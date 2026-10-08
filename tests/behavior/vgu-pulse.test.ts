@@ -234,7 +234,10 @@ describe("VGU-Pulse real D1 behavior",()=>{
     for(const reviewer of [{id:1001},{id:3003},{id:4004},{id:5005},{id:6006}]){const review=await request("/api/v4/teacher-review",reviewer as Record<string,unknown>,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({teacher:"Professor Y",elective:"DBMS",teaching:5,workload:3,support:4})});expect(review.status).toBe(201);}
     const moderated=await request("/api/v4/moderate",{id:9009},{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({type:"review",id:1,status:"published"})});expect(moderated.status).toBe(200);
     await (await worker.getEnv() as {DB:D1Database}).DB.prepare("UPDATE teacher_reviews SET status='published' WHERE teacher='Professor Y' AND elective='DBMS'").run();
-    const aggregate=await request("/api/v4/teacher-reviews?teacher=Professor%20Y&elective=DBMS",user);expect(aggregate.status).toBe(200);const aggregateData=await aggregate.json() as {ratings:unknown};expect(aggregateData.ratings).not.toBeNull();
+    const aggregate=await request("/api/v4/teacher-reviews?teacher=Professor%20Y&elective=DBMS",user);expect(aggregate.status).toBe(200);const pendingAggregate=await aggregate.json() as {ratings:unknown};expect(pendingAggregate.ratings).toBeNull();
+    const env=await worker.getEnv() as {DB:D1Database};
+    await env.DB.prepare("UPDATE teacher_reviews SET status='published' WHERE teacher=? AND elective=?").bind("Professor Y","DBMS").run();
+    const publishedAggregate=await request("/api/v4/teacher-reviews?teacher=Professor%20Y&elective=DBMS",user);const publishedData=await publishedAggregate.json() as {ratings:{count:number}};expect(publishedData.ratings.count).toBe(5);
 
   });
 });
