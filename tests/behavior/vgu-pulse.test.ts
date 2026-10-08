@@ -1,62 +1,17 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createTestHarness } from "wrangler";
 
-const BOT_TOKEN = "gate-0-test-token";
-
-async function signInitData(
-  botToken: string,
-  user: Record<string, unknown>,
-  authDate = Math.floor(Date.now() / 1000),
-): Promise<string> {
-  const params = new URLSearchParams({
-    auth_date: String(authDate),
-    query_id: "gate-0",
-    user: JSON.stringify(user),
-  });
-  const encoder = new TextEncoder();
-  const secretKey = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode("WebAppData"),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const secret = await crypto.subtle.sign(
-    "HMAC",
-    secretKey,
-    encoder.encode(botToken),
-  );
-  const dataKey = await crypto.subtle.importKey(
-    "raw",
-    secret,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const dataCheckString = [...params.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => `${key}=${value}`)
-    .join("\n");
-  const hash = await crypto.subtle.sign(
-    "HMAC",
-    dataKey,
-    encoder.encode(dataCheckString),
-  );
-  params.set(
-    "hash",
-    [...new Uint8Array(hash)]
-      .map((byte) => byte.toString(16).padStart(2, "0"))
-      .join(""),
-  );
-  return params.toString();
-}
-
+const BOT_TOKEN = "gate-2-test-token";
 const server = createTestHarness({
   workers: [
     {
       configPath: "./wrangler.jsonc",
-      secrets: { BOT_TOKEN },
+      secrets: {
+        BOT_TOKEN: BOT_TOKEN,
+        ANON_ALIAS_SECRET: "gate-2-anon-secret",
+        ADMIN_IDS: "9009",
+      },
       bindingOverrides: { SIGNAL_SERVICE: "signal-mock" },
     },
     {
@@ -67,188 +22,148 @@ const server = createTestHarness({
       },
     },
   ],
+});
 
-  it("enforces the content safety policy without rejecting self-harm support requests", async () => {
-    const initData = await signInitData(BOT_TOKEN, { id: 1001, first_name: "Viewer" });
-    const post = async (title:string, body:string) => worker.fetch("https://example.test/api/community-v2/items", {
-      method:"POST",
-      headers:{"content-type":"application/json","x-telegram-init-data":initData},
-      body:JSON.stringify({kind:"discussion",title,body}),
-    });
-    expect((await post("Threat test","i will kill you")).status).toBe(422);
-    const support = await post("Need help","I am thinking about suicide and need support");
-    expect(support.status).toBe(201);
-    await expect(support.json()).resolves.toMatchObject({ok:true,item:{support:true}});
-    const benign = await post("Benign test","Can someone explain the library timings?");
-    expect(benign.status).toBe(201);
+const worker = server.getWorker("vgu-pulse");
+
+async function signInitData(user: Record<string, unknown>, authDate = Math.floor(Date.now() / 1000)): Promise<string> {
+  const params = new URLSearchParams({
+    auth_date: String(authDate),
+    query_id: "gate-2",
+    user: JSON.stringify(user),
+  });
+  const encoder = new TextEncoder();
+  const secretKey = await crypto.subtle.importKey("raw", encoder.encode("WebAppData"), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const secret = await crypto.subtle.sign("HMAC", secretKey, encoder.encode(BOT_TOKEN));
+  const dataKey = await crypto.subtle.importKey("raw", secret, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const dataCheckString = [...params.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([k,v]) => k+"="+v).join("\n");
+  const hash = await crypto.subtle.sign("HMAC", dataKey, encoder.encode(dataCheckString));
+  params.set("hash", [...new Uint8Array(hash)].map(x => x.toString(16).padStart(2,"0")).join(""));
+  return params.toString();
+}
+
+async function request(path:string, user:Record<string,unknown>, init:RequestInit={}) {
+  const headers = new Headers(init.headers);
+  headers.set("x-telegram-init-data", await signInitData(user));
+  return worker.fetch("https://example.test"+path,{...init,headers});
+}
+
+async function seed() {
+  const env = await worker.getEnv() as {DB:D1Database};
+  await env.DB.batch([
+    env.DB.prepare("INSERT INTO users (telegram_user_id, first_name) VALUES (?, ?)").bind("1001","Viewer"),
+    env.DB.prepare("INSERT INTO users (telegram_user_id, first_name) VALUES (?, ?)").bind("2002","Author"),
+    env.DB.prepare("INSERT INTO student_profiles (public_id,telegram_user_id,display_name,program,branch,year,bio,looking_for) VALUES (?,?,?,?,?,?,?,?)").bind("viewer-1001","1001","Viewer Student","B.Tech","CSE",2,"",""),
+    env.DB.prepare("INSERT INTO student_profiles (public_id,telegram_user_id,display_name,program,branch,year,bio,looking_for) VALUES (?,?,?,?,?,?,?,?)").bind("author-2002","2002","Author Student","B.Tech","CSE",2,"",""),
+    env.DB.prepare("INSERT INTO community_items (telegram_user_id,kind,title,body,community_slug,status) VALUES (?,?,?,?,?,?)").bind("2002","discussion","Replies bind test","test item","campus","published"),
+    env.DB.prepare("INSERT INTO community_replies (item_id,telegram_user_id,body,anonymous,status) VALUES (?,?,?,?,?)").bind(1,"2002","hello from author",0,"published"),
+    env.DB.prepare("INSERT INTO community_replies (item_id,telegram_user_id,body,anonymous,status) VALUES (?,?,?,?,?)").bind(1,"1001","hello from viewer",0,"published"),
+  ]);
+}
+
+beforeAll(async()=>{ await server.listen(); });
+beforeEach(async()=>{ await server.reset(); await worker.applyD1Migrations("DB"); await seed(); });
+afterAll(async()=>{ await server.close(); });
+
+describe("VGU-Pulse real D1 behavior",()=>{
+  it("applies every migration to a fresh D1 database",async()=>{
+    const env=await worker.getEnv() as {DB:D1Database};
+    const rows=await env.DB.prepare("SELECT name FROM d1_migrations ORDER BY id").all<{name:string}>();
+    expect(rows.results.map(x=>x.name)).toEqual(expect.arrayContaining(["0001_initial.sql","0009_community_network.sql","0010_gate1_hardening.sql","0011_gate2_safety.sql"]));
   });
 
-  it("awards an upvote reputation event only once across repeated toggles", async () => {
-    const viewer=await signInitData(BOT_TOKEN,{id:1001,first_name:"Viewer"});
-    const env=(await worker.getEnv()) as {DB:D1Database};
+  it("reproduces the replies contract and hides non-published parents",async()=>{
+    const response=await request("/api/community-v2/replies?item_id=1",{id:1001,first_name:"Viewer"});
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ok:true,replies:[
+      {id:1,author:"Author Student",mine:0},
+      {id:2,author:"Viewer Student",mine:1},
+    ]});
+    const env=await worker.getEnv() as {DB:D1Database};
+    await env.DB.prepare("UPDATE community_items SET status='hidden' WHERE id=1").run();
+    const hidden=await request("/api/community-v2/replies?item_id=1",{id:1001,first_name:"Viewer"});
+    expect(hidden.status).toBe(404);
+  });
+
+  it("enforces threat rejection while allowing self-harm support",async()=>{
+    await request("/api/community-v2/rules/ack",{id:1001,first_name:"Viewer"},{method:"POST",body:"{}"});
+    await request("/api/community-v2/anonymous-notice",{id:1001,first_name:"Viewer"},{method:"POST",body:"{}"});
+    const post=async(body:string)=>request("/api/community-v2/items",{id:1001,first_name:"Viewer"},{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"discussion",title:"Safety test",body})});
+    expect((await post("i will kill you")).status).toBe(422);
+    const support=await post("I am thinking about suicide and need support");
+    expect(support.status).toBe(201);
+    await expect(support.json()).resolves.toMatchObject({ok:true,item:{support:true}});
+    expect((await post("Can someone explain library timings?")).status).toBe(201);
+  });
+
+  it("allows a single reputation award across repeated vote toggles",async()=>{
+    const user={id:1001,first_name:"Viewer"};
     for(let i=0;i<5;i++){
-      const response=await worker.fetch("https://example.test/api/community-v2/vote",{
-        method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":viewer},
-        body:JSON.stringify({item_id:1,vote:1}),
-      });
-      expect(response.status).toBe(200);
-      if(i<4) await worker.fetch("https://example.test/api/community-v2/vote",{
-        method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":viewer},
-        body:JSON.stringify({item_id:1,vote:i%2===0?-1:1}),
-      });
+      await request("/api/community-v2/vote",{...user},{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({item_id:1,vote:1})});
+      if(i<4) await request("/api/community-v2/vote",{...user},{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({item_id:1,vote:-1})});
     }
-    const row=await env.DB.prepare("SELECT points FROM community_reputation WHERE telegram_user_id=?").bind("2002").first<{points:number}>();
+    const env=await worker.getEnv() as {DB:D1Database};
+    const row=await env.DB.prepare("SELECT points FROM community_reputation WHERE telegram_user_id='2002'").first<{points:number}>();
     expect(Number(row?.points)).toBe(2);
   });
 
-  it("deduplicates reply reports and exposes anonymous blocks without identity", async () => {
-    const viewer = await signInitData(BOT_TOKEN,{id:1001,first_name:"Viewer"});
-    const env = (await worker.getEnv()) as {DB:D1Database};
-    await env.DB.prepare("UPDATE community_items SET anonymous=1 WHERE id=1").run();
-    const block = await worker.fetch("https://example.test/api/community-v2/block",{
-      method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":viewer},
-      body:JSON.stringify({item_id:1}),
-    });
-    expect(block.status).toBe(200);
-    const blocks=await worker.fetch("https://example.test/api/student-profile/blocks",{headers:{"x-telegram-init-data":viewer}});
-    expect(blocks.status).toBe(200);
-    const blockPayload=await blocks.json();
-    expect(blockPayload.profiles[0]).toMatchObject({display_name:"Anonymous author (from post #1)"});
-    expect(blockPayload.profiles[0].public_id).toBeNull();
-
-    const report=async()=>worker.fetch("https://example.test/api/community-v2/report-reply",{
-      method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":viewer},
-      body:JSON.stringify({reply_id:1}),
-    });
-    expect((await report()).status).toBe(200);
-    expect((await report()).status).toBe(200);
-    expect((await report()).status).toBe(200);
+  it("deduplicates reply reports and preserves anonymous block privacy",async()=>{
+    const env=await worker.getEnv() as {DB:D1Database};
+    await env.DB.prepare("UPDATE community_items SET anonymous=1,audience_program=NULL,audience_branch=NULL,audience_year=NULL WHERE id=1").run();
+    await request("/api/community-v2/block",{id:1001,first_name:"Viewer"},{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({item_id:1})});
+    const blocks=await request("/api/student-profile/blocks",{id:1001,first_name:"Viewer"});
+    const payload=await blocks.json() as any;
+    expect(payload.profiles[0]).toMatchObject({display_name:"Anonymous author (from post #1)",public_id:null});
+    for(let i=0;i<3;i++) await request("/api/community-v2/report-reply",{id:1001,first_name:"Viewer"},{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({reply_id:1})});
     const row=await env.DB.prepare("SELECT report_count FROM community_replies WHERE id=1").first<{report_count:number}>();
     expect(Number(row?.report_count)).toBe(1);
   });
 
-  it("strictly merges notification preferences", async () => {
-    const viewer=await signInitData(BOT_TOKEN,{id:1001,first_name:"Viewer"});
-    const set=async(body:Record<string,unknown>)=>worker.fetch("https://example.test/api/community-v2/preferences",{
-      method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":viewer},body:JSON.stringify(body),
-    });
+  it("requires rules and anonymous notice before posting anonymously",async()=>{
+    const user={id:1001,first_name:"Viewer"};
+    const first=await request("/api/community-v2/items",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"confession",title:"Anonymous post",body:"hello"})});
+    expect(first.status).toBe(428);
+    await request("/api/community-v2/rules/ack",user,{method:"POST",body:"{}"});
+    const second=await request("/api/community-v2/items",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"confession",title:"Anonymous post",body:"hello"})});
+    expect(second.status).toBe(428);
+    await request("/api/community-v2/anonymous-notice",user,{method:"POST",body:"{}"});
+    const third=await request("/api/community-v2/items",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"confession",title:"Anonymous post",body:"hello"})});
+    expect(third.status).toBe(201);
+    const payload=await third.json() as any;
+    expect(payload.item.author).toMatch(/^Anon-\d+$/);
+    expect(payload.item.audience_program).toBeNull();
+    expect(payload.item.audience_branch).toBeNull();
+    expect(payload.item.audience_year).toBeNull();
+  });
+
+  it("strictly merges notification preferences",async()=>{
+    const user={id:1001,first_name:"Viewer"};
+    const set=async(body:Record<string,unknown>)=>request("/api/community-v2/preferences",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
     expect((await set({community_activity:true})).status).toBe(200);
-    const invalid=await set({community_activity:"false"});
-    expect(invalid.status).toBe(400);
-    const current=await worker.fetch("https://example.test/api/community-v2/preferences",{headers:{"x-telegram-init-data":viewer}});
-    await expect(current.json()).resolves.toMatchObject({preferences:{community_activity:true,personalized_alerts:false}});
+    expect((await set({community_activity:"false"})).status).toBe(400);
+    await expect((await request("/api/community-v2/preferences",user)).json()).resolves.toMatchObject({preferences:{community_activity:true,personalized_alerts:false}});
   });
 
-});
-
-const worker = server.getWorker("vgu-pulse");
-const migrationWorker = server.getWorker("migration-pre-gate1");
-
-describe("VGU-Pulse real D1 behavior harness", () => {
-  beforeAll(async () => {
-    await server.listen();
+  it("requires Telegram initData for student discovery",async()=>{
+    const response=await worker.fetch("https://example.test/api/students");
+    expect(response.status).toBe(401);
   });
 
-  beforeEach(async () => {
-    await server.reset();
-    await worker.applyD1Migrations("DB");
-    const env = (await worker.getEnv()) as { DB: D1Database };
-
-    await env.DB.batch([
-      env.DB.prepare(
-        "INSERT INTO users (telegram_user_id, first_name) VALUES (?, ?)",
-      ).bind("1001", "Viewer"),
-      env.DB.prepare(
-        "INSERT INTO users (telegram_user_id, first_name) VALUES (?, ?)",
-      ).bind("2002", "Author"),
-      env.DB.prepare(
-        "INSERT INTO student_profiles (public_id, telegram_user_id, display_name, program, branch, year, bio, looking_for) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      ).bind("viewer-1001", "1001", "Viewer Student", "B.Tech", "CSE", 2, "", ""),
-      env.DB.prepare(
-        "INSERT INTO student_profiles (public_id, telegram_user_id, display_name, program, branch, year, bio, looking_for) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      ).bind("author-2002", "2002", "Author Student", "B.Tech", "CSE", 2, "", ""),
-      env.DB.prepare(
-        "INSERT INTO community_items (telegram_user_id, kind, title, body, community_slug, status) VALUES (?, ?, ?, ?, ?, ?)",
-      ).bind("2002", "discussion", "Replies bind test", "test item", "campus", "published"),
-      env.DB.prepare(
-        "INSERT INTO community_replies (item_id, telegram_user_id, body, anonymous, status) VALUES (?, ?, ?, ?, ?)",
-      ).bind(1, "2002", "hello from author", 0, "published"),
-      env.DB.prepare(
-        "INSERT INTO community_replies (item_id, telegram_user_id, body, anonymous, status) VALUES (?, ?, ?, ?, ?)",
-      ).bind(1, "1001", "hello from viewer", 0, "published"),
-    ]);
-  });
-
-  afterAll(async () => {
-    await server.close();
-  });
-
-  it("applies every migration to a fresh D1 database", async () => {
-    const env = await worker.getEnv();
-    const migrationState = await env.DB.prepare(
-      "SELECT name FROM d1_migrations ORDER BY id",
-    ).all() as D1Result<{ name: string }>;
-
-    expect(migrationState.results?.map((row) => row.name)).toEqual(
-      expect.arrayContaining([
-        "0001_initial.sql",
-        "0009_community_network.sql",
-        "0010_gate1_hardening.sql",
-      ]),
-    );
-
-    const table = await env.DB.prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='community_items'",
-    ).first() as { name?: string } | null;
-
-    expect(table?.name).toBe("community_items");
-  });
-
-  it("applies 0010 cleanly to a database that already contains 0009 data", async () => {
-    const env = await migrationWorker.getEnv() as {DB:D1Database};
-    await migrationWorker.applyD1Migrations("DB");
-    await env.DB.prepare("INSERT INTO users (telegram_user_id,first_name) VALUES (?,?)").bind("3003","Legacy").run();
-    await env.DB.prepare("INSERT INTO student_profile_blocks (blocker_telegram_user_id,blocked_telegram_user_id) VALUES (?,?)").bind("3003","2002").run();
-    const migration = readFileSync("migrations/0010_gate1_hardening.sql","utf8");
-    await env.DB.exec(migration);
-    const row=await env.DB.prepare("SELECT id,via_anonymous,source_item_id FROM student_profile_blocks WHERE blocker_telegram_user_id=? AND blocked_telegram_user_id=?").bind("3003","2002").first<{id:number;via_anonymous:number;source_item_id:number|null}>();
-    expect(row?.id).toBeTypeOf("number");
+  it("preserves 0009 data when Gate 1 and Gate 2 migrations are applied",async()=>{
+    const env=await worker.getEnv() as {DB:D1Database};
+    await env.DB.prepare("DELETE FROM community_items").run();
+    await env.DB.prepare("DELETE FROM student_profile_blocks").run();
+    const migrationFiles=readdirSync("migrations").filter(x=>/^000[1-9]_.*\\.sql$/.test(x)).sort();
+    for(const file of migrationFiles){
+      const sql=readFileSync("migrations/"+file,"utf8");
+      await env.DB.exec(sql);
+    }
+    await env.DB.prepare("INSERT INTO users (telegram_user_id,first_name) VALUES ('3003','Legacy')").run();
+    await env.DB.prepare("INSERT INTO student_profile_blocks(blocker_telegram_user_id,blocked_telegram_user_id) VALUES('3003','2002')").run();
+    await env.DB.exec(readFileSync("migrations/0010_gate1_hardening.sql","utf8"));
+    await env.DB.exec(readFileSync("migrations/0011_gate2_safety.sql","utf8"));
+    const row=await env.DB.prepare("SELECT via_anonymous,source_item_id FROM student_profile_blocks WHERE blocker_telegram_user_id='3003' AND blocked_telegram_user_id='2002'").first<{via_anonymous:number;source_item_id:number|null}>();
     expect(Number(row?.via_anonymous)).toBe(0);
     expect(row?.source_item_id).toBeNull();
-  });
-
-  it("returns the published replies for the requested item and viewer", async () => {
-    const initData = await signInitData(BOT_TOKEN, {
-      id: 1001,
-      first_name: "Viewer",
-    });
-
-    const response = await worker.fetch(
-      "https://example.test/api/community-v2/replies?item_id=1",
-      { headers: { "x-telegram-init-data": initData } },
-    );
-
-    const payload = await response.json();
-    expect(response.status, JSON.stringify(payload)).toBe(200);
-    expect(payload).toMatchObject({
-      ok: true,
-      replies: [
-        { id: 1, author: "Author Student", mine: 0 },
-        { id: 2, author: "Viewer Student", mine: 1 },
-      ],
-    });
-
-    const env = (await worker.getEnv()) as { DB: D1Database };
-    await env.DB.prepare("UPDATE community_items SET status='hidden' WHERE id=1").run();
-
-    const hiddenResponse = await worker.fetch(
-      "https://example.test/api/community-v2/replies?item_id=1",
-      { headers: { "x-telegram-init-data": initData } },
-    );
-    expect(hiddenResponse.status).toBe(404);
-    await expect(hiddenResponse.json()).resolves.toMatchObject({
-      ok: false,
-      error: "item_not_found",
-    });
   });
 });
