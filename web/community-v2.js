@@ -231,11 +231,13 @@
       }catch{
         contextCommunity="campus";
       }
-      if(sort!=="for_you"){community=contextCommunity;$("#cv2-community").value=community;$("#cv2-community-filter").value=community;$("#cv2-current-community").textContent=community==="campus"?"VGU campus":community;}
-      else {community="";$("#cv2-community").value="";$("#cv2-community-filter").value="";$("#cv2-current-community").textContent="For you";}
       try{
         const data=await api("/api/community-v2/communities");
-        const names=["campus",contextCommunity,...(data.communities||[]).map(x=>x.slug)].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).slice(0,16);
+        const approved=new Set(["campus",...(data.communities||[]).filter(x=>Number(x.approved??1)===1).map(x=>String(x.slug||""))]);
+        if(!approved.has(contextCommunity))contextCommunity="campus";
+        if(sort!=="for_you"){community=contextCommunity;$("#cv2-community").value=community;$("#cv2-community-filter").value=community;$("#cv2-current-community").textContent=community==="campus"?"VGU campus":community;}
+        else {community="";$("#cv2-community").value="";$("#cv2-community-filter").value="";$("#cv2-current-community").textContent="For you";}
+        const names=[contextCommunity,...(data.communities||[]).map(x=>x.slug)].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).slice(0,16);
         $("#cv2-communities").innerHTML=names.map(n=>`<button type="button" class="cv2-community-chip" data-community="${esc(n)}">${esc(n)}</button>`).join("");const list=$("#cv2-community-options");if(list)list.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join("");
       }catch{
         $("#cv2-communities").innerHTML='<span class="cv2-note">Communities will appear when student activity is available.</span>';
@@ -289,7 +291,7 @@
         else await api("/api/community-v2/items",{method:"POST",body:JSON.stringify({kind:postKind,title:$("#cv2-title").value,body:$("#cv2-body").value,community_slug:$("#cv2-community").value,anonymous:$("#cv2-anon").checked})});
         $("#cv2-title").value="";$("#cv2-body").value="";$("#cv2-options").value="";status.textContent=editingId?"Saved.":"Published.";editingId=null;$("#cv2-compose-heading").textContent="Start a student post";$("#cv2-publish").textContent="Publish";$("#cv2-compose-dialog").close();await loadFeed();
       }catch(e){
-        const messages={unsafe_content:"That content needs editing before it can be published.",invalid_item:"Add a title and a little more detail.",invalid_poll:"A poll needs at least two options.",rate_limited:"You have posted a lot recently. Try again later.",reopen_telegram:"Reopen Pulse from Telegram.",forbidden:"You can only edit your own post.",item_not_found:"That post is no longer available."};
+        const messages={unsafe_content:"That content needs editing before it can be published.",invalid_item:"Add a title and a little more detail.",invalid_poll:"A poll needs at least two options.",rate_limited:"You have posted a lot recently. Try again later.",reopen_telegram:"Reopen Pulse from Telegram.",forbidden:"You can only edit your own post.",item_not_found:"That post is no longer available.",rules_required:"Acknowledge the community rules before publishing.",anonymous_notice_required:"Acknowledge the anonymous-post notice first.",anonymous_unavailable:"Anonymous posting is temporarily unavailable.",invalid_community:"That community is no longer available. Switch to VGU campus and try again."};
         status.textContent=messages[e.message]||"Could not save this post. Please try again.";
       }finally{button.disabled=false}
     };
