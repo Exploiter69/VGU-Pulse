@@ -227,6 +227,7 @@ export async function listItems(db: D1Database, viewerId: number, params: URLSea
   let cursor:{created_at:string;id:number}|null=null;
   if(cursorRaw){try{const decoded=JSON.parse(atob(cursorRaw)); if(typeof decoded.created_at==="string"&&Number.isSafeInteger(decoded.id)&&decoded.id>0)cursor=decoded;}catch{throw new Error("invalid_cursor");}}
   queryCounter && (queryCounter.value += 1);
+  const forYou = sort === "for_you";
   const p = await profile(db, viewerId);
   if (forYou && !p) {
     const fallback = new URLSearchParams(params);
@@ -251,7 +252,6 @@ export async function listItems(db: D1Database, viewerId: number, params: URLSea
     args.push(String(viewerId));
   }
   const audience = params.get("personalized") === "1" || sort === "for_you";
-  const forYou = sort === "for_you";
   if (sort==="new" && cursor) { where.push("(i.created_at < ? OR (i.created_at = ? AND i.id < ?))"); args.push(cursor.created_at,cursor.created_at,cursor.id); }
   if (audience && p) {
     where.push("(i.audience_branch IS NULL OR i.audience_branch=? OR i.community_slug='campus')");
