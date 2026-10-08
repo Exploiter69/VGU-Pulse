@@ -231,6 +231,17 @@ export default {
     }
 
 
+    if (request.method === "POST" && url.pathname === "/api/moderation/community") {
+      const init=await validateInitData(request.headers.get("x-telegram-init-data")??"",getBotToken(env));
+      if(!init||!isAdmin(env,init.user.id))return json({ok:false,error:"forbidden"},403);
+      const b=await readJson<Record<string,unknown>>(request); if(!b)return json({ok:false,error:"invalid_json"},400);
+      const slug=String(b.slug??"").trim().toLowerCase().replace(/[^a-z0-9_-]/g,"-").slice(0,60);
+      const name=String(b.name??"").trim().slice(0,100); const kind=String(b.kind??"topic");
+      if(!slug||!name||!["club","hostel","batch","branch","topic","campus"].includes(kind))return json({ok:false,error:"invalid_community"},400);
+      await env.DB.prepare("INSERT INTO communities(slug,name,kind,description,rules,owner_telegram_user_id,official,approved) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(slug) DO UPDATE SET name=excluded.name,description=excluded.description,rules=excluded.rules,owner_telegram_user_id=excluded.owner_telegram_user_id,official=excluded.official,approved=excluded.approved").bind(slug,name,kind,String(b.description??"").slice(0,500),String(b.rules??"").slice(0,1000),String(b.owner_telegram_user_id??init.user.id),b.official===true?1:0,b.approved===true?1:0).run();
+      return json({ok:true,slug});
+    }
+
     if (request.method === "GET" && url.pathname === "/api/moderation/review") {
       const init=await validateInitData(request.headers.get("x-telegram-init-data")??"",getBotToken(env));
       if(!init||!isAdmin(env,init.user.id))return json({ok:false,error:"forbidden"},403);
