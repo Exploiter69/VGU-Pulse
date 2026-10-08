@@ -95,6 +95,7 @@ describe("final Student OS production contract", () => {
     const community = readFileSync("src/community-v2.ts", "utf8");
     expect(community).toContain('sort === "for_you"');
     expect(community).toContain('rows.length < Math.min(6, limit)');
+    expect(community).toContain('if (forYou && !p)');
     expect(community).toContain('set("community","campus")');
     expect(community).toContain("author_badge");
     expect(communityWebSource).toContain('data-sort="for_you"');
