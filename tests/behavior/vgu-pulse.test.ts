@@ -213,6 +213,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
     const env=await worker.getEnv() as {DB:D1Database};
     await env.DB.batch([
       env.DB.prepare("INSERT OR IGNORE INTO notification_preferences(telegram_user_id) VALUES('1001')"),
+      env.DB.prepare("INSERT OR IGNORE INTO community_members(community_slug,telegram_user_id,role) VALUES('campus','1001','member')"),
       env.DB.prepare("INSERT INTO community_items(telegram_user_id,kind,title,body,community_slug,status) VALUES('1001','discussion','Delete me','body','campus','published')"),
       env.DB.prepare("INSERT INTO community_reputation(telegram_user_id,points) VALUES('1001',9)"),
       env.DB.prepare("INSERT INTO community_reputation_events(telegram_user_id,delta,reason,reference_key) VALUES('1001',3,'test','delete-test')"),
