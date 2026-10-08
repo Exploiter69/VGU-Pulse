@@ -235,4 +235,3 @@ describe("VGU-Pulse real D1 behavior",()=>{
     const growth=await request("/api/v4/growth/top",user);expect(growth.status).toBe(200);
   });
 });
-});
