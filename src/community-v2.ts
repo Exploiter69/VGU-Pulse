@@ -446,7 +446,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
             WHERE b.blocker_telegram_user_id=? AND b.blocked_telegram_user_id=i.telegram_user_id
           )`).bind(id,viewerId).first<{telegram_user_id:string}>();
       if(!item)return json({ok:false,error:"item_not_found"},404);
-      const rows=await env.DB.prepare(`SELECT r.id,r.body,r.anonymous,r.created_at,
+      const rows=await env.DB.prepare(`SELECT r.id,r.body,r.anonymous,r.telegram_user_id,r.created_at,
         (SELECT COALESCE(SUM(CASE WHEN rv.vote=1 THEN 1 ELSE 0 END),0) FROM community_reply_votes rv WHERE rv.reply_id=r.id) AS upvotes,
         (SELECT COALESCE(SUM(CASE WHEN rv.vote=-1 THEN 1 ELSE 0 END),0) FROM community_reply_votes rv WHERE rv.reply_id=r.id) AS downvotes,
         (SELECT rv.vote FROM community_reply_votes rv WHERE rv.reply_id=r.id AND rv.telegram_user_id=? LIMIT 1) AS my_vote,
@@ -462,7 +462,15 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
               AND b.blocked_telegram_user_id IN (i.telegram_user_id,r.telegram_user_id)
           )
         ORDER BY r.created_at ASC LIMIT 100`).bind(viewerId,viewerId,id,viewerId).all();
-      return json({ok:true,replies:rows.results??[]});
+      const replies=await Promise.all((rows.results??[]).map(async (row)=>{
+        const itemRow=row as Record<string,unknown>;
+        const {telegram_user_id:_private,...publicRow}=itemRow;
+        if(Number(itemRow.anonymous)){
+          publicRow.author=await anonymousAlias(env.ANON_ALIAS_SECRET,Number(itemRow.telegram_user_id),id);
+        }
+        return publicRow;
+      }));
+      return json({ok:true,replies});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/poll"){
       const id=Number(url.searchParams.get("item_id"));
