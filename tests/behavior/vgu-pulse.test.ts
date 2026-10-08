@@ -78,7 +78,7 @@ describe("VGU-Pulse real D1 behavior harness", () => {
   beforeEach(async () => {
     await server.reset();
     await worker.applyD1Migrations("DB");
-    const env = await worker.getEnv();
+    const env = (await worker.getEnv()) as { DB: D1Database };
 
     await env.DB.batch([
       env.DB.prepare(
@@ -113,7 +113,7 @@ describe("VGU-Pulse real D1 behavior harness", () => {
     const env = await worker.getEnv();
     const migrationState = await env.DB.prepare(
       "SELECT name FROM d1_migrations ORDER BY id",
-    ).all<{ name: string }>();
+    ).all() as D1Result<{ name: string }>;
 
     expect(migrationState.results?.map((row) => row.name)).toEqual(
       expect.arrayContaining([
@@ -124,7 +124,7 @@ describe("VGU-Pulse real D1 behavior harness", () => {
 
     const table = await env.DB.prepare(
       "SELECT name FROM sqlite_master WHERE type='table' AND name='community_items'",
-    ).first<{ name: string }>();
+    ).first() as { name?: string } | null;
 
     expect(table?.name).toBe("community_items");
   });
