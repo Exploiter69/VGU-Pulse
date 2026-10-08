@@ -196,28 +196,6 @@ describe("VGU-Pulse real D1 behavior",()=>{
     expect(on.status).toBe(200);
   });
 
-  it("enforces approved communities and cursor pagination",async()=>{
-    const user={id:1001,first_name:"Viewer"};
-    await request("/api/community-v2/rules/ack",user,{method:"POST",body:"{}"});
-    const invalid=await request("/api/community-v2/items",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"discussion",title:"Bad community",body:"hello",community_slug:"invented"})});
-    expect(invalid.status).toBe(400);
-    const campus=await request("/api/community-v2/items",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"discussion",title:"Campus community",body:"hello",community_slug:"campus"})});
-    expect(campus.status).toBe(201);
-    const feed=await request("/api/community-v2/feed?limit=1",user);
-    const payload=await feed.json() as any;
-    expect(payload.next_cursor).toMatch(/.+/);
-    const next=await request("/api/community-v2/feed?limit=1&cursor="+encodeURIComponent(payload.next_cursor),user);
-    expect(next.status).toBe(200);
-  });
-
-  it("keeps Telegram contact opt-in",async()=>{
-    const user={id:1001,first_name:"Viewer"};
-    const off=await request("/api/student-profile/contact",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({enabled:false})});
-    expect(off.status).toBe(200);
-    const on=await request("/api/student-profile/contact",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({enabled:true})});
-    expect(on.status).toBe(200);
-  });
-
   it("supports Q&A reply votes and solved state",async()=>{
     const viewer={id:1001,first_name:"Viewer"};
     const vote=await request("/api/community-v2/reply-vote",viewer,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({reply_id:1,vote:1})});
