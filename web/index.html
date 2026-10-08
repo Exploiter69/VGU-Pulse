@@ -391,13 +391,17 @@ input:focus,textarea:focus,select:focus,.quick:focus-visible,.nav-item:focus-vis
   <section class="card"><div class="eyebrow">Attendance</div><h2>Attendance calculator</h2><div class="two-col"><div><label for="att-present">Classes attended</label><input id="att-present" type="number" min="0" step="1" placeholder="32"></div><div><label for="att-total">Classes held</label><input id="att-total" type="number" min="0" step="1" placeholder="40"></div></div><label for="att-target">Target attendance %</label><input id="att-target" type="number" min="0" max="100" step="0.1" value="75"><label for="att-mode">What do you want to know?</label><select id="att-mode"><option value="reach">How many classes must I attend?</option><option value="miss">How many classes can I miss?</option></select><button id="att-calc" class="submit" type="button">Calculate attendance</button><p id="att-result" class="muted" aria-live="polite">Enter your attendance to see the result.</p></section>
   <section class="card"><div class="eyebrow">Marks</div><h2>Marks calculator</h2><p class="muted">Combine obtained and maximum marks without assuming VGU's internal/external weighting.</p><div id="marks-rows"></div><div class="wrap-row"><button id="marks-add" class="quick auto-width" type="button">Add component</button><button id="marks-calc" class="submit auto-width" type="button">Calculate percentage</button></div><p id="marks-result" class="muted" aria-live="polite">Add components to calculate.</p></section><section class="card">
 <div class="eyebrow">Campus extras</div><h2>Student network</h2>
-<p class="muted">Daily campus utilities, events, expiring listings, reviews and weekly growth signals.</p>
+<p class="muted">Student-owned utilities and opportunities. Community content is never presented as official VGU information.</p>
 <div class="two-col">
 <div><label for="v4-mess">Today's mess rating</label><input id="v4-mess" type="number" min="1" max="5" step="1" placeholder="1–5"></div>
 <div><label for="v4-exam">Next exam</label><input id="v4-exam" type="datetime-local"></div>
 </div>
-<div class="wrap-row"><button id="v4-save" class="submit auto-width" type="button">Save campus updates</button><button id="v4-refresh" class="quick auto-width" type="button">Refresh extras</button></div>
+<div class="wrap-row"><button id="v4-save" class="submit auto-width" type="button">Save updates</button><button id="v4-refresh" class="quick auto-width" type="button">Refresh</button><button id="v4-share" class="quick auto-width" type="button">Share my Pulse card</button></div>
+<div id="v4-question" class="settings-note" aria-live="polite"></div>
 <div id="v4-extras" class="muted" aria-live="polite">Open from Telegram to use student features.</div>
+<div id="v4-events" class="pulse-activity-list"></div>
+<div id="v4-resources" class="pulse-activity-list"></div>
+<div id="v4-review" class="profile-editor" style="margin-top:10px"><strong>Teacher / elective review</strong><p class="settings-note">Reviews stay pending until moderated and aggregates appear only after 5 published ratings.</p><div class="three-col"><input id="v4-teacher" maxlength="120" placeholder="Teacher"><input id="v4-elective" maxlength="120" placeholder="Elective"><input id="v4-teaching" type="number" min="1" max="5" placeholder="Teaching"></div><div class="two-col"><input id="v4-workload" type="number" min="1" max="5" placeholder="Workload"><input id="v4-support" type="number" min="1" max="5" placeholder="Support"></div><textarea id="v4-review-comment" maxlength="500" rows="2" placeholder="Optional factual comment"></textarea><button id="v4-review-submit" class="submit" type="button">Submit review</button><p id="v4-review-status" class="muted" aria-live="polite"></p></div>
 </section>
 </section>
 
