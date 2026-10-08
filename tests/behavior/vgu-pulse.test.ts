@@ -313,7 +313,6 @@ describe("VGU-Pulse real D1 behavior",()=>{
   it("caps personalized fan-out and skips a blocked recipient",async()=>{
     const author={id:2002,first_name:"Author"};
     await request("/api/community-v2/rules/ack",author,{method:"POST",body:"{}"});
-    await request("/api/community-v2/rules/ack",viewer,{method:"POST",body:"{}"});
     const env=await worker.getEnv() as {DB:D1Database};
     await env.DB.batch([
       env.DB.prepare("INSERT OR IGNORE INTO notification_preferences(telegram_user_id,official_updates,community_replies,community_activity,personalized_alerts) VALUES('3003',1,1,1,1)"),
@@ -332,6 +331,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
     const author={id:2002,first_name:"Author"};
     const viewer={id:1001,first_name:"Viewer"};
     await request("/api/community-v2/rules/ack",author,{method:"POST",body:"{}"});
+    await request("/api/community-v2/rules/ack",viewer,{method:"POST",body:"{}"});
     const env=await worker.getEnv() as {DB:D1Database};
     await env.DB.prepare("INSERT OR IGNORE INTO notification_preferences(telegram_user_id,community_replies,community_activity,personalized_alerts,official_updates) VALUES('2002',1,1,1,1)").run();
     const created=await request("/api/community-v2/items",author,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"discussion",title:"Author notification test",body:"Need an answer",community_slug:"campus"})});
