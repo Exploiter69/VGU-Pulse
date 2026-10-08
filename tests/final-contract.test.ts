@@ -156,6 +156,7 @@ describe("final Student OS production contract", () => {
     expect(communityWebSource).toContain("startapp");
     expect(communityWebSource).toContain("post|poll");
     expect(webSource).toContain("window.__pulseResolveStartApp");
+    expect(webSource).toContain("data-poll-id");
     expect(webSource).toContain("data-event-id");
   });
 
