@@ -1151,17 +1151,16 @@ document.getElementById("v4-review-submit")?.addEventListener("click",async()=>{
 
 
 document.getElementById("delete-my-data")?.addEventListener("click",async()=>{
- const status=document.getElementById("delete-my-data-status");
+ const button=document.getElementById("delete-my-data"),status=document.getElementById("delete-my-data-status");
  if(!initData){if(status)status.textContent="Reopen Pulse from Telegram.";return}
- if(!window.confirm){if(status)status.textContent="Use the Telegram confirmation sheet to continue.";return}
- const ok=window.prompt("Type DELETE to permanently remove your VGU Pulse data.")==="DELETE";
- if(!ok){if(status)status.textContent="Deletion cancelled.";return}
+ if(button.dataset.confirm!=="1"){button.dataset.confirm="1";button.textContent="Tap again to permanently delete";if(status)status.textContent="This cannot be undone. Tap again within 10 seconds.";setTimeout(()=>{button.dataset.confirm="0";button.textContent="Delete all my Pulse data"},10000);return}
+ button.disabled=true;
  try{
   const r=await fetch("/api/account/delete",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({confirm:true})});
   const d=await r.json().catch(()=>({}));
   if(!r.ok)throw new Error(d.error||"delete_failed");
   if(status)status.textContent="Your Pulse data has been deleted. Reopen Pulse from Telegram to start again.";
- }catch(e){if(status)status.textContent=e.message==="unauthorized"?"Reopen Pulse from Telegram.":"Could not complete deletion. Please try again."}
+ }catch(e){button.disabled=false;button.dataset.confirm="0";button.textContent="Delete all my Pulse data";if(status)status.textContent=e.message==="unauthorized"?"Reopen Pulse from Telegram.":"Could not complete deletion. Please try again."}
 });
 </script>
 </body>
