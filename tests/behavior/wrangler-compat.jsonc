@@ -1,0 +1,16 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "vgu-pulse-migration-compat",
+  "main": "../../src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "vgu-pulse-migration-compat",
+      "database_id": "local-compat-db",
+      "migrations_dir": "../../migrations",
+      "migrations_pattern": "../../migrations/000[1-9]_*.sql"
+    }
+  ],
+  "vars": { "APP_NAME": "VGU Pulse" }
+}
