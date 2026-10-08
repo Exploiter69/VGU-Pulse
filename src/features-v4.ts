@@ -29,6 +29,7 @@ export async function handleFeaturesV4(request:Request,env:Env,user:User):Promis
    const b=await body<Record<string,unknown>>(request);if(!b)return json({ok:false,error:"invalid_json"},400);
    const question=text(b.question,240);if(question.length<5)return json({ok:false,error:"invalid_question"},400);
    const day=new Date().toISOString().slice(0,10);
+   if(!admin(env,user.id))return json({ok:false,error:"forbidden"},403);
    await env.DB.prepare("INSERT INTO campus_questions(day,question,created_by) VALUES(?,?,?) ON CONFLICT(day) DO UPDATE SET question=excluded.question,created_by=excluded.created_by").bind(day,question,String(user.id)).run();
    return json({ok:true,day,question});
   }
@@ -72,15 +73,17 @@ export async function handleFeaturesV4(request:Request,env:Env,user:User):Promis
   }
   if(request.method==="POST"&&u.pathname==="/api/v4/event/reminder"){
    const b=await body<Record<string,unknown>>(request);if(!b)return json({ok:false,error:"invalid_json"},400);const id=safeId(b.event_id);if(!id)return json({ok:false,error:"invalid_event"},400);
-   await env.DB.prepare("INSERT INTO event_reminders(event_id,telegram_user_id,enabled) VALUES(?,?,?) ON CONFLICT(event_id,telegram_user_id) DO UPDATE SET enabled=excluded.enabled").bind(id,String(user.id),b.enabled===false?0:1).run();return json({ok:true,enabled:b.enabled!==false});
+   const event=await env.DB.prepare("SELECT id FROM campus_events WHERE id=? AND status='published' AND starts_at>CURRENT_TIMESTAMP").bind(id).first();if(!event)return json({ok:false,error:"event_not_found"},404);
+   await env.DB.prepare("INSERT INTO event_reminders(event_id,telegram_user_id,enabled,sent_at) VALUES(?,?,?,NULL) ON CONFLICT(event_id,telegram_user_id) DO UPDATE SET enabled=excluded.enabled,sent_at=NULL").bind(id,String(user.id),b.enabled===false?0:1).run();return json({ok:true,enabled:b.enabled!==false});
   }
   if(request.method==="POST"&&u.pathname==="/api/v4/event/rsvp"){
    const b=await body<Record<string,unknown>>(request);if(!b)return json({ok:false,error:"invalid_json"},400);const id=safeId(b.event_id);if(!id)return json({ok:false,error:"invalid_event"},400);
+   const event=await env.DB.prepare("SELECT id FROM campus_events WHERE id=? AND status='published' AND starts_at>CURRENT_TIMESTAMP").bind(id).first();if(!event)return json({ok:false,error:"event_not_found"},404);
    await env.DB.prepare("INSERT INTO event_rsvps(event_id,telegram_user_id,interested) VALUES(?,?,?) ON CONFLICT(event_id,telegram_user_id) DO UPDATE SET interested=excluded.interested").bind(id,String(user.id),b.interested===false?0:1).run();return json({ok:true,interested:b.interested!==false});
   }
   if(request.method==="POST"&&u.pathname==="/api/v4/listing"){
    const b=await body<Record<string,unknown>>(request);if(!b)return json({ok:false,error:"invalid_json"},400);const kind=text(b.kind,20);const title=text(b.title,160),content=text(b.body,2000);const expires=text(b.expires_at,50);
-   if(!["lost_found","ride","roommate"].includes(kind)||title.length<2||!content||!Number.isFinite(Date.parse(expires)))return json({ok:false,error:"invalid_listing"},400);
+   if(!["lost_found","ride","roommate"].includes(kind)||title.length<2||!content||!Number.isFinite(Date.parse(expires))||new Date(expires).getTime()<=Date.now())return json({ok:false,error:"invalid_listing"},400);
    const r=await env.DB.prepare("INSERT INTO expiring_listings(telegram_user_id,kind,title,body,expires_at) VALUES(?,?,?,?,?)").bind(String(user.id),kind,title,content,new Date(expires).toISOString()).run();return json({ok:true,id:r.meta.last_row_id},201);
   }
   if(request.method==="GET"&&u.pathname==="/api/v4/listings"){
