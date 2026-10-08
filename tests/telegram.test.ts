@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validateStudentPostInput, validateStudentReplyInput, validateStudentProfileInput } from "../src/db";
 import { validateInitData } from "../src/telegram";
+import { parseResourceCaption } from "../src/index";
 
 describe("validateInitData", () => {
   it("rejects empty input", async () => {
@@ -17,7 +18,7 @@ describe("validateInitData", () => {
 describe("validateStudentProfileInput", () => {
   it("accepts a bounded opt-in profile", () => {
     expect(validateStudentProfileInput({
-      display_name: "Alok", program: "B.Tech CSE", branch: "CSE",
+      display_name: "Alok", program: "B.Tech", branch: "CSE",
       year: 2, bio: "Building with friends.", looking_for: "DSA study group",
     })?.looking_for).toBe("DSA study group");
   });
@@ -72,5 +73,16 @@ describe("validateStudentPostInput", () => {
         body: "Hello",
       }),
     ).toBeNull();
+  });
+});
+
+
+describe("parseResourceCaption", () => {
+  it("parses resource metadata separated by whitespace", () => {
+    expect(parseResourceCaption("/resource type=PYQ subject=DBMS semester=5")).toEqual({
+      type: "PYQ",
+      subject: "DBMS",
+      semester: "5",
+    });
   });
 });

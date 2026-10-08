@@ -1,122 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 
-describe("community V2 contract", () => {
-  it("has the complete student-community data model", () => {
-    const sql = readFileSync("migrations/0009_community_network.sql", "utf8");
-    for (const name of [
-      "community_items","community_replies","community_votes","community_follows",
-      "community_saves","community_reports","community_poll_options","community_poll_votes",
-      "community_reputation","community_reputation_events","community_badges",
-    ]) expect(sql).toContain(`CREATE TABLE IF NOT EXISTS ${name}`);
-    expect(sql).toContain("community_activity");
-    expect(sql).toContain("personalized_alerts");
+describe("community V2 repository invariants", () => {
+  it("keeps the migration chain append-only through Gate 3", () => {
+    const files = readdirSync("migrations").filter((name) => /^\d{4}_.*\.sql$/.test(name)).sort();
+    expect(files).toContain("0009_community_network.sql");
+    expect(files).toContain("0010_gate1_hardening.sql");
+    expect(files).toContain("0011_gate2_safety.sql");
+    expect(files).toContain("0012_gate3_foundations.sql");
+    expect(files).toContain("0013_gate3_qa.sql");
+    expect(files.filter((name) => /^000[1-9]_/.test(name))).toHaveLength(9);
   });
 
-  it("exposes every V2 community capability through one authenticated module", () => {
-    const source = readFileSync("src/community-v2.ts", "utf8");
-    for (const path of [
-      "/api/community-v2/feed","/api/community-v2/reputation","/api/community-v2/replies",
-      "/api/community-v2/poll","/api/community-v2/communities","/api/community-v2/search",
-      "/api/community-v2/items","/api/community-v2/polls","/api/community-v2/replies",
-      "/api/community-v2/vote","/api/community-v2/poll-vote","/api/community-v2/follow",
-      "/api/community-v2/save","/api/community-v2/report","/api/community-v2/preferences",
-    ]) expect(source).toContain(path);
-    for (const kind of [
-      "discussion","confession","campus","exam","senior","utility","listing","lost_found",
-      "notes","pyq","teammate","ride","roommate","teacher","elective","opportunity",
-    ]) expect(source).toContain(`"${kind}"`);
-  });
-
-  it("ships the student-facing V2 interface and Ask bridge", () => {
-    const source = readFileSync("web/community-v2.js", "utf8");
-    for (const text of [
-      "Trending","Confessions","Campus help","Exam survival","Senior → junior",
-      "Notes / resources","PYQ / exam material","Project teammate","Lost & found",
-      "Ride sharing","Room / roommate","Student exchange","Filter","Post",
-      "Ask students","Related discussions",
-    ]) expect(source).toContain(text);
-    expect(source).not.toContain("/api/student-posts");
-    expect(source).not.toContain("loadStudentPosts");
-  });
-
-  it("keeps notifications and personal controls in the primary Me surface", () => {
-    const source = readFileSync("web/index.html", "utf8");
-    for (const text of ["VGU updates","Post replies","Mark all read","Study plan","People","Student tools"]) {
-      expect(source).toContain(text);
-    }
-  });
-
-
-  it("keeps saved, editing, moderation and reputation surfaces wired", () => {
-    const backend = readFileSync("src/community-v2.ts", "utf8");
-    const web = readFileSync("web/community-v2.js", "utf8");
-    const index = readFileSync("web/index.html", "utf8");
-    expect(backend).toContain('params.get("saved") === "1"');
-    expect(backend).toContain('request.method==="PATCH" && url.pathname==="/api/community-v2/items"');
-    expect(backend).toContain('request.method==="GET" && url.pathname==="/api/community-v2/items"');
-    expect(backend).toContain('UPDATE community_items SET title=?,body=?,updated_at=CURRENT_TIMESTAMP');
-    expect(backend).toContain('/api/community-v2/reputation');
-    expect(backend).toContain('/api/community-v2/preferences');
-    expect(web).toContain('data-special="saved"');
-    expect(web).toContain('window.__pulseCommunitySaved');
-    expect(web).toContain('data-action="edit"');
-    expect(web).toContain('method:"PATCH"');
-    expect(web).toContain('data-action="moderate"');
-    expect(web).toContain('cv2-more-report');
-    expect(index).toContain('data-community-mode="saved"');
-    expect(index).toContain('community-reputation-points');
-    expect(index).toContain('notify-community-activity');
-    expect(index).toContain('notify-personalized');
-    expect(index).toContain('loadCommunityAccount');
-    expect(index).not.toContain('function renderStudentPosts');
-    expect(index).not.toContain('/api/student-posts",{method:"POST"');
-  });
-
-  it("keeps ownership, deletion, toggle and blocking contracts wired", () => {
-    const backend = readFileSync("src/community-v2.ts", "utf8");
-    const web = readFileSync("web/community-v2.js", "utf8");
-    expect(backend).toContain('request.method==="DELETE" && url.pathname==="/api/community-v2/items"');
-    expect(backend).toContain('request.method==="DELETE" && url.pathname==="/api/community-v2/replies"');
-    expect(backend).toContain('item.telegram_user_id!==String(user.id)');
-    expect(backend).toContain('blocked_telegram_user_id=i.telegram_user_id');
-    expect(backend).toContain('...args,String(viewerId),limit,offset).all');
-    expect(backend).toContain('blocked_telegram_user_id=r.telegram_user_id');
-    expect(backend).toContain('cannot_report_own_item');
-    expect(backend).toContain('cannot_report_own_reply');
-    expect(web).toContain('data-action="delete"');
-    expect(web).toContain('/api/community-v2/items?item_id=');
-    expect(web).toContain('/api/community-v2/replies?reply_id=');
-    expect(web).toContain('following?"?item_id="');
-    expect(web).toContain('saved?"?item_id="');
-    expect(web).toContain('data-reply-delete');
-    expect(web).toContain('Community could not be loaded.');
-  });
-
-  it("keeps critical community controls explicitly wired", () => {
-    const source = readFileSync("web/community-v2.js", "utf8");
-    expect(source).toContain('id="cv2-compose-close" type="button"');
-    expect(source).toContain('$("#cv2-compose-close").onclick');
-    expect(source).toContain('<input id="cv2-kind" type="hidden" value="discussion">');
-    expect(source).not.toContain('<select id="cv2-kind">');
-    expect(source).toContain('if(dialog?.showModal)dialog.showModal()');
-  });
-
-  it("keeps feed pagination, slug normalization and stable thread interactions wired", () => {
-    const backend = readFileSync("src/community-v2.ts", "utf8");
-    const web = readFileSync("web/community-v2.js", "utf8");
-    expect(backend).toContain("function communitySlug");
-    expect(backend).toContain("LIMIT ? OFFSET ?");
-    expect(backend).toContain("next_offset");
-    expect(web).toContain("Load more discussions");
-    expect(web).toContain('data-action="share"');
-    expect(web).toContain("window.__pulseCommunityOpenItem");
-    expect(web).toContain("renderReplies");
-  });
-
-  it("never exposes Telegram identity for anonymous content", () => {
-    const source = readFileSync("src/community-v2.ts", "utf8");
-    expect(source).toContain('const { telegram_user_id: _private, ...publicRow } = row');
-    expect(source).toContain('"Anonymous student"');
+  it("keeps production guards in CI and the behavior harness in the repository", () => {
+    expect(readFileSync(".github/workflows/ci.yml", "utf8")).toContain("npx vitest run tests/behavior");
+    expect(readFileSync("tests/behavior/vgu-pulse.test.ts", "utf8")).toContain("createTestHarness");
   });
 });
