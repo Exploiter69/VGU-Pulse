@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createTestHarness } from "wrangler";
+import { listItems } from "../../src/community-v2";
 
 const BOT_TOKEN = "gate-2-test-token";
 const server = createTestHarness({
@@ -181,6 +182,15 @@ describe("VGU-Pulse real D1 behavior",()=>{
     const search=await upgraded.DB.prepare("SELECT rowid FROM community_items_fts WHERE community_items_fts MATCH ?").bind("LegacySearchPost*").all();
     expect(search.results.length).toBe(1);
   });
+  it("keeps a 40-item feed at constant D1 query count",async()=>{
+    const env=await worker.getEnv() as {DB:D1Database};
+    await env.DB.batch(Array.from({length:40},(_,i)=>env.DB.prepare("INSERT INTO community_items(telegram_user_id,kind,title,body,community_slug,status) VALUES(?,?,?,?,?,?)").bind("2002","discussion","Feed item "+i,"body","campus","published")));
+    const counter={value:0};
+    const rows=await listItems(env.DB,1001,new URLSearchParams({sort:"new",limit:"40"}), "gate-2-anon-secret", counter);
+    expect(rows.length).toBe(40);
+    expect(counter.value).toBe(2);
+  });
+
   it("enforces approved communities and cursor pagination",async()=>{
     const user={id:1001,first_name:"Viewer"};
     await request("/api/community-v2/rules/ack",user,{method:"POST",body:"{}"});
