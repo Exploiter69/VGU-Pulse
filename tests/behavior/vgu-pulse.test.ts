@@ -32,7 +32,7 @@ const server = createTestHarness({
       secrets: { BOT_TOKEN, ANON_ALIAS_SECRET: "gate-2-anon-secret" },
     },
   ],
-
+});
 
 const worker = server.getWorker("vgu-pulse");
 const compatWorker = server.getWorker("migration-compat");
