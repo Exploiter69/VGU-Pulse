@@ -97,22 +97,42 @@ Baseline repository reviewed on 2026-10-08:
 
 ## Phase 2 — Telegram Growth Engine
 
-Status: **NOT STARTED**
+**Status: IMPLEMENTATION COMPLETE — automated verification pending**
 
-Acceptance checklist:
+### Shipped
+- Rich, bounded Telegram `startapp` contract for sections, posts, polls, events, and communities.
+- Exact post/poll/community/event resolution in the Mini App, with existing five-tab navigation preserved.
+- Bot username cache hardened with six-hour expiry and concurrent `getMe` request coalescing.
+- Telegram webhook callback actions for one-tap poll voting, event RSVP, event reminders, and Pulse card sharing.
+- Weekly-only channel digest replaced by bounded high-signal cards: campus poll, near-term event, meaningful mess summary, and recent helpful student thread.
+- Channel delivery is D1-deduped so the 15-minute cron can publish at most one new card per sweep without repeated fan-out.
+- Channel cards visibly label student content and always include a Mini App deep link.
+- Existing notification preference gates, 18-item notification sweep cap, 15-minute cron, 403/429 handling, and opt-in event reminders remain intact.
+- No paid dependency, new workflow system, or Groups-as-system-of-record behavior added.
+- `docs/TELEGRAM_GROWTH.md` documents the deep-link and channel-card contracts.
 
-- [ ] Rich `startapp` deep-link contract
-- [ ] Exact entity/section resolution
-- [ ] Hardened bot username caching
-- [ ] Lightweight bot actions
-- [ ] Bounded, high-signal Channel cards
-- [ ] Every Channel card deep-links into Mini App
-- [ ] Notification sweep remains opt-in and bounded
-- [ ] No paid dependency
-- [ ] Tests/typecheck/behavior tests pass
-- [ ] Deep-link and Channel card contracts documented
+### Acceptance
+- [x] Rich `startapp` target contract exists and is bounded.
+- [x] Exact post/poll/community/event and section resolution is wired.
+- [x] Bot username caching is hardened.
+- [x] Lightweight Telegram callback actions are wired.
+- [x] Channel cards are bounded, labeled, and deep-link back to Mini App.
+- [x] Notification sweep remains opt-in and bounded.
+- [x] No paid dependency or forbidden infrastructure added.
+- [x] Contract tests added.
+- [ ] `npm run check` — GitHub CI verification pending.
+- [ ] `npm test` — GitHub CI verification pending.
+- [ ] `npx vitest run tests/behavior` — GitHub CI verification pending.
+- [ ] Real Telegram channel/mobile/Desktop smoke — manual verification remains.
 
-Commit(s): TBD
+### Implementation commits
+- `3f2196e` — Telegram growth engine contracts
+- `dad9af5` / `54be05e` — bounded channel delivery log + SQLite-safe candidate view
+- `88ac1a7` — poll cards and one-tap channel actions
+- `55685f6` — Community rich deep links
+- `7756505` / `7c21ea0` / `53bfc1f` / `83aaa26` — Mini App target resolution and cache-bust
+- `747f942` / `9af429e` — contract tests
+- `9186bdf` / `5190d3f` — Telegram growth documentation
 
 ## Phase 3 — Home Daily Magnet
 
