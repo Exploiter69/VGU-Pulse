@@ -260,7 +260,7 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
       ? "(SELECT COUNT(*) FROM community_replies rr WHERE rr.item_id=i.id AND rr.status='published') DESC, i.created_at DESC"
       : "i.created_at DESC";
   const sql = `SELECT i.id,i.kind,i.title,i.body,i.community_slug,i.audience_program,i.audience_branch,i.audience_year,
-      i.anonymous,i.created_at,i.updated_at,i.telegram_user_id,sp.display_name,
+      i.anonymous,i.created_at,i.updated_at,i.telegram_user_id,sp.display_name,i.solved,i.accepted_reply_id,
       CASE WHEN i.telegram_user_id=? THEN 1 ELSE 0 END AS mine,
       (SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=1) AS upvotes,
       (SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=-1) AS downvotes,
@@ -393,6 +393,36 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       const row=await env.DB.prepare("SELECT 1 FROM community_rules_ack WHERE telegram_user_id=?").bind(String(user.id)).first();
       return json({ok:true,acknowledged:Boolean(row)});
     }
+    if(request.method==="POST" && url.pathname==="/api/community-v2/reply-vote"){
+      const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
+      const replyId=Number(input.reply_id), value=Number(input.vote);
+      if(!Number.isSafeInteger(replyId)||replyId<1)return json({ok:false,error:"invalid_reply"},400);
+      if(value!==1&&value!==-1)return json({ok:false,error:"invalid_vote"},400);
+      const replyRow=await env.DB.prepare("SELECT id FROM community_replies WHERE id=? AND status='published'").bind(replyId).first();
+      if(!replyRow)return json({ok:false,error:"reply_not_found"},404);
+      const existing=await env.DB.prepare("SELECT vote FROM community_reply_votes WHERE reply_id=? AND telegram_user_id=?").bind(replyId,String(user.id)).first<{vote:number}>();
+      if(existing?.vote===value) await env.DB.prepare("DELETE FROM community_reply_votes WHERE reply_id=? AND telegram_user_id=?").bind(replyId,String(user.id)).run();
+      else await env.DB.prepare("INSERT INTO community_reply_votes(reply_id,telegram_user_id,vote) VALUES(?,?,?) ON CONFLICT(reply_id,telegram_user_id) DO UPDATE SET vote=excluded.vote,created_at=CURRENT_TIMESTAMP").bind(replyId,String(user.id),value).run();
+      return json({ok:true});
+    }
+    if(request.method==="POST" && url.pathname==="/api/community-v2/read"){
+      const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
+      const itemId=Number(input.item_id); if(!Number.isSafeInteger(itemId)||itemId<1)return json({ok:false,error:"invalid_item"},400);
+      await env.DB.prepare("INSERT INTO community_item_reads(item_id,telegram_user_id,last_read_at) VALUES(?,?,CURRENT_TIMESTAMP) ON CONFLICT(item_id,telegram_user_id) DO UPDATE SET last_read_at=CURRENT_TIMESTAMP").bind(itemId,String(user.id)).run();
+      return json({ok:true});
+    }
+    if(request.method==="POST" && url.pathname==="/api/community-v2/solve"){
+      const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
+      const itemId=Number(input.item_id), replyId=Number(input.reply_id);
+      if(!Number.isSafeInteger(itemId)||itemId<1||!Number.isSafeInteger(replyId)||replyId<1)return json({ok:false,error:"invalid_item"},400);
+      const owner=await env.DB.prepare("SELECT telegram_user_id FROM community_items WHERE id=? AND status='published'").bind(itemId).first<{telegram_user_id:string}>();
+      if(!owner)return json({ok:false,error:"item_not_found"},404);
+      if(owner.telegram_user_id!==String(user.id))return json({ok:false,error:"forbidden"},403);
+      const replyRow=await env.DB.prepare("SELECT id FROM community_replies WHERE id=? AND item_id=? AND status='published'").bind(replyId,itemId).first();
+      if(!replyRow)return json({ok:false,error:"reply_not_found"},404);
+      await env.DB.prepare("UPDATE community_items SET solved=1,accepted_reply_id=? WHERE id=?").bind(replyId,itemId).run();
+      return json({ok:true,solved:true,accepted_reply_id:replyId});
+    }
     if(request.method==="GET" && url.pathname==="/api/community-v2/context"){
       const p=await profile(env.DB,user.id);
       const community=p ? p.branch.toLowerCase().replace(/[^a-z0-9]+/g,"-") + "-year-" + p.year : "campus";
@@ -417,6 +447,9 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
           )`).bind(id,viewerId).first<{telegram_user_id:string}>();
       if(!item)return json({ok:false,error:"item_not_found"},404);
       const rows=await env.DB.prepare(`SELECT r.id,r.body,r.anonymous,r.created_at,
+        (SELECT COALESCE(SUM(CASE WHEN rv.vote=1 THEN 1 ELSE 0 END),0) FROM community_reply_votes rv WHERE rv.reply_id=r.id) AS upvotes,
+        (SELECT COALESCE(SUM(CASE WHEN rv.vote=-1 THEN 1 ELSE 0 END),0) FROM community_reply_votes rv WHERE rv.reply_id=r.id) AS downvotes,
+        (SELECT rv.vote FROM community_reply_votes rv WHERE rv.reply_id=r.id AND rv.telegram_user_id=? LIMIT 1) AS my_vote,
         CASE WHEN r.anonymous=1 THEN 'Anonymous student' ELSE COALESCE(sp.display_name,'VGU student') END author,
         CASE WHEN r.telegram_user_id=? THEN 1 ELSE 0 END AS mine
         FROM community_replies r
@@ -428,7 +461,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
             WHERE b.blocker_telegram_user_id=?
               AND b.blocked_telegram_user_id IN (i.telegram_user_id,r.telegram_user_id)
           )
-        ORDER BY r.created_at ASC LIMIT 100`).bind(viewerId,id,viewerId).all();
+        ORDER BY r.created_at ASC LIMIT 100`).bind(viewerId,viewerId,id,viewerId).all();
       return json({ok:true,replies:rows.results??[]});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/poll"){
