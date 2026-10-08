@@ -384,7 +384,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
     expect((await request("/api/v4/teacher-review",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)})).status).toBe(201);
     const updatedPayload={...payload,teaching:4,comment:"updated"};
     const updated=await request("/api/v4/teacher-review",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(updatedPayload)});
-    expect(updated.status).toBe(200);
+    expect(updated.status).toBe(201);
     const env=await worker.getEnv() as {DB:D1Database};
     const rows=await env.DB.prepare("SELECT teaching,comment,status FROM teacher_reviews WHERE telegram_user_id='1001' AND teacher='Professor Z' AND elective='Networks'").all<{teaching:number;comment:string;status:string}>();
     expect(rows.results).toEqual([{teaching:4,comment:"updated",status:"pending"}]);
