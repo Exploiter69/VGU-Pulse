@@ -259,13 +259,19 @@ async function reply(db: D1Database, user: CommunityUser, itemId: number, text: 
   ).bind(itemId,String(user.id),clean,anonymous ? 1 : 0).run();
   const id = Number(result.meta.last_row_id);
   await award(db,user.id,1,"created_reply",`reply:${id}`);
+  await db.prepare("INSERT OR IGNORE INTO community_follows(item_id,telegram_user_id) VALUES(?,?)").bind(itemId,String(user.id)).run();
+  await db.prepare(
+    `INSERT OR IGNORE INTO student_notifications (telegram_user_id,kind,channel,title,body,reference_key)
+     SELECT f.telegram_user_id,'community','community_activity','New activity in a discussion',?,?
+     FROM community_follows f JOIN notification_preferences p ON p.telegram_user_id=f.telegram_user_id
+     WHERE f.item_id=? AND p.community_activity=1 AND f.telegram_user_id<>?`,
+  ).bind(`New reply in “${item.title.slice(0,120)}”.`,`v2-reply:${id}`,itemId,String(user.id)).run();
   if (item.telegram_user_id !== String(user.id)) {
     await db.prepare(
-      `INSERT OR IGNORE INTO student_notifications (telegram_user_id,kind,title,body,reference_key)
-       SELECT f.telegram_user_id,'community','New activity in a discussion',?,?
-       FROM community_follows f JOIN notification_preferences p ON p.telegram_user_id=f.telegram_user_id
-       WHERE f.item_id=? AND p.community_activity=1 AND f.telegram_user_id<>?`,
-    ).bind(`New reply in “${item.title.slice(0,120)}”.`,`v2-reply:${id}`,itemId,String(user.id)).run();
+      `INSERT OR IGNORE INTO student_notifications (telegram_user_id,kind,channel,title,body,reference_key)
+       SELECT telegram_user_id,'community','community_replies','New reply to your discussion',?,?
+       FROM notification_preferences WHERE telegram_user_id=? AND community_replies=1`,
+    ).bind(`Someone replied to “${item.title.slice(0,120)}”: ${clean.slice(0,500)}`,`v2-author-reply:${id}`,item.telegram_user_id).run();
   }
   return { id, item_id:itemId, body:clean, support:support.support, author:anonymous ? "Anonymous student" : (await db.prepare("SELECT display_name FROM student_profiles WHERE telegram_user_id=?").bind(String(user.id)).first<{display_name:string}>())?.display_name || "VGU student", anonymous };
 }
@@ -299,6 +305,9 @@ async function poll(db:D1Database,user:CommunityUser,input:Record<string,unknown
 }
 
 async function pollVote(db:D1Database,userId:number,itemId:number,optionId:number):Promise<void>{
+  const poll=await db.prepare("SELECT id,closes_at FROM community_items WHERE id=? AND status='published'").bind(itemId).first<{id:number;closes_at:string|null}>();
+  if(!poll) throw new Error("item_not_found");
+  if(poll.closes_at && Date.parse(poll.closes_at)<=Date.now()) throw new Error("poll_closed");
   const option=await db.prepare("SELECT id FROM community_poll_options WHERE id=? AND item_id=?").bind(optionId,itemId).first();
   if(!option) throw new Error("invalid_option");
   await db.prepare("INSERT INTO community_poll_votes(item_id,option_id,telegram_user_id) VALUES(?,?,?) ON CONFLICT(item_id,telegram_user_id) DO UPDATE SET option_id=excluded.option_id,created_at=CURRENT_TIMESTAMP").bind(itemId,optionId,String(userId)).run();
@@ -357,10 +366,14 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/poll"){
       const id=Number(url.searchParams.get("item_id"));
+      if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
+      const item=await env.DB.prepare("SELECT id FROM community_items WHERE id=? AND status='published'").bind(id).first();
+      if(!item)return json({ok:false,error:"item_not_found"},404);
       const options=await env.DB.prepare(`SELECT o.id,o.label,COUNT(v.telegram_user_id) votes
         FROM community_poll_options o LEFT JOIN community_poll_votes v ON v.option_id=o.id
         WHERE o.item_id=? GROUP BY o.id ORDER BY o.id`).bind(id).all();
-      return json({ok:true,options:options.results??[]});
+      const selected=await env.DB.prepare("SELECT option_id FROM community_poll_votes WHERE item_id=? AND telegram_user_id=?").bind(id,String(user.id)).first<{option_id:number}>();
+      return json({ok:true,selected_option_id:selected?.option_id??null,options:options.results??[]});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/communities"){
       const rows=await env.DB.prepare(`SELECT community_slug,COUNT(*) posts FROM community_items
@@ -413,7 +426,9 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     }
     if(request.method==="POST" && url.pathname==="/api/community-v2/replies"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
-      const id=Number(input.item_id); const r=await reply(env.DB,user,id,clamp(input.body,LIMITS.body),Boolean(input.anonymous));
+      const id=Number(input.item_id); if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
+      if(typeof input.anonymous!=="boolean")return json({ok:false,error:"invalid_anonymous"},400);
+      const r=await reply(env.DB,user,id,clamp(input.body,LIMITS.body),input.anonymous);
       return json({ok:true,reply:r},201);
     }
     if(request.method==="DELETE" && url.pathname==="/api/community-v2/items"){
@@ -438,11 +453,15 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     }
     if(request.method==="POST" && url.pathname==="/api/community-v2/vote"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
-      await vote(env.DB,user.id,Number(input.item_id),Number(input.vote)); return json({ok:true});
+      const id=Number(input.item_id); if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
+      await vote(env.DB,user.id,id,Number(input.vote)); return json({ok:true});
     }
     if(request.method==="POST" && url.pathname==="/api/community-v2/poll-vote"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
-      await pollVote(env.DB,user.id,Number(input.item_id),Number(input.option_id)); return json({ok:true});
+      const itemId=Number(input.item_id),optionId=Number(input.option_id);
+      if(!Number.isSafeInteger(itemId)||itemId<1)return json({ok:false,error:"invalid_item"},400);
+      if(!Number.isSafeInteger(optionId)||optionId<1)return json({ok:false,error:"invalid_option"},400);
+      await pollVote(env.DB,user.id,itemId,optionId); return json({ok:true});
     }
     if(request.method==="POST" && url.pathname==="/api/community-v2/follow"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
