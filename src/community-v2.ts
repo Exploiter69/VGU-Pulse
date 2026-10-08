@@ -632,7 +632,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     if(request.method==="POST" && url.pathname==="/api/community-v2/block"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
       const id=Number(input.item_id); if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
-      const owner=await env.DB.prepare("SELECT telegram_user_id FROM community_items WHERE id=?").bind(id).first<{telegram_user_id:string}>();
+      const owner=await env.DB.prepare("SELECT telegram_user_id,anonymous FROM community_items WHERE id=?").bind(id).first<{telegram_user_id:string;anonymous:number}>();
       if(!owner || owner.telegram_user_id===String(user.id)) return json({ok:false,error:"invalid_target"},400);
       await env.DB.prepare("INSERT OR IGNORE INTO student_profile_blocks(blocker_telegram_user_id,blocked_telegram_user_id,via_anonymous,source_item_id) VALUES(?,?,?,?)").bind(String(user.id),owner.telegram_user_id,Number(owner.anonymous),Number(owner.anonymous)?id:null).run();
       return json({ok:true});
