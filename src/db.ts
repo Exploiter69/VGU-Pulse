@@ -31,6 +31,9 @@ export interface StudentReply {
 }
 
 
+const CONTROLLED_PROGRAMS=new Set(["b.tech","bca","bba","b.com","b.arch","b.des","b.pharm","b.sc","bpt","ba/bjmc","llb / integrated law","mba","m.tech","mca","m.sc","ph.d.","other"]);
+const CONTROLLED_BRANCHES=new Set(["computer science & engineering","cse","cse — artificial intelligence","cse — artificial intelligence & machine learning","cse — cloud computing","cse — iot & cyber security","artificial intelligence & data science","computer science & technology","software engineering","mechanical engineering","civil engineering","electrical engineering","other"]);
+
 export interface StudentProfile {
   public_id: string;
   display_name: string;
@@ -56,6 +59,7 @@ export function validateStudentProfileInput(input: {
   const branch = input.branch.trim();
   const bio = input.bio.trim();
   const looking_for = input.looking_for.trim();
+  if (!CONTROLLED_PROGRAMS.has(program.toLowerCase()) || !CONTROLLED_BRANCHES.has(branch.toLowerCase())) return null;
   if (display_name.length < 2 || display_name.length > 80 ||
       program.length < 2 || program.length > 80 ||
       branch.length < 2 || branch.length > 80 ||
@@ -307,7 +311,12 @@ export async function deleteAllStudentData(db:D1Database,userId:number):Promise<
   await db.batch(batch);
 }
 
-export async function deleteStudentProfile(db: D1Database, userId: number): Promise<boolean> {
+
+export async function setStudentContactEnabled(db:D1Database,userId:number,enabled:boolean):Promise<boolean>{
+  const result=await db.prepare("UPDATE student_profiles SET contact_enabled=? WHERE telegram_user_id=?").bind(enabled?1:0,String(userId)).run();
+  return Number(result.meta.changes??0)>0;
+}
+\nexport async function deleteStudentProfile(db: D1Database, userId: number): Promise<boolean> {
   const result = await db.prepare(
     `DELETE FROM student_profiles WHERE telegram_user_id = ?`,
   ).bind(String(userId)).run();
