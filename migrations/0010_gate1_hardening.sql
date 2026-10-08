@@ -18,6 +18,9 @@ ALTER TABLE student_profile_blocks_new RENAME TO student_profile_blocks;
 CREATE INDEX IF NOT EXISTS idx_student_profile_blocks_blocked
   ON student_profile_blocks(blocked_telegram_user_id);
 
+ALTER TABLE community_items ADD COLUMN poll_status TEXT NOT NULL DEFAULT 'open' CHECK (poll_status IN ('open','closed'));
+ALTER TABLE community_items ADD COLUMN poll_closes_at TEXT;
+
 ALTER TABLE student_notifications ADD COLUMN channel TEXT NOT NULL DEFAULT 'official'
   CHECK (channel IN ('official','community_replies','community_activity','personalized'));
 ALTER TABLE student_notifications ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0;
