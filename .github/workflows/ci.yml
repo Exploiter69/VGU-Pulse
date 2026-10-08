@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: 22
       - name: Install
-        run: npm install
+        run: npm ci
       - name: Typecheck
         run: npm run check
       - name: Worker dry run
@@ -52,3 +52,5 @@ jobs:
           NODE
       - name: Tests
         run: npm test
+      - name: Behavior tests
+        run: npx vitest run tests/behavior
