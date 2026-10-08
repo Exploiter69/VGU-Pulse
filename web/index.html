@@ -318,6 +318,14 @@ input:focus,textarea:focus,select:focus,.quick:focus-visible,.nav-item:focus-vis
     </div>
   </section>
   <section class="section">
+    <div class="section-heading"><div><div class="eyebrow">Account</div><h2>Privacy & data</h2></div></div>
+    <div class="card" style="margin:0">
+      <p class="settings-note">You can permanently remove your Pulse profile, student posts, replies, votes, follows, saves, notifications, preferences and personal feature data. Moderation bans/history are retained for safety.</p>
+      <button id="delete-my-data" type="button" class="quick">Delete all my Pulse data</button>
+      <p id="delete-my-data-status" class="settings-note" aria-live="polite"></p>
+    </div>
+  </section>
+  <section class="section">
     <div class="section-heading"><div><div class="eyebrow">Semester</div><h2>Next deadlines</h2></div><button type="button" class="action-link" data-view="academics">Open Study plan →</button></div>
     <div id="my-pulse-academics"><p class="muted">Your local academic plan will appear here.</p></div>
   </section>
@@ -380,7 +388,7 @@ input:focus,textarea:focus,select:focus,.quick:focus-visible,.nav-item:focus-vis
   <section class="card"><div class="search-shell"><input id="people-search" maxlength="100" placeholder="DSA, hackathon, project partner…" aria-label="Search people"><button id="people-search-button" type="button" class="submit search-button" aria-label="Search people">⌕</button></div></section>
   <section class="section"><div class="three-col"><select id="people-year" aria-label="Filter by year"><option value="">Any year</option><option value="1">Year 1</option><option value="2">Year 2</option><option value="3">Year 3</option><option value="4">Year 4</option><option value="5">Year 5</option><option value="6">Year 6</option></select><input id="people-program" maxlength="80" placeholder="Program" aria-label="Filter by program"><input id="people-branch" maxlength="80" placeholder="Branch" aria-label="Filter by branch"></div></section>
   <section class="section"><div class="section-heading"><div><div class="eyebrow">Discover</div><h2>People you could build with</h2></div></div><div id="profiles"><p class="muted">Loading student profiles…</p></div></section>
-  <section class="section"><details class="profile-editor"><summary>My opt-in profile</summary><p class="muted">Publish only what you are comfortable sharing. You can hide or delete it any time.</p><form id="profile-form"><label for="profile-name">Display name</label><input id="profile-name" maxlength="80" placeholder="Display name" required><div class="two-col"><div><label for="profile-program">Program</label><input id="profile-program" maxlength="80" placeholder="Program" required></div><div><label for="profile-branch">Branch</label><input id="profile-branch" maxlength="80" placeholder="Branch" required></div></div><label for="profile-year">Year</label><input id="profile-year" type="number" min="1" max="6" placeholder="Year" required><label for="profile-bio">Short intro</label><textarea id="profile-bio" maxlength="300" rows="2" placeholder="Short intro (optional)"></textarea><label for="profile-looking">Looking for</label><input id="profile-looking" maxlength="160" placeholder="Looking for — e.g. DSA study group" required><button class="submit" type="submit">Save my profile</button><button id="profile-delete" class="report" type="button" hidden>Delete my profile</button><button id="profile-visibility" class="report" type="button" hidden>Hide my profile</button><p id="profile-status" class="muted" aria-live="polite"></p></form></details><div id="blocked-people" class="muted" style="margin-top:12px"></div></section>
+  <section class="section"><details class="profile-editor"><summary>My opt-in profile</summary><p class="muted">Publish only what you are comfortable sharing. You can hide or delete it any time.</p><form id="profile-form"><label for="profile-name">Display name</label><input id="profile-name" maxlength="80" placeholder="Display name" required><div class="two-col"><div><label for="profile-program">Program</label><select id="profile-program" required><option value="">Select program</option><option>B.Tech</option><option>BCA</option><option>BBA</option><option>B.Com</option><option>B.Arch</option><option>B.Des</option><option>B.Pharm</option><option>B.Sc</option><option>BPT</option><option>BA/BJMC</option><option>LLB / Integrated Law</option><option>MBA</option><option>M.Tech</option><option>MCA</option><option>M.Sc</option><option>Ph.D.</option><option>Other</option></select></div><div><label for="profile-branch">Branch</label><select id="profile-branch" required><option value="">Select branch</option><option>Computer Science & Engineering</option><option>CSE</option><option>CSE — Artificial Intelligence</option><option>CSE — Artificial Intelligence & Machine Learning</option><option>CSE — Cloud Computing</option><option>CSE — IoT & Cyber Security</option><option>Artificial Intelligence & Data Science</option><option>Computer Science & Technology</option><option>Software Engineering</option><option>Mechanical Engineering</option><option>Civil Engineering</option><option>Electrical Engineering</option><option>Other</option></select></div></div><label for="profile-year">Year</label><input id="profile-year" type="number" min="1" max="6" placeholder="Year" required><label for="profile-bio">Short intro</label><textarea id="profile-bio" maxlength="300" rows="2" placeholder="Short intro (optional)"></textarea><label for="profile-looking">Looking for</label><input id="profile-looking" maxlength="160" placeholder="Looking for — e.g. DSA study group" required><button class="submit" type="submit">Save my profile</button><button id="profile-delete" class="report" type="button" hidden>Delete my profile</button><button id="profile-visibility" class="report" type="button" hidden>Hide my profile</button><p id="profile-status" class="muted" aria-live="polite"></p></form></details><div id="blocked-people" class="muted" style="margin-top:12px"></div></section>
 </section>
 
 <section class="view" data-view-panel="tools">
@@ -389,7 +397,20 @@ input:focus,textarea:focus,select:focus,.quick:focus-visible,.nav-item:focus-vis
   <section class="card"><div class="eyebrow">SGPA</div><h2>SGPA calculator</h2><p class="muted">Enter each subject's credit and grade point.</p><div id="sgpa-rows"></div><div class="wrap-row"><button id="sgpa-add" class="quick auto-width" type="button">Add subject</button><button id="sgpa-calc" class="submit auto-width" type="button">Calculate SGPA</button></div><p id="sgpa-result" class="muted" aria-live="polite">Add subjects to calculate.</p></section>
   <section class="card"><div class="eyebrow">CGPA</div><h2>CGPA calculator</h2><p class="muted">Calculate a credit-weighted CGPA from semester SGPA values.</p><div id="cgpa-rows"></div><div class="wrap-row"><button id="cgpa-add" class="quick auto-width" type="button">Add semester</button><button id="cgpa-calc" class="submit auto-width" type="button">Calculate CGPA</button></div><p id="cgpa-result" class="muted" aria-live="polite">Add semesters to calculate.</p></section>
   <section class="card"><div class="eyebrow">Attendance</div><h2>Attendance calculator</h2><div class="two-col"><div><label for="att-present">Classes attended</label><input id="att-present" type="number" min="0" step="1" placeholder="32"></div><div><label for="att-total">Classes held</label><input id="att-total" type="number" min="0" step="1" placeholder="40"></div></div><label for="att-target">Target attendance %</label><input id="att-target" type="number" min="0" max="100" step="0.1" value="75"><label for="att-mode">What do you want to know?</label><select id="att-mode"><option value="reach">How many classes must I attend?</option><option value="miss">How many classes can I miss?</option></select><button id="att-calc" class="submit" type="button">Calculate attendance</button><p id="att-result" class="muted" aria-live="polite">Enter your attendance to see the result.</p></section>
-  <section class="card"><div class="eyebrow">Marks</div><h2>Marks calculator</h2><p class="muted">Combine obtained and maximum marks without assuming VGU's internal/external weighting.</p><div id="marks-rows"></div><div class="wrap-row"><button id="marks-add" class="quick auto-width" type="button">Add component</button><button id="marks-calc" class="submit auto-width" type="button">Calculate percentage</button></div><p id="marks-result" class="muted" aria-live="polite">Add components to calculate.</p></section>
+  <section class="card"><div class="eyebrow">Marks</div><h2>Marks calculator</h2><p class="muted">Combine obtained and maximum marks without assuming VGU's internal/external weighting.</p><div id="marks-rows"></div><div class="wrap-row"><button id="marks-add" class="quick auto-width" type="button">Add component</button><button id="marks-calc" class="submit auto-width" type="button">Calculate percentage</button></div><p id="marks-result" class="muted" aria-live="polite">Add components to calculate.</p></section><section class="card">
+<div class="eyebrow">Campus extras</div><h2>Student network</h2>
+<p class="muted">Student-owned utilities and opportunities. Community content is never presented as official VGU information.</p>
+<div class="two-col">
+<div><label for="v4-mess">Today's mess rating</label><input id="v4-mess" type="number" min="1" max="5" step="1" placeholder="1–5"></div>
+<div><label for="v4-exam">Next exam</label><input id="v4-exam" type="datetime-local"></div>
+</div>
+<div class="wrap-row"><button id="v4-save" class="submit auto-width" type="button">Save updates</button><button id="v4-refresh" class="quick auto-width" type="button">Refresh</button><button id="v4-share" class="quick auto-width" type="button">Share my Pulse card</button></div>
+<div id="v4-question" class="settings-note" aria-live="polite"></div>
+<div id="v4-extras" class="muted" aria-live="polite">Open from Telegram to use student features.</div>
+<div id="v4-events" class="pulse-activity-list"></div>
+<div id="v4-resources" class="pulse-activity-list"></div>
+<div id="v4-review" class="profile-editor" style="margin-top:10px"><strong>Teacher / elective review</strong><p class="settings-note">Reviews stay pending until moderated and aggregates appear only after 5 published ratings.</p><div class="three-col"><input id="v4-teacher" maxlength="120" placeholder="Teacher"><input id="v4-elective" maxlength="120" placeholder="Elective"><input id="v4-teaching" type="number" min="1" max="5" placeholder="Teaching"></div><div class="two-col"><input id="v4-workload" type="number" min="1" max="5" placeholder="Workload"><input id="v4-support" type="number" min="1" max="5" placeholder="Support"></div><textarea id="v4-review-comment" maxlength="500" rows="2" placeholder="Optional factual comment"></textarea><button id="v4-review-submit" class="submit" type="button">Submit review</button><p id="v4-review-status" class="muted" aria-live="polite"></p></div>
+</section>
 </section>
 
 <dialog id="pulse-sheet" class="pulse-sheet"><h3 id="pulse-sheet-title">Pulse</h3><p id="pulse-sheet-body" class="muted"></p><button type="button" class="sheet-close" id="pulse-sheet-close">Close</button></dialog>
@@ -631,7 +652,7 @@ async function loadProfiles(){if(!profiles)return;const params=new URLSearchPara
 async function loadProfile(){if(!initData)return;const response=await fetch("/api/student-profile",{headers:{"x-telegram-init-data":initData}});if(!response.ok)throw Error("profile_failed");const data=await response.json(),p=data.profile;if(!p){profileStatus.textContent="No published profile yet.";return}document.querySelector("#profile-name").value=p.display_name||"";document.querySelector("#profile-program").value=p.program||"";document.querySelector("#profile-branch").value=p.branch||"";document.querySelector("#profile-year").value=p.year||"";document.querySelector("#profile-bio").value=p.bio||"";document.querySelector("#profile-looking").value=p.looking_for||"";profileDelete.hidden=false;profileVisibility.hidden=false;profileVisibility.textContent=p.status==="published"?"Hide my profile":"Publish my profile";profileVisibility.dataset.visible=p.status==="published"?"1":"0";profileStatus.textContent=p.status==="published"?"Your profile is visible to opted-in students.":"Your profile is hidden."}
 async function loadBlockedPeople(){if(!blockedPeople||!initData)return;const response=await fetch("/api/student-profile/blocks",{headers:{"x-telegram-init-data":initData}});if(!response.ok)throw Error("blocked_failed");const data=await response.json();blockedPeople.textContent=(data.profiles||[]).length?String((data.profiles||[]).length)+" blocked student"+((data.profiles||[]).length===1?"":"s"):"No blocked students."}
 function initPeopleUi(){const reload=()=>loadProfiles().catch(()=>{});peopleSearchButton?.addEventListener("click",reload);peopleSearch?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();reload()}});peopleYear?.addEventListener("change",reload);peopleProgram?.addEventListener("input",reload);peopleBranch?.addEventListener("input",reload);profileForm?.addEventListener("submit",async event=>{event.preventDefault();if(!initData){profileStatus.textContent="Open Pulse from Telegram to publish a profile.";return}const payload={display_name:document.querySelector("#profile-name").value.trim(),program:document.querySelector("#profile-program").value.trim(),branch:document.querySelector("#profile-branch").value.trim(),year:Number(document.querySelector("#profile-year").value),bio:document.querySelector("#profile-bio").value.trim(),looking_for:document.querySelector("#profile-looking").value.trim()};try{const response=await fetch("/api/student-profile",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify(payload)});if(!response.ok)throw Error();profileStatus.textContent="Profile saved.";await loadProfile();await loadProfiles()}catch{profileStatus.textContent="Could not save your profile. Try again."}});profileDelete?.addEventListener("click",async()=>{try{const response=await fetch("/api/student-profile",{method:"DELETE",headers:{"x-telegram-init-data":initData}});if(!response.ok)throw Error();profileForm.reset();profileDelete.hidden=true;profileVisibility.hidden=true;profileStatus.textContent="Profile deleted.";await loadProfiles()}catch{profileStatus.textContent="Could not delete your profile."}});profileVisibility?.addEventListener("click",async()=>{const visible=profileVisibility.dataset.visible!=="1";try{const response=await fetch("/api/student-profile/visibility",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({visible})});if(!response.ok)throw Error();await loadProfile();await loadProfiles()}catch{profileStatus.textContent="Could not update profile visibility."}})}
-async function loadHome(){const response=await fetch("/api/home");if(!response.ok)throw Error("home_failed");const data=await response.json();const noticeItems=data.sections?.find(s=>s.type==="notice")?.items||[],eventsItems=data.sections?.find(s=>s.type==="events")?.items||[],homePosts=data.sections?.find(s=>s.type==="student-posts")?.items||[];renderItems(notices,noticeItems,"No verified VGU information is available right now.");renderItems(events,eventsItems,"No verified events or opportunities are available right now.");renderPoll(data.poll);renderHomePulse(data.poll);renderHomeCommunity(homePosts);renderTodayStats(noticeItems,homePosts,data.poll);await loadCommunityInsights()}
+async function loadHome(){const response=await fetch("/api/home",{headers:initData?{"x-telegram-init-data":initData}:{}});if(response.status===401){throw Error("reopen_telegram")}if(!response.ok)throw Error("home_failed");const data=await response.json();const noticeItems=data.sections?.find(s=>s.type==="notice")?.items||[],eventsItems=data.sections?.find(s=>s.type==="events")?.items||[],homePosts=data.sections?.find(s=>s.type==="student-posts")?.items||[];renderItems(notices,noticeItems,"No verified VGU information is available right now.");renderItems(events,eventsItems,"No verified events or opportunities are available right now.");renderPoll(data.poll);renderHomePulse(data.poll);renderHomeCommunity(homePosts);renderTodayStats(noticeItems,homePosts,data.poll);await loadCommunityInsights()}
 function renderTodayStats(noticeItems,postItems,pollData){
  if(!todayStats)return;
  const today=pulseDateKey(new Date());
@@ -1040,7 +1061,7 @@ document.querySelectorAll("[data-campus-category]").forEach(button=>{
  }
 
  initPeopleUi();
- try{await loadHome()}catch{status.textContent="Pulse information is temporarily unavailable. Try again."}
+ try{await loadHome()}catch(error){status.textContent=error?.message==="reopen_telegram"?"Reopen Pulse from Telegram.":"Pulse information is temporarily unavailable. Try again."}
  try{await loadProfiles()}catch{}
 
  if(initData){
@@ -1085,5 +1106,68 @@ communityScript.src="/community-v2.js?v=20261007-4";
 communityScript.onload=()=>window.__pulseBoot?.();
 communityScript.onerror=()=>window.__pulseBoot?.();
 document.body.append(communityScript);
+function escapeHtml(value){return String(value??"").replace(/[&<>"\']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","\'":"&#39;"}[ch]));}
+async function loadV4Extras(){
+ const box=document.getElementById("v4-extras"),eventsBox=document.getElementById("v4-events"),resourcesBox=document.getElementById("v4-resources"),questionBox=document.getElementById("v4-question");
+ if(!initData){if(box)box.textContent="Reopen Pulse from Telegram to use student features.";return}
+ const h={"x-telegram-init-data":initData};
+ try{
+  const [events,listings,growth,card,question,resources,exams]=await Promise.all(["/api/v4/events","/api/v4/listings","/api/v4/growth/top","/api/v4/share-card","/api/v4/campus-question","/api/v4/resources","/api/v4/exam-countdowns"].map(p=>fetch(p,{headers:h}).then(r=>r.json())));
+  if(questionBox)questionBox.innerHTML="<strong>Campus question:</strong> "+escapeHtml(question.question||"")+(exams.exam_season&&exams.next?"<br><strong>Exam-season mode:</strong> "+escapeHtml(exams.next.title)+" in "+Math.max(0,Math.ceil((new Date(exams.next.exam_at)-Date.now())/86400000))+" day(s).":"");
+  if(box)box.innerHTML="<strong>Your Pulse card</strong><br>"+Number(card.card?.points||0)+" reputation · "+Number(card.card?.posts||0)+" posts · "+Number(card.card?.replies||0)+" replies"+
+    "<br><br><strong>Active listings</strong><br>"+(listings.items||[]).slice(0,3).map(x=>escapeHtml(x.title)+" · "+escapeHtml(x.kind)).join("<br>")+
+    "<br><br><strong>Top threads</strong><br>"+(growth.items||[]).slice(0,3).map(x=>escapeHtml(x.title)).join("<br>");
+  if(eventsBox)eventsBox.innerHTML="<div class='section-heading'><strong>Upcoming events</strong></div>"+(events.items||[]).slice(0,5).map(x=>"<div class='pulse-activity-item'><span class='pulse-activity-main'><span class='pulse-activity-text'>"+escapeHtml(x.title)+"</span><span class='pulse-activity-label'>"+escapeHtml(x.starts_at)+" · "+escapeHtml(x.location||"Campus")+"</span></span><button class='report v4-rsvp' data-id='"+Number(x.id)+"' type='button'>I'm interested</button></div>").join("");
+  if(resourcesBox)resourcesBox.innerHTML="<div class='section-heading'><strong>Resource library</strong></div><p class='settings-note'>Send a document to the VGU Pulse bot with caption <b>/resource type=PYQ subject=DBMS semester=5</b>. Moderated files appear here automatically.</p>"+(resources.items||[]).slice(0,10).map(x=>"<div class='pulse-activity-item'><span class='pulse-activity-main'><span class='pulse-activity-text'>"+escapeHtml(x.name)+"</span><span class='pulse-activity-label'>"+escapeHtml(x.resource_type)+" · "+escapeHtml(x.subject||"General")+" · "+escapeHtml(x.semester||"")+"</span></span><button class='report v4-resource-report' data-id='"+Number(x.id)+"' type='button'>Report</button></div>").join("");
+ }catch{if(box)box.textContent="Campus extras are temporarily unavailable."}
+}
+document.getElementById("v4-refresh")?.addEventListener("click",loadV4Extras);
+document.getElementById("v4-save")?.addEventListener("click",async()=>{
+ if(!initData){openPulseSheet("Telegram required","Reopen Pulse from Telegram to save student updates.");return}
+ const mess=Number(document.getElementById("v4-mess")?.value),exam=document.getElementById("v4-exam")?.value;
+ const h={"content-type":"application/json","x-telegram-init-data":initData};
+ if(Number.isInteger(mess)&&mess>=1&&mess<=5)await fetch("/api/v4/mess-rating",{method:"POST",headers:h,body:JSON.stringify({rating:mess,meal:"overall"})});
+ if(exam)await fetch("/api/v4/exam-countdown",{method:"POST",headers:h,body:JSON.stringify({title:"Next exam",exam_at:new Date(exam).toISOString()})});
+ await loadV4Extras();
+});
+document.getElementById("v4-resources")?.addEventListener("click",async event=>{
+ const button=event.target.closest(".v4-resource-report");if(!button)return;
+ const id=Number(button.dataset.id);if(!Number.isSafeInteger(id)||id<1)return;
+ const h={"content-type":"application/json","x-telegram-init-data":initData};button.disabled=true;
+ try{const r=await fetch("/api/v4/resource/report",{method:"POST",headers:h,body:JSON.stringify({resource_id:id,reason:"inappropriate"})});button.textContent=r.ok?"Reported ✓":"Report failed";}catch{button.textContent="Report failed";}
+});
+document.getElementById("v4-events")?.addEventListener("click",async event=>{
+ const button=event.target.closest(".v4-rsvp");if(!button)return;
+ const h={"content-type":"application/json","x-telegram-init-data":initData};
+ const id=Number(button.dataset.id);if(!Number.isSafeInteger(id)||id<1)return;
+ button.disabled=true;try{const r=await fetch("/api/v4/event/rsvp",{method:"POST",headers:h,body:JSON.stringify({event_id:id,interested:true})});if(r.ok){button.textContent="Interested ✓";await fetch("/api/v4/event/reminder",{method:"POST",headers:h,body:JSON.stringify({event_id:id,enabled:true})});}else button.disabled=false}catch{button.disabled=false}
+});
+document.getElementById("v4-share")?.addEventListener("click",async()=>{
+ if(!initData){openPulseSheet("Telegram required","Reopen Pulse from Telegram to share your Pulse card.");return}
+ try{const r=await fetch("/api/v4/share-card",{headers:{"x-telegram-init-data":initData}});const d=await r.json();const text="My VGU Pulse card — "+Number(d.card?.points||0)+" reputation, "+Number(d.card?.posts||0)+" posts, "+Number(d.card?.replies||0)+" helpful replies.";
+ if(navigator.share)await navigator.share({title:"VGU Pulse",text});else await navigator.clipboard.writeText(text);openPulseSheet("Pulse card ready",text);
+ }catch{openPulseSheet("Share unavailable","Your Pulse card could not be shared right now.")}
+});
+document.getElementById("v4-review-submit")?.addEventListener("click",async()=>{
+ const h={"content-type":"application/json","x-telegram-init-data":initData},q=id=>document.getElementById(id)?.value;
+ const body={teacher:q("v4-teacher"),elective:q("v4-elective"),teaching:Number(q("v4-teaching")),workload:Number(q("v4-workload")),support:Number(q("v4-support")),comment:q("v4-review-comment")};
+ const status=document.getElementById("v4-review-status");if(!initData){if(status)status.textContent="Reopen Pulse from Telegram.";return}
+ const r=await fetch("/api/v4/teacher-review",{method:"POST",headers:h,body:JSON.stringify(body)});if(status)status.textContent=r.ok?"Review submitted for moderation.":"Could not submit review.";
+});
+
+
+document.getElementById("delete-my-data")?.addEventListener("click",async()=>{
+ const button=document.getElementById("delete-my-data"),status=document.getElementById("delete-my-data-status");
+ if(!initData){if(status)status.textContent="Reopen Pulse from Telegram.";return}
+ if(button.dataset.confirm!=="1"){button.dataset.confirm="1";button.textContent="Tap again to permanently delete";if(status)status.textContent="This cannot be undone. Tap again within 10 seconds.";setTimeout(()=>{button.dataset.confirm="0";button.textContent="Delete all my Pulse data"},10000);return}
+ button.disabled=true;
+ try{
+  const r=await fetch("/api/account/delete",{method:"POST",headers:{"content-type":"application/json","x-telegram-init-data":initData},body:JSON.stringify({confirm:true})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||"delete_failed");
+  if(status)status.textContent="Your Pulse data has been deleted. Reopen Pulse from Telegram to start again.";
+ }catch(e){button.disabled=false;button.dataset.confirm="0";button.textContent="Delete all my Pulse data";if(status)status.textContent=e.message==="unauthorized"?"Reopen Pulse from Telegram.":"Could not complete deletion. Please try again."}
+});
 </script>
-</body></html>
+</body>
+</html>

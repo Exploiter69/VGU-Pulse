@@ -31,6 +31,9 @@ export interface StudentReply {
 }
 
 
+const CONTROLLED_PROGRAMS=new Set(["b.tech","bca","bba","b.com","b.arch","b.des","b.pharm","b.sc","bpt","ba/bjmc","llb / integrated law","mba","m.tech","mca","m.sc","ph.d.","other"]);
+const CONTROLLED_BRANCHES=new Set(["computer science & engineering","cse","cse — artificial intelligence","cse — artificial intelligence & machine learning","cse — cloud computing","cse — iot & cyber security","artificial intelligence & data science","computer science & technology","software engineering","mechanical engineering","civil engineering","electrical engineering","other"]);
+
 export interface StudentProfile {
   public_id: string;
   display_name: string;
@@ -51,10 +54,12 @@ export function validateStudentProfileInput(input: {
       typeof input.branch !== "string" || typeof input.year !== "number" ||
       typeof input.bio !== "string" || typeof input.looking_for !== "string") return null;
   const display_name = input.display_name.trim();
+  if (/\b(?:exam\s*cell|admin|administrator|vgu|official|controller\s*of\s*examinations)\b/i.test(display_name)) return null;
   const program = input.program.trim();
   const branch = input.branch.trim();
   const bio = input.bio.trim();
   const looking_for = input.looking_for.trim();
+  if (!CONTROLLED_PROGRAMS.has(program.toLowerCase()) || !CONTROLLED_BRANCHES.has(branch.toLowerCase())) return null;
   if (display_name.length < 2 || display_name.length > 80 ||
       program.length < 2 || program.length > 80 ||
       branch.length < 2 || branch.length > 80 ||
@@ -129,15 +134,22 @@ export async function listStudentProfiles(
   return rows.results;
 }
 
-export async function listBlockedProfiles(db: D1Database, userId: number): Promise<Array<{ public_id: string; display_name: string }>> {
+export async function listBlockedProfiles(db: D1Database, userId: number): Promise<Array<{ block_id: number; public_id: string | null; display_name: string }>> {
   const rows = await db.prepare(
-    `SELECT p.public_id, p.display_name
+    `SELECT b.id AS block_id,
+      CASE WHEN b.via_anonymous=1 THEN NULL ELSE p.public_id END AS public_id,
+      CASE WHEN b.via_anonymous=1 THEN 'Anonymous author (from post #' || COALESCE(b.source_item_id,'?') || ')' ELSE COALESCE(p.display_name,'VGU student') END AS display_name
      FROM student_profile_blocks b
-     JOIN student_profiles p ON p.telegram_user_id = b.blocked_telegram_user_id
+     LEFT JOIN student_profiles p ON p.telegram_user_id = b.blocked_telegram_user_id
      WHERE b.blocker_telegram_user_id = ?
-     ORDER BY p.display_name`,
-  ).bind(String(userId)).all<{ public_id: string; display_name: string }>();
+     ORDER BY b.id DESC`,
+  ).bind(String(userId)).all<{ block_id:number; public_id:string|null; display_name:string }>();
   return rows.results;
+}
+
+export async function unblockStudentProfileBlock(db: D1Database,userId:number,blockId:number):Promise<boolean>{
+  const result=await db.prepare("DELETE FROM student_profile_blocks WHERE id=? AND blocker_telegram_user_id=?").bind(blockId,String(userId)).run();
+  return Number(result.meta.changes??0)>0;
 }
 
 export async function setStudentProfileVisibility(db: D1Database, userId: number, visible: boolean): Promise<boolean> {
@@ -254,12 +266,12 @@ export async function createStudentPost(
   const post = await db
     .prepare(
       `SELECT p.id, p.category, p.title, p.body,
-              COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
+              COALESCE(NULLIF(TRIM(sp.display_name), ''), 'VGU student') AS author_name,
               p.created_at, p.report_count,
               (SELECT COUNT(*) FROM student_post_replies r WHERE r.post_id = p.id AND r.status = 'published' AND r.report_count < 3) AS reply_count,
               CASE WHEN ? IS NOT NULL AND p.telegram_user_id = ? THEN 1 ELSE 0 END AS owned
        FROM student_posts p
-       JOIN users u ON u.telegram_user_id = p.telegram_user_id
+       LEFT JOIN student_profiles sp ON sp.telegram_user_id = p.telegram_user_id
        WHERE p.id = ?`,
     )
     .bind(String(userId), String(userId), result.meta.last_row_id)
@@ -268,6 +280,55 @@ export async function createStudentPost(
   return { ...post, report_count: Number(post.report_count) };
 }
 
+export async function deleteAllStudentData(db:D1Database,userId:number):Promise<void>{
+  const id=String(userId);
+  const statements=[
+    "UPDATE communities SET owner_telegram_user_id=NULL WHERE owner_telegram_user_id=?",
+    "DELETE FROM community_reply_votes WHERE telegram_user_id=?",
+    "DELETE FROM community_item_reads WHERE telegram_user_id=?",
+    "DELETE FROM resource_reports WHERE telegram_user_id=?",
+    "DELETE FROM event_reminders WHERE telegram_user_id=?",
+    "DELETE FROM event_rsvps WHERE telegram_user_id=?",
+    "DELETE FROM mess_daily_ratings WHERE telegram_user_id=?",
+    "DELETE FROM exam_countdowns WHERE telegram_user_id=?",
+    "DELETE FROM resources WHERE telegram_user_id=?",
+    "DELETE FROM campus_events WHERE created_by=?",
+    "DELETE FROM teacher_reviews WHERE telegram_user_id=?",
+    "DELETE FROM campus_questions WHERE created_by=?",
+    "DELETE FROM community_poll_votes WHERE telegram_user_id=?",
+
+    "DELETE FROM community_votes WHERE telegram_user_id=?",
+    "DELETE FROM community_follows WHERE telegram_user_id=?",
+    "DELETE FROM community_saves WHERE telegram_user_id=?",
+    "DELETE FROM community_reports WHERE telegram_user_id=?",
+    "DELETE FROM community_reply_reports WHERE telegram_user_id=?",
+    "DELETE FROM student_profile_blocks WHERE blocker_telegram_user_id=? OR blocked_telegram_user_id=?",
+    "DELETE FROM student_profile_reports WHERE reporter_telegram_user_id=?",
+    "DELETE FROM student_post_reply_votes WHERE telegram_user_id=?",
+    "DELETE FROM student_post_votes WHERE telegram_user_id=?",
+    "DELETE FROM student_notifications WHERE telegram_user_id=?",
+    "DELETE FROM notification_preferences WHERE telegram_user_id=?",
+    "DELETE FROM community_badges WHERE telegram_user_id=?",
+    "DELETE FROM community_reputation_events WHERE telegram_user_id=?",
+    "DELETE FROM community_reputation WHERE telegram_user_id=?",
+    "DELETE FROM community_anonymous_notices WHERE telegram_user_id=?",
+    "DELETE FROM community_rules_ack WHERE telegram_user_id=?",
+    "DELETE FROM community_replies WHERE telegram_user_id=?",
+    "DELETE FROM community_items WHERE telegram_user_id=?",
+    "DELETE FROM student_post_replies WHERE telegram_user_id=?",
+    "DELETE FROM student_posts WHERE telegram_user_id=?",
+    "DELETE FROM student_profiles WHERE telegram_user_id=?",
+    "DELETE FROM users WHERE telegram_user_id=?",
+  ];
+  const batch=statements.map(sql=>db.prepare(sql).bind(sql.includes("OR blocked")?id:id, ...(sql.includes("OR blocked")?[id]:[])));
+  await db.batch(batch);
+}
+
+
+export async function setStudentContactEnabled(db:D1Database,userId:number,enabled:boolean):Promise<boolean>{
+  const result=await db.prepare("UPDATE student_profiles SET contact_enabled=? WHERE telegram_user_id=?").bind(enabled?1:0,String(userId)).run();
+  return Number(result.meta.changes??0)>0;
+}
 export async function deleteStudentProfile(db: D1Database, userId: number): Promise<boolean> {
   const result = await db.prepare(
     `DELETE FROM student_profiles WHERE telegram_user_id = ?`,
@@ -285,7 +346,7 @@ export async function listStudentPosts(
   const rows = await db
     .prepare(
       `SELECT p.id, p.category, p.title, p.body,
-              COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
+              COALESCE(NULLIF(TRIM(sp.display_name), ''), 'VGU student') AS author_name,
               p.created_at, p.report_count,
               (SELECT COUNT(*) FROM student_post_replies r WHERE r.post_id = p.id AND r.status = 'published' AND r.report_count < 3) AS reply_count,
               (SELECT COUNT(*) FROM student_post_votes v WHERE v.post_id = p.id AND v.vote = 1) AS upvotes,
@@ -293,7 +354,7 @@ export async function listStudentPosts(
               (SELECT COALESCE(v.vote, 0) FROM student_post_votes v WHERE v.post_id = p.id AND v.telegram_user_id = ?) AS viewer_vote,
               CASE WHEN ? IS NOT NULL AND p.telegram_user_id = ? THEN 1 ELSE 0 END AS owned
        FROM student_posts p
-       JOIN users u ON u.telegram_user_id = p.telegram_user_id
+       LEFT JOIN student_profiles sp ON sp.telegram_user_id = p.telegram_user_id
        WHERE p.status = 'published' AND p.report_count < 3
          AND (? IS NULL OR p.category = ?)
        ORDER BY
@@ -328,6 +389,41 @@ export async function listStudentPosts(
     viewer_vote: (Number(post.viewer_vote ?? 0) as -1 | 0 | 1),
     ...(userId !== undefined ? { owned: Boolean(post.owned) } : {}),
   }));
+}
+
+export async function getStudentPostById(db:D1Database,postId:number,userId?:number):Promise<StudentPost|null>{
+  const viewer=userId===undefined?null:String(userId);
+  const row=await db.prepare(
+    `SELECT p.id,p.category,p.title,p.body,
+      COALESCE(NULLIF(TRIM(sp.display_name),''),'VGU student') AS author_name,
+      p.created_at,p.report_count,
+      (SELECT COUNT(*) FROM student_post_replies r WHERE r.post_id=p.id AND r.status='published' AND r.report_count<3) AS reply_count,
+      (SELECT COUNT(*) FROM student_post_votes v WHERE v.post_id=p.id AND v.vote=1) AS upvotes,
+      (SELECT COUNT(*) FROM student_post_votes v WHERE v.post_id=p.id AND v.vote=-1) AS downvotes,
+      (SELECT COALESCE(v.vote,0) FROM student_post_votes v WHERE v.post_id=p.id AND v.telegram_user_id=?) AS viewer_vote,
+      CASE WHEN ? IS NOT NULL AND p.telegram_user_id=? THEN 1 ELSE 0 END AS owned
+     FROM student_posts p LEFT JOIN student_profiles sp ON sp.telegram_user_id=p.telegram_user_id
+     WHERE p.id=? AND p.status='published' AND p.report_count<3`
+  ).bind(viewer,viewer,viewer,postId).first<StudentPost>();
+  if(!row)return null;
+  return {...row,report_count:Number(row.report_count),reply_count:Number(row.reply_count??0),upvotes:Number(row.upvotes??0),downvotes:Number(row.downvotes??0),score:Number(row.upvotes??0)-Number(row.downvotes??0),viewer_vote:Number(row.viewer_vote??0) as -1|0|1,...(userId!==undefined?{owned:Boolean(row.owned)}:{})};
+}
+
+export async function getStudentReplyById(db:D1Database,replyId:number,userId?:number):Promise<StudentReply|null>{
+  const viewer=userId===undefined?null:String(userId);
+  const row=await db.prepare(
+    `SELECT r.id,r.post_id,r.body,
+      COALESCE(NULLIF(TRIM(sp.display_name),''),'VGU student') AS author_name,
+      r.created_at,r.report_count,
+      (SELECT COUNT(*) FROM student_post_reply_votes v WHERE v.reply_id=r.id AND v.vote=1) AS upvotes,
+      (SELECT COUNT(*) FROM student_post_reply_votes v WHERE v.reply_id=r.id AND v.vote=-1) AS downvotes,
+      (SELECT COALESCE(v.vote,0) FROM student_post_reply_votes v WHERE v.reply_id=r.id AND v.telegram_user_id=?) AS viewer_vote,
+      CASE WHEN ? IS NOT NULL AND r.telegram_user_id=? THEN 1 ELSE 0 END AS owned
+     FROM student_post_replies r LEFT JOIN student_profiles sp ON sp.telegram_user_id=r.telegram_user_id
+     WHERE r.id=? AND r.status='published' AND r.report_count<3`
+  ).bind(viewer,viewer,viewer,replyId).first<StudentReply>();
+  if(!row)return null;
+  return {...row,report_count:Number(row.report_count),upvotes:Number(row.upvotes??0),downvotes:Number(row.downvotes??0),score:Number(row.upvotes??0)-Number(row.downvotes??0),viewer_vote:Number(row.viewer_vote??0) as -1|0|1,...(userId!==undefined?{owned:Boolean(row.owned)}:{})};
 }
 
 export async function voteStudentPost(db: D1Database, postId: number, userId: number, vote: -1 | 1): Promise<void> {
@@ -398,7 +494,7 @@ export async function listStudentReplies(
   const rows = await db
     .prepare(
       `SELECT r.id, r.post_id, r.body,
-              COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
+              COALESCE(NULLIF(TRIM(sp.display_name), ''), 'VGU student') AS author_name,
               r.created_at, r.report_count,
               (SELECT COUNT(*) FROM student_post_reply_votes v WHERE v.reply_id = r.id AND v.vote = 1) AS upvotes,
               (SELECT COUNT(*) FROM student_post_reply_votes v WHERE v.reply_id = r.id AND v.vote = -1) AS downvotes,
@@ -481,10 +577,10 @@ export async function createStudentReply(
   const reply = await db
     .prepare(
       `SELECT r.id, r.post_id, r.body,
-              COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
+              COALESCE(NULLIF(TRIM(sp.display_name), ''), 'VGU student') AS author_name,
               r.created_at, r.report_count
        FROM student_post_replies r
-       JOIN users u ON u.telegram_user_id = r.telegram_user_id
+       LEFT JOIN student_profiles sp ON sp.telegram_user_id = r.telegram_user_id
        WHERE r.id = ?`,
     )
     .bind(result.meta.last_row_id)
@@ -714,6 +810,9 @@ export async function voteInPoll(
   optionId: number,
   telegramUserId: number,
 ): Promise<void> {
+  const poll = await db.prepare("SELECT id FROM polls WHERE id=? AND status='open' AND (closes_at IS NULL OR closes_at>CURRENT_TIMESTAMP)").bind(pollId).first();
+  if (!poll) throw new Error("poll_closed");
+
   const validOption = await db
     .prepare(`SELECT 1 FROM poll_options WHERE id = ? AND poll_id = ?`)
     .bind(optionId, pollId)
