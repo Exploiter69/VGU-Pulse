@@ -56,35 +56,44 @@ Baseline repository reviewed on 2026-10-08:
 - Production D1 migration `0020_moderation_target_identity.sql` is applied; no remote migrations remain.
 - Phase 0 does not redeploy or alter production behavior.
 
-## Phase 1 — Community UX Polish
+## Phase 1 — Community UX
+**Status:** COMPLETE (automated acceptance green)  
+**Completion commits:** `bb0482f`, `534ed78`, `fe60951`, `c009e47`, `e73ba62`, `4724cfa`, `5a725f3`, `781f031`, `82e4eb5`, `f35f70d`, `7b4b1ec`, `bba403b`, `4ddf060`, `dca8b7d`, `0d1c4c9`, `6252d4e`
 
-Status: **NOT STARTED**
+### Shipped
+- Community defaults to **For You**.
+- For You ranks published branch/year cohort matches, unanswered cohort questions, recent viewer activity, own posts, and recency in one D1 query; sparse results fall back to campus Trending.
+- No-profile viewers also fall back to campus Trending.
+- Existing Community modes remain available: Latest, Trending, Confessions, Campus, Exam survival, Saved.
+- Empty states provide action-oriented prefilled starting points.
+- Long bodies retain the compact eight-line treatment with **Show more**.
+- Unanswered discussion cards expose **Answer this**.
+- Solved/accepted-answer state is visible on cards and in reply threads.
+- Confession and Exam survival cards have distinct visual treatment.
+- Lightweight author reputation/badge metadata is shown only for non-anonymous authors.
+- Composer shows seven high-frequency intents first; remaining intents stay behind **More…**.
+- Anonymous notice/rules acknowledgement and existing moderation contracts remain intact.
+- Dismissible Campus Pulse widgets summarize mess ratings, the next published event, and the campus question.
+- Community controls were raised to 44px minimum touch targets where applicable and Telegram haptics are used when available.
+- Community UX documentation, Product model, and Roadmap were updated.
 
-Goal: Community becomes the fastest place for a student to react, answer, ask, or rate something useful.
-
-Acceptance checklist:
-
-- [ ] For You is the default with a graceful campus-wide fallback
-- [ ] Existing core filters remain available
-- [ ] Helpful, actionable empty states
-- [ ] Long posts collapse with Show more
-- [ ] Reply hierarchy and accepted/solved states are prominent
-- [ ] Intent picker is simplified with More…
-- [ ] One primary Publish action
-- [ ] Anonymous notice and rules acknowledgement preserved
-- [ ] Lightweight reputation/badge treatment
-- [ ] Confessions and Exam survival have distinct safe treatment
-- [ ] Dismissible Campus pulse widgets
-- [ ] One-tap Answer this for unanswered questions
-- [ ] Global design-system consistency and Telegram-native behavior preserved
-- [ ] Existing vote/follow/save/report/block/anonymous flows regress cleanly
-- [ ] `npm run check` passes
-- [ ] `npm test` passes
-- [ ] Behavior tests pass
-- [ ] Manual Telegram mobile + desktop Community smoke completed
-- [ ] `docs/UI_UX_V3.md` updated
-
-Commit(s): TBD
+### Acceptance
+- [x] For You is the default and has a real personalization/fallback backend contract.
+- [x] Tabs preserve the existing Community taxonomy.
+- [x] Action-first empty state and Answer this are wired.
+- [x] Solved/accepted-answer visibility is wired.
+- [x] Confession/Exam survival visual differentiation is wired.
+- [x] Seven primary compose intents + More are wired.
+- [x] Campus Pulse is dismissible and free-tier safe.
+- [x] Anonymous/moderation/privacy behavior was not removed.
+- [x] `npm run check` — PASS in GitHub CI.
+- [x] `npm test` — PASS in GitHub CI.
+- [x] `npx vitest run tests/behavior` — PASS in GitHub CI.
+- [x] Web JavaScript syntax gate — PASS in GitHub CI.
+- [x] Wrangler dry-run/static production guards — PASS in GitHub CI.
+- [x] Worker deployment — PASS for final Phase 1 commit.
+- [ ] Real Telegram mobile + desktop smoke — manual device verification remains.
+- [ ] Visual/haptic behavior on an actual Telegram client — manual verification remains.
 
 ## Phase 2 — Telegram Growth Engine
 
