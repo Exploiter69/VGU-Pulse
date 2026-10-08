@@ -11,6 +11,7 @@ import {
   unblockStudentProfile,
   setStudentProfileVisibility,
   listBlockedProfiles,
+  unblockStudentProfileBlock,
   upsertStudentProfile,
   validateStudentProfileInput,
   createStudentReply,
@@ -214,13 +215,11 @@ export default {
         const year = Number.isInteger(parsedYear) && parsedYear >= 1 && parsedYear <= 6
           ? parsedYear
           : undefined;
-        let viewerId: number | undefined;
         const initData = request.headers.get("x-telegram-init-data") ?? "";
-        if (initData && getBotToken(env)) {
-          const validated = await validateInitData(initData, getBotToken(env));
-          if (validated) viewerId = validated.user.id;
-        }
-        const profiles = await listStudentProfiles(env.DB, 30, viewerId, {
+        if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
+        const validated = await validateInitData(initData, getBotToken(env));
+        if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
+        const profiles = await listStudentProfiles(env.DB, 30, validated.user.id, {
           q,
           program,
           branch,
@@ -254,10 +253,11 @@ export default {
       if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
       const validated = await validateInitData(request.headers.get("x-telegram-init-data") ?? "", getBotToken(env));
       if (!validated) return json({ ok: false, error: "unauthorized" }, 401);
-      const body = await readJson<{ public_id?: unknown }>(request);
+      const body = await readJson<{ block_id?: unknown }>(request);
       if (!body) return json({ ok: false, error: "invalid_json" }, 400);
-      if (typeof body.public_id !== "string" || body.public_id.length > 100) return json({ ok: false, error: "invalid_profile" }, 400);
-      return json({ ok: true, unblocked: await unblockStudentProfile(env.DB, validated.user.id, body.public_id) });
+      const blockId=Number(body.block_id);
+      if (!Number.isSafeInteger(blockId)||blockId<1) return json({ ok: false, error: "invalid_block" }, 400);
+      return json({ ok: true, unblocked: await unblockStudentProfileBlock(env.DB, validated.user.id, blockId) });
     }
 
     if (request.method === "GET" && url.pathname === "/api/student-profile/blocks") {
