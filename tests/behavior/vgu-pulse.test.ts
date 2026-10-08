@@ -26,7 +26,7 @@ const server = createTestHarness({
 });
 
 const worker = server.getWorker("vgu-pulse");
-const compatWorker = server.getWorker("migration-compat");
+const compatWorker = server.getWorker("vgu-pulse-migration-compat");
 
 async function signInitData(user: Record<string, unknown>, authDate = Math.floor(Date.now() / 1000)): Promise<string> {
   const params = new URLSearchParams({
