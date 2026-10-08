@@ -244,6 +244,33 @@ describe("VGU-Pulse real D1 behavior",()=>{
     expect(ban).toEqual({reason:"safety record",banned_by:"9009"});
   });
 
+  it("parks Telegram 403 notifications and honors 429 retry-after",async()=>{
+    const env=await worker.getEnv() as {DB:D1Database};
+    await env.DB.prepare("INSERT OR IGNORE INTO notification_preferences(telegram_user_id,official_updates,community_replies,community_activity,personalized_alerts) VALUES('1001',1,1,1,1)").run();
+    await env.DB.prepare("INSERT INTO student_notifications(telegram_user_id,kind,channel,title,body,reference_key) VALUES('1001','community','community_activity','Retry test','body','retry-test')").run();
+    const fetchMock=vi.spyOn(globalThis,"fetch").mockResolvedValue(new Response("{}",{status:403}));
+    const signal={fetch:async()=>new Response(JSON.stringify({ok:true,result:{items:[]}}),{status:200})} as unknown as Fetcher;
+    try{
+      const parked=await runNotificationSweep(env.DB,signal,"test-token");
+      expect(parked.failed).toBe(1);
+      const failed=await env.DB.prepare("SELECT attempts,failed_at,last_error FROM student_notifications WHERE reference_key='retry-test'").first<{attempts:number;failed_at:string|null;last_error:string}>();
+      expect(Number(failed?.attempts)).toBe(5);
+      expect(failed?.failed_at).toBeTruthy();
+      expect(failed?.last_error).toBe("telegram_403");
+    }finally{fetchMock.mockRestore();}
+
+    await env.DB.prepare("UPDATE student_notifications SET attempts=0,failed_at=NULL,last_error=NULL,retry_at=NULL,sent_at=NULL WHERE reference_key='retry-test'").run();
+    const rateMock=vi.spyOn(globalThis,"fetch").mockResolvedValue(new Response(JSON.stringify({parameters:{retry_after:17}}),{status:429}));
+    try{
+      const throttled=await runNotificationSweep(env.DB,signal,"test-token");
+      expect(throttled.sent).toBe(0);
+      const retry=await env.DB.prepare("SELECT retry_at,last_error,attempts FROM student_notifications WHERE reference_key='retry-test'").first<{retry_at:string|null;last_error:string;attempts:number}>();
+      expect(retry?.retry_at).toBeTruthy();
+      expect(retry?.last_error).toBe("telegram_429_retry_after:17");
+      expect(Number(retry?.attempts)).toBe(0);
+    }finally{rateMock.mockRestore();}
+  });
+
   it("sweeps notification channels independently after malformed Signal JSON",async()=>{
     const env=await worker.getEnv() as {DB:D1Database};
     await env.DB.prepare("INSERT OR IGNORE INTO notification_preferences(telegram_user_id,official_updates,community_replies,community_activity,personalized_alerts) VALUES('1001',1,1,1,0)").run();
