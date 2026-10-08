@@ -228,10 +228,8 @@
       }catch{
         contextCommunity="campus";
       }
-      community=contextCommunity;
-      $("#cv2-community").value=community;
-      $("#cv2-community-filter").value=community;
-      $("#cv2-current-community").textContent=community==="campus"?"VGU campus":community;
+      if(sort!=="for_you"){community=contextCommunity;$("#cv2-community").value=community;$("#cv2-community-filter").value=community;$("#cv2-current-community").textContent=community==="campus"?"VGU campus":community;}
+      else {community="";$("#cv2-community").value="";$("#cv2-community-filter").value="";$("#cv2-current-community").textContent="For you";}
       try{
         const data=await api("/api/community-v2/communities");
         const names=["campus",contextCommunity,...(data.communities||[]).map(x=>x.slug)].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).slice(0,16);
