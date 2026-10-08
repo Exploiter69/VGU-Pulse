@@ -66,6 +66,18 @@ function getBotToken(env: Env): string {
 function adminIds(raw?:string):Set<string>{return new Set((raw??"").split(",").map(x=>x.trim()).filter(Boolean));}
 function isAdmin(env:Env,userId:number):boolean{return adminIds(env.ADMIN_IDS).has(String(userId));}
 let cachedBotUsername:{value:string;expiresAt:number}|null=null;
+let botUsernamePromise:Promise<string>|null=null;
+const DEEP_LINK_RE=/^(?:home|ask|community|campus|academics|people|tools|me|exam|mess|post:\d+|poll:\d+|event:\d+|community:[a-z0-9_-]{1,60})$/;
+function normalizeDeepLinkTarget(raw:string):string{const target=raw.trim().slice(0,80);return DEEP_LINK_RE.test(target)?target:"home";}
+async function getBotUsername(env:Env):Promise<string>{
+  if(cachedBotUsername&&cachedBotUsername.expiresAt>Date.now())return cachedBotUsername.value;
+  if(botUsernamePromise)return botUsernamePromise;
+  const token=getBotToken(env);if(!token)throw new Error("bot_not_configured");
+  botUsernamePromise=(async()=>{const response=await fetch(`https://api.telegram.org/bot${token}/getMe`);const payload=await response.json() as {ok?:boolean;result?:{username?:string}};const username=payload.result?.username?.trim();if(!response.ok||!payload.ok||!username)throw new Error("bot_username_unavailable");cachedBotUsername={value:username,expiresAt:Date.now()+6*60*60*1000};return username;})();
+  try{return await botUsernamePromise}finally{botUsernamePromise=null}
+}
+async function telegramDeepLink(env:Env,target:string):Promise<string>{const username=await getBotUsername(env);return `https://t.me/${username}?startapp=${encodeURIComponent(normalizeDeepLinkTarget(target))}`;}
+
 
 function html(): Response {
   return new Response(
@@ -88,6 +100,24 @@ export function parseResourceCaption(caption: string): Record<string,string> {
   return metadata;
 }
 
+async function publishNextChannelCard(env:Env):Promise<void>{
+  const channelId=Number(env.PULSE_CHANNEL_ID);if(!Number.isSafeInteger(channelId))return;
+  const rows=await env.DB.prepare(
+    "SELECT kind,entity_id,title,detail FROM telegram_channel_candidates LIMIT 8"
+  ).all<{kind:string;entity_id:number;title:string;detail:string}>();
+  for(const x of rows.results??[]){
+    let key="",target="",text="",reply_markup:any;
+    if(x.kind==="event"){key=`event:${x.entity_id}:${x.detail}`;target=`event:${x.entity_id}`;text=`📅 <b>Upcoming event</b>\n${x.title}\n${x.detail}\n\nStudent event — open Pulse for details.`;reply_markup={inline_keyboard:[[{text:"I'm interested",callback_data:`rsvp:${x.entity_id}`},{text:"Remind me",callback_data:`remind:${x.entity_id}`}],[{text:"Open in VGU Pulse",url:await telegramDeepLink(env,target)}]]};}
+    else if(x.kind==="mess"){key=`mess:${new Date().toISOString().slice(0,10)}`;target="mess";text=`🍽 <b>Mess pulse</b>\n${x.title}\n\nStudent-reported rating summary.`;reply_markup={inline_keyboard:[[{text:"Open mess pulse",url:await telegramDeepLink(env,target)}]]};}
+    else {key=`thread:${x.entity_id}:${new Date().toISOString().slice(0,10)}`;target=`post:${x.entity_id}`;text=`💬 <b>Student content</b> · helpful thread\n${x.title}\n\nStudent-reported discussion — not an official VGU announcement.`;reply_markup={inline_keyboard:[[{text:"Read in VGU Pulse",url:await telegramDeepLink(env,target)}]]};}
+    const claimed=await env.DB.prepare("INSERT OR IGNORE INTO telegram_channel_cards(card_key,kind,entity_id,created_at) VALUES(?,?,?,CURRENT_TIMESTAMP)").bind(key,x.kind,Number(x.entity_id||0)).run();
+    if(Number(claimed.meta.changes??0)!==1)continue;
+    const response=await telegramApi(getBotToken(env),"sendMessage",{chat_id:channelId,text,parse_mode:"HTML",reply_markup});
+    if(!response.ok){await env.DB.prepare("DELETE FROM telegram_channel_cards WHERE card_key=?").bind(key).run();return;}
+    return;
+  }
+}
+
 async function handleTelegramUpdate(request: Request, env: Env): Promise<Response> {
   if (!getBotToken(env)) return json({ ok: false, error: "bot_not_configured" }, 503);
 
@@ -98,8 +128,23 @@ async function handleTelegramUpdate(request: Request, env: Env): Promise<Respons
 
   const update = await readJson<{
     message?: { from?: { id?: number }; chat?: { id?: number }; text?: string; caption?: string; document?: { file_id?: string; file_unique_id?: string; file_name?: string; mime_type?: string; file_size?: number } };
+    callback_query?: { id?: string; from?: { id?: number }; data?: string; message?: { chat?: { id?: number }; message_id?: number } };
   }>(request);
   if (!update) return json({ ok: false, error: "invalid_json" }, 400);
+
+  const callback=update.callback_query;
+  if(callback?.id&&callback.from?.id){
+    const data=(callback.data??"").trim();
+    const chatId=callback.message?.chat?.id;
+    try{
+      if(/^vote:\d+:\d+$/.test(data)){const [,pollId,optionId]=data.split(":").map(Number);await voteInPoll(env.DB,pollId,optionId,callback.from.id);await telegramApi(getBotToken(env),"answerCallbackQuery",{callback_query_id:callback.id,text:"Vote recorded"});}
+      else if(/^rsvp:\d+$/.test(data)){const id=Number(data.split(":")[1]);const event=await env.DB.prepare("SELECT id FROM campus_events WHERE id=? AND status='published' AND starts_at>CURRENT_TIMESTAMP").bind(id).first();if(!event)throw new Error("event_not_found");await env.DB.prepare("INSERT INTO event_rsvps(event_id,telegram_user_id,interested) VALUES(?,?,1) ON CONFLICT(event_id,telegram_user_id) DO UPDATE SET interested=1").bind(id,String(callback.from.id)).run();await telegramApi(getBotToken(env),"answerCallbackQuery",{callback_query_id:callback.id,text:"RSVP saved"});}
+      else if(/^remind:\d+$/.test(data)){const id=Number(data.split(":")[1]);const event=await env.DB.prepare("SELECT id FROM campus_events WHERE id=? AND status='published' AND starts_at>CURRENT_TIMESTAMP").bind(id).first();if(!event)throw new Error("event_not_found");await env.DB.prepare("INSERT INTO event_reminders(event_id,telegram_user_id,enabled,sent_at) VALUES(?,?,1,NULL) ON CONFLICT(event_id,telegram_user_id) DO UPDATE SET enabled=1,sent_at=NULL").bind(id,String(callback.from.id)).run();await telegramApi(getBotToken(env),"answerCallbackQuery",{callback_query_id:callback.id,text:"Reminder enabled"});}
+      else if(data==="share:card"){const link=await telegramDeepLink(env,"me");if(chatId)await telegramApi(getBotToken(env),"sendMessage",{chat_id:chatId,text:"Your VGU Pulse card is ready.",reply_markup:{inline_keyboard:[[{text:"Open my card",url:link}]]}});await telegramApi(getBotToken(env),"answerCallbackQuery",{callback_query_id:callback.id,text:"Card ready"});}
+      else await telegramApi(getBotToken(env),"answerCallbackQuery",{callback_query_id:callback.id,text:"Action unavailable"});
+    }catch(error){await telegramApi(getBotToken(env),"answerCallbackQuery",{callback_query_id:callback.id,text:error instanceof Error&&error.message==="poll_closed"?"Poll closed":"Could not complete"});}
+    return json({ok:true});
+  }
 
   const message = update.message;
   const chatId = message?.chat?.id;
@@ -161,14 +206,7 @@ export default {
   async scheduled(controller: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
     try {
       const result = await runNotificationSweep(env.DB, env.SIGNAL_SERVICE, getBotToken(env), env.TELEGRAM_WEBAPP_URL);
-      const weeklyTime=new Date(controller.scheduledTime); const weeklyWindow=weeklyTime.getUTCDay()===1 && weeklyTime.getUTCHours()===4 && weeklyTime.getUTCMinutes()<15;
-      if(env.PULSE_CHANNEL_ID&&weeklyWindow){
-        const rows=await env.DB.prepare("SELECT i.id,i.title,(SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=1) upvotes,(SELECT COUNT(*) FROM community_replies r WHERE r.item_id=i.id AND r.status='published') replies,(SELECT COUNT(*) FROM community_votes v WHERE v.item_id=i.id AND v.vote=-1) downvotes FROM community_items i WHERE i.status='published' ORDER BY (upvotes+2*replies-downvotes) DESC,i.created_at DESC LIMIT 5").all<{id:number;title:string;upvotes:number;replies:number}>();
-        if(rows.results?.length){
-          const digest="VGU Pulse — weekly top threads\\n\\n"+rows.results.map((x,i)=>(i+1)+". "+x.title+" ("+x.upvotes+" helpful, "+x.replies+" replies)").join("\\n");
-          await sendMessage(getBotToken(env),Number(env.PULSE_CHANNEL_ID),digest,env.TELEGRAM_WEBAPP_URL);
-        }
-      }
+      if(env.PULSE_CHANNEL_ID&&getBotToken(env))await publishNextChannelCard(env);
       const reminderRows=await env.DB.prepare("SELECT er.event_id,er.telegram_user_id,e.title,e.starts_at,e.location FROM event_reminders er JOIN campus_events e ON e.id=er.event_id WHERE er.enabled=1 AND er.sent_at IS NULL AND e.status='published' AND e.starts_at>CURRENT_TIMESTAMP AND e.starts_at<=datetime('now','+60 minutes') ORDER BY e.starts_at LIMIT 18").all<{event_id:number;telegram_user_id:string;title:string;starts_at:string;location:string|null}>();
       const reminderUpdates:D1PreparedStatement[]=[];
       for(const r of reminderRows.results??[]){
@@ -215,18 +253,9 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/api/share-link") {
-      const target = (url.searchParams.get("target") ?? "home").trim().replace(/[^a-zA-Z0-9:_-]/g, "").slice(0, 64) || "home";
-      const token = getBotToken(env);
-      if (!token) return json({ ok: false, error: "bot_not_configured" }, 503);
-      try {
-        if(cachedBotUsername && cachedBotUsername.expiresAt>Date.now()) return json({ok:true,url:`https://t.me/${cachedBotUsername.value}?startapp=${encodeURIComponent(target)}`});
-        const response = await fetch(`https://api.telegram.org/bot${token}/getMe`);
-        const payload = await response.json() as { ok?: boolean; result?: { username?: string } };
-        const username = payload.result?.username;
-        if (!response.ok || !payload.ok || !username) return json({ ok: false, error: "bot_username_unavailable" }, 503);
-        cachedBotUsername={value:username,expiresAt:Date.now()+3600000};
-        return json({ ok: true, url: `https://t.me/${username}?startapp=${encodeURIComponent(target)}` });
-      } catch { return json({ ok: false, error: "share_link_unavailable" }, 503); }
+      const target=(url.searchParams.get("target")??"home").trim();
+      if(!DEEP_LINK_RE.test(target))return json({ok:false,error:"invalid_target"},400);
+      try{return json({ok:true,url:await telegramDeepLink(env,target)})}catch{return json({ok:false,error:"share_link_unavailable"},503)}
     }
 
     if (request.method === "POST" && url.pathname === "/telegram/webhook") {
