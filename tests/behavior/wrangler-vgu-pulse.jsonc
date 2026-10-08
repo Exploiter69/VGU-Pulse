@@ -1,0 +1,19 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "vgu-pulse",
+  "main": "../../src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "../../web" },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "vgu-pulse-behavior",
+    "database_id": "local-behavior-db",
+    "migrations_dir": "../../migrations"
+  }],
+  "services": [{ "binding": "SIGNAL_SERVICE", "service": "signal-mock" }],
+  "vars": {
+    "APP_NAME": "VGU Pulse",
+    "ANON_ALIAS_SECRET": "gate-2-anon-secret",
+    "ADMIN_IDS": "9009"
+  }
+}
