@@ -192,7 +192,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
     const env=await worker.getEnv() as {DB:D1Database};
     await env.DB.batch(Array.from({length:40},(_,i)=>env.DB.prepare("INSERT INTO community_items(telegram_user_id,kind,title,body,community_slug,status) VALUES(?,?,?,?,?,?)").bind("2002","discussion","Feed item "+i,"body","campus","published")));
     const counter={value:0};
-    const rows=await listItems(env.DB,1001,new URLSearchParams({sort:"new",limit:"40"}), "gate-2-anon-secret", counter);
+    const rows=await listItems(env.DB,1001,new URLSearchParams({sort:"new",limit:"40"}), "gate-2-anon-secret", false, counter);
     expect(rows.length).toBe(40);
     expect(counter.value).toBe(2);
   });
