@@ -109,7 +109,7 @@ async function handleTelegramUpdate(request: Request, env: Env): Promise<Respons
   }
 
   const update = await readJson<{
-    message?: { chat?: { id?: number }; text?: string; caption?: string; document?: { file_id?: string; file_unique_id?: string; file_name?: string; mime_type?: string; file_size?: number } };
+    message?: { from?: { id?: number }; chat?: { id?: number }; text?: string; caption?: string; document?: { file_id?: string; file_unique_id?: string; file_name?: string; mime_type?: string; file_size?: number } };
   }>(request);
   if (!update) return json({ ok: false, error: "invalid_json" }, 400);
 
@@ -118,7 +118,7 @@ async function handleTelegramUpdate(request: Request, env: Env): Promise<Respons
   if (!chatId) return json({ ok: true });
 
   const text = (message.text ?? "").trim();
-  const senderId=chatId;
+  const senderId=message.from?.id ?? chatId;
   if(message.document && (message.caption??"").trim().startsWith("/resource")){
     const d=message.document;
     if(!d.file_id||!d.file_name)return json({ok:true});
