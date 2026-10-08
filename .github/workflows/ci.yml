@@ -2,11 +2,11 @@ name: Pulse CI
 
 on:
   push:
-    branches: [main, hardening/gate-0]
+    branches: [main]
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verify:
@@ -19,16 +19,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Detect lockfile
-        id: lockfile
-        run: |
-          if [ -f package-lock.json ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
       - name: Install
-        run: npm install
+        run: npm ci
       - name: Typecheck
         run: npm run check
       - name: Worker dry run
@@ -62,11 +54,3 @@ jobs:
         run: npm test
       - name: Behavior tests
         run: npx vitest run tests/behavior
-      - name: Bootstrap committed lockfile
-        if: ${{ steps.lockfile.outputs.present == 'false' }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git commit -m "chore: add npm lockfile"
-          git push origin "HEAD:${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
