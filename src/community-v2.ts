@@ -46,6 +46,8 @@ function json(data: unknown, status = 200): Response {
 }
 
 async function body<T>(request: Request): Promise<T | null> {
+  const length=Number(request.headers.get("content-length")??"0");
+  if(Number.isFinite(length)&&length>32768)return null;
   try {
     const value = await request.json() as T;
     return value && typeof value === "object" ? value : null;
@@ -537,6 +539,8 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     return json({ok:false,error:"not_found"},404);
   }catch(error){
     const message=error instanceof Error?error.message:"unknown";
+    const requestId=crypto.randomUUID();
+    console.error(JSON.stringify({event:"community_v2_error",request_id:requestId,error:message}));
     const status=message==="rate_limited"?429:message==="unsafe_content"?422:message==="forbidden"?403:message==="item_not_found"||message==="reply_not_found"?404:message==="invalid_item"||message==="invalid_reply"||message==="invalid_vote"||message==="invalid_poll"||message==="invalid_option"||message==="cannot_report_own_item"||message==="cannot_report_own_reply"?400:500;
     return json({ok:false,error:message},status);
   }
