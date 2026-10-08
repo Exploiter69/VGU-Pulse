@@ -149,5 +149,18 @@ describe("VGU-Pulse real D1 behavior harness", () => {
         { id: 2, author: "Viewer Student", mine: 1 },
       ],
     });
+
+    const env = (await worker.getEnv()) as { DB: D1Database };
+    await env.DB.prepare("UPDATE community_items SET status='hidden' WHERE id=1").run();
+
+    const hiddenResponse = await worker.fetch(
+      "https://example.test/api/community-v2/replies?item_id=1",
+      { headers: { "x-telegram-init-data": initData } },
+    );
+    expect(hiddenResponse.status).toBe(404);
+    await expect(hiddenResponse.json()).resolves.toMatchObject({
+      ok: false,
+      error: "item_not_found",
+    });
   });
 });
