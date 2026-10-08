@@ -21,6 +21,8 @@ const KINDS = new Set<CommunityKind>([
 
 const DAILY_REPUTATION_CAP = 25;
 
+function communitySlug(value: unknown): string { return typeof value === "string" ? value.trim().toLowerCase().replace(/[^a-z0-9_-]+/g,"-").replace(/^-+|-+$/g,"").slice(0,60) : ""; }
+
 const LIMITS: Record<string, number> = {
   title: 180,
   body: 4000,
