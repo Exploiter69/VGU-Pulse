@@ -143,6 +143,13 @@ describe("VGU-Pulse real D1 behavior",()=>{
     expect(payload.item.audience_year).toBeNull();
   });
 
+  it("rejects oversized V2 request bodies",async()=>{
+    const user={id:1001,first_name:"Viewer"};
+    const huge="x".repeat(40000);
+    const response=await request("/api/community-v2/preferences",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({community_activity:true,payload:huge})});
+    expect(response.status).toBe(400);
+  });
+
   it("strictly merges notification preferences",async()=>{
     const user={id:1001,first_name:"Viewer"};
     const set=async(body:Record<string,unknown>)=>request("/api/community-v2/preferences",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
