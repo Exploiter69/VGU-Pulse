@@ -625,6 +625,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       if(owner.telegram_user_id===String(user.id))return json({ok:false,error:"cannot_report_own_item"},400);
       const result=await env.DB.prepare("INSERT OR IGNORE INTO community_reports(item_id,telegram_user_id,reason) VALUES(?,?,?)").bind(id,String(user.id),reason).run();
       if(Number(result.meta.changes??0)){
+        await env.DB.prepare("INSERT INTO moderation_report_history(reporter_telegram_user_id,target_type,target_id,reason) VALUES(?,?,?,?)").bind(String(user.id),"item",String(id),reason).run();
         const reporters=await env.DB.prepare("SELECT COUNT(*) count,COALESCE(SUM(COALESCE(w.weight,1)),0) weight FROM community_reports r LEFT JOIN moderation_report_weights w ON w.telegram_user_id=r.telegram_user_id WHERE r.item_id=?").bind(id).first<{count:number;weight:number}>();
         await env.DB.prepare("UPDATE community_items SET report_count=? ,status=CASE WHEN ? >= 3 AND ? >= 3 THEN 'review' ELSE status END WHERE id=?").bind(Number(reporters?.count??0),Number(reporters?.count??0),Number(reporters?.weight??0),id).run();
       }
@@ -640,6 +641,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       if(Number(recent?.count??0)>=10)return json({ok:false,error:"rate_limited"},429);
       const result=await env.DB.prepare("INSERT OR IGNORE INTO community_reply_reports(reply_id,telegram_user_id) VALUES(?,?)").bind(id,String(user.id)).run();
       if(Number(result.meta.changes??0)){
+        await env.DB.prepare("INSERT INTO moderation_report_history(reporter_telegram_user_id,target_type,target_id,reason) VALUES(?,?,?,?)").bind(String(user.id),"reply",String(id),"other").run();
         const reporters=await env.DB.prepare("SELECT COUNT(*) count,COALESCE(SUM(COALESCE(w.weight,1)),0) weight FROM community_reply_reports r LEFT JOIN moderation_report_weights w ON w.telegram_user_id=r.telegram_user_id WHERE r.reply_id=?").bind(id).first<{count:number;weight:number}>();
         await env.DB.prepare("UPDATE community_replies SET report_count=? ,status=CASE WHEN ? >= 3 AND ? >= 3 THEN 'review' ELSE status END WHERE id=? AND status='published'").bind(Number(reporters?.count??0),Number(reporters?.count??0),Number(reporters?.weight??0),id).run();
       }
