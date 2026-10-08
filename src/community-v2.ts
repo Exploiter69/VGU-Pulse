@@ -317,6 +317,14 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       const id=Number(url.searchParams.get("item_id"));
       if(!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_item"},400);
       const viewerId=String(user.id);
+      const item=await env.DB.prepare(`SELECT i.telegram_user_id
+        FROM community_items i
+        WHERE i.id=? AND i.status='published'
+          AND NOT EXISTS (
+            SELECT 1 FROM student_profile_blocks b
+            WHERE b.blocker_telegram_user_id=? AND b.blocked_telegram_user_id=i.telegram_user_id
+          )`).bind(id,viewerId).first<{telegram_user_id:string}>();
+      if(!item)return json({ok:false,error:"item_not_found"},404);
       const rows=await env.DB.prepare(`SELECT r.id,r.body,r.anonymous,r.created_at,
         CASE WHEN r.anonymous=1 THEN 'Anonymous student' ELSE COALESCE(sp.display_name,'VGU student') END author,
         CASE WHEN r.telegram_user_id=? THEN 1 ELSE 0 END AS mine
