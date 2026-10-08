@@ -109,6 +109,9 @@ describe("final Student OS production contract", () => {
     expect(community).toContain('set("community","campus")');
     expect(community).toContain('SELECT slug FROM communities WHERE slug=? AND approved=1');
     expect(community).toContain('const community=approved?.slug || "campus"');
+    expect(community).toContain('stage:"personalized_notification_query",item_id:id');
+    expect(community).toContain('stage:"personalized_notification_query",item_id:id,error:');
+    expect(community).not.toContain('stage:"personalized_notification_query",error:error instanceof Error?error.message:"unknown"})); throw error;');
     expect(community).toContain("author_badge");
     expect(communityWebSource).toContain('data-sort="for_you"');
     expect(communityWebSource).toContain('data-sort="trending"');
