@@ -125,6 +125,7 @@ async function createItem(db: D1Database, user: CommunityUser, input: Record<str
   ).bind(String(user.id), kind, title, text, community, program, branch, year, anonymous ? 1 : 0).run();
 
   const id = Number(result.meta.last_row_id);
+  await db.prepare("INSERT OR IGNORE INTO community_follows(item_id,telegram_user_id) VALUES(?,?)").bind(id,String(user.id)).run();
   await award(db, user.id, 3, "created_item", `item:${id}`);
   await db.prepare(
     `INSERT OR IGNORE INTO student_notifications (telegram_user_id, kind, channel, title, body, reference_key)
