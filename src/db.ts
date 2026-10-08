@@ -797,7 +797,7 @@ export async function voteInPoll(
   optionId: number,
   telegramUserId: number,
 ): Promise<void> {
-  const poll = await db.prepare("SELECT id FROM polls WHERE id=? AND status='open'").bind(pollId).first();
+  const poll = await db.prepare("SELECT id FROM polls WHERE id=? AND status='open' AND (closes_at IS NULL OR closes_at>CURRENT_TIMESTAMP)").bind(pollId).first();
   if (!poll) throw new Error("poll_closed");
 
   const validOption = await db
