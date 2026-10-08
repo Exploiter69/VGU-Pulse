@@ -56,7 +56,7 @@ async function signInitData(user: Record<string, unknown>, authDate = Math.floor
 async function request(path:string, user:Record<string,unknown>, init:RequestInit={}) {
   const headers = new Headers(init.headers);
   headers.set("x-telegram-init-data", await signInitData(user));
-  return worker.fetch("https://example.test"+path,{...init,headers:Object.fromEntries(headers.entries())});
+  return worker.fetch(new Request("https://example.test"+path,{...init,headers:Object.fromEntries(headers.entries())}));
 }
 
 async function seed() {
