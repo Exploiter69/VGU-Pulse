@@ -213,7 +213,7 @@ async function getItem(db: D1Database, id: number, viewerId?: number, anonSecret
   return { ...publicRow, author: display, trust: "student-community" };
 }
 
-export async function listItems(db: D1Database, viewerId: number, params: URLSearchParams, anonSecret?:string, withExtra=false, metrics?:{value:number}): Promise<Record<string, unknown>[]> {
+export async function listItems(db: D1Database, viewerId: number, params: URLSearchParams, anonSecret?:string, queryCounter?:{value:number}): Promise<Record<string, unknown>[]> {
   const kind = params.get("kind") as CommunityKind | null;
   const sort = params.get("sort") || "new";
   const community = clamp(params.get("community"), LIMITS.community);
@@ -226,7 +226,7 @@ export async function listItems(db: D1Database, viewerId: number, params: URLSea
   const cursorRaw=params.get("cursor");
   let cursor:{created_at:string;id:number}|null=null;
   if(cursorRaw){try{const decoded=JSON.parse(atob(cursorRaw)); if(typeof decoded.created_at==="string"&&Number.isSafeInteger(decoded.id)&&decoded.id>0)cursor=decoded;}catch{throw new Error("invalid_cursor");}}
-  metrics && (metrics.value += 1);
+  queryCounter && (queryCounter.value += 1);
   const p = await profile(db, viewerId);
   const where = ["i.status='published'"];
   const solvedFilter=params.get("solved");
@@ -234,7 +234,8 @@ export async function listItems(db: D1Database, viewerId: number, params: URLSea
   if(solvedFilter==="unanswered")where.push("i.solved=0");
   const args: unknown[] = [];
   if (kind && KINDS.has(kind)) { where.push("i.kind=?"); args.push(kind); }
-  if (community) { where.push("i.community_slug=?"); args.push(community); }\n  if (branchFilter) { where.push("(i.audience_branch IS NULL OR i.audience_branch=?)"); args.push(branchFilter); }\n  if (yearFilter) { where.push("(i.audience_year IS NULL OR i.audience_year=?)"); args.push(yearFilter); }
+  if (community) { where.push("i.community_slug=?"); args.push(community); }
+  if (branchFilter) { where.push("(i.audience_branch IS NULL OR i.audience_branch=?)"); args.push(branchFilter); }\n  if (yearFilter) { where.push("(i.audience_year IS NULL OR i.audience_year=?)"); args.push(yearFilter); }
   if (search) { where.push("i.id IN (SELECT rowid FROM community_items_fts WHERE community_items_fts MATCH ?)"); args.push(search.replace(/[^a-zA-Z0-9 ]/g," ").trim()+"*"); }
   if (params.get("saved") === "1") {
     where.push("EXISTS (SELECT 1 FROM community_saves sx WHERE sx.item_id=i.id AND sx.telegram_user_id=?)");
