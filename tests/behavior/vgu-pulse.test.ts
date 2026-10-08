@@ -55,6 +55,10 @@ async function seed() {
   await env.DB.batch([
     env.DB.prepare("INSERT INTO users (telegram_user_id, first_name) VALUES (?, ?)").bind("1001","Viewer"),
     env.DB.prepare("INSERT INTO users (telegram_user_id, first_name) VALUES (?, ?)").bind("2002","Author"),
+    env.DB.prepare("INSERT INTO users (telegram_user_id, first_name) VALUES (?, ?)").bind("3003","Student 3"),
+    env.DB.prepare("INSERT INTO users (telegram_user_id, first_name) VALUES (?, ?)").bind("4004","Student 4"),
+    env.DB.prepare("INSERT INTO users (telegram_user_id, first_name) VALUES (?, ?)").bind("5005","Student 5"),
+    env.DB.prepare("INSERT INTO users (telegram_user_id, first_name) VALUES (?, ?)").bind("6006","Student 6"),
     env.DB.prepare("INSERT INTO student_profiles (public_id,telegram_user_id,display_name,program,branch,year,bio,looking_for) VALUES (?,?,?,?,?,?,?,?)").bind("viewer-1001","1001","Viewer Student","B.Tech","CSE",2,"",""),
     env.DB.prepare("INSERT INTO student_profiles (public_id,telegram_user_id,display_name,program,branch,year,bio,looking_for) VALUES (?,?,?,?,?,?,?,?)").bind("author-2002","2002","Author Student","B.Tech","CSE",2,"",""),
     env.DB.prepare("INSERT INTO community_items (telegram_user_id,kind,title,body,community_slug,status) VALUES (?,?,?,?,?,?)").bind("2002","discussion","Replies bind test","test item","campus","published"),
@@ -236,7 +240,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
     const events=await request("/api/v4/events",user);expect(events.status).toBe(200);
     const createdEvent=await request("/api/v4/event",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({title:"Student event",starts_at:"2026-12-05T15:00:00Z"})});expect(createdEvent.status).toBe(201);
     const pastListing=await request("/api/v4/listing",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"ride",title:"Past ride",body:"No longer needed",expires_at:"2020-01-01T00:00:00Z"})});expect(pastListing.status).toBe(400);
-    for(let n=0;n<5;n++){const review=await request("/api/v4/teacher-review",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({teacher:"Professor Y",elective:"DBMS",teaching:5,workload:3,support:4})});if(n===0)expect(review.status).toBe(201);}
+    for(const reviewer of [{id:1001},{id:3003},{id:4004},{id:5005},{id:6006}]){const review=await request("/api/v4/teacher-review",reviewer as Record<string,unknown>,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({teacher:"Professor Y",elective:"DBMS",teaching:5,workload:3,support:4})});expect(review.status).toBe(201);}
 
   });
 });
