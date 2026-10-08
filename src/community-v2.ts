@@ -135,7 +135,7 @@ async function createItem(db: D1Database, user: CommunityUser, input: Record<str
   const id = Number(result.meta.last_row_id);
   await db.prepare("INSERT OR IGNORE INTO community_follows(item_id,telegram_user_id) VALUES(?,?)").bind(id,String(user.id)).run();
   await award(db, user.id, 3, "created_item", `item:${id}`);
-  await db.prepare(
+  try { await db.prepare(
     `INSERT OR IGNORE INTO student_notifications (telegram_user_id, kind, channel, title, body, reference_key)
      SELECT p.telegram_user_id, 'community', 'personalized', 'New discussion for your community',
        ?, ?
@@ -156,7 +156,7 @@ async function createItem(db: D1Database, user: CommunityUser, input: Record<str
     program, program,
     branch, branch,
     year, year,
-  ).run();
+  ).run()); } catch (error) { console.error(JSON.stringify({event:"community_v2_stage",stage:"personalized_notification_query",error:error instanceof Error?error.message:"unknown"})); throw error; }
   return { ...(await getItem(db, id, user.id))!, support: support.support, support_resources: support.support ? SUPPORT_RESOURCES.india : [] };
 }
 
