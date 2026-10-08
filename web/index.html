@@ -1095,7 +1095,8 @@ communityScript.onload=()=>window.__pulseBoot?.();
 communityScript.onerror=()=>window.__pulseBoot?.();
 document.body.append(communityScript);
 </script>
-</body></htmlasync function loadV4Extras(){
+</body></htmlfunction escapeHtml(value){return String(value??"").replace(/[&<>"\']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","\'":"&#39;"}[ch]));}
+async function loadV4Extras(){
  const box=document.getElementById("v4-extras");if(!box||!initData)return;
  const h={"x-telegram-init-data":initData};
  try{
