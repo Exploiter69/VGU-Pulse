@@ -252,7 +252,7 @@ export async function listItems(db: D1Database, viewerId: number, params: URLSea
     args.push(p.year);
   }
   const order = forYou && p
-    ? "(CASE WHEN i.audience_branch=? THEN 45 ELSE 0 END
+    ? `(CASE WHEN i.audience_branch=? THEN 45 ELSE 0 END
        + CASE WHEN i.audience_year=? THEN 25 ELSE 0 END
        + CASE WHEN i.kind='discussion' AND i.solved=0
            AND NOT EXISTS (SELECT 1 FROM community_replies qr WHERE qr.item_id=i.id AND qr.status='published')
