@@ -59,7 +59,7 @@ function unsafeText(value: string): { threat: boolean; credential: boolean; supp
   const s = value.toLowerCase();
   return {
     threat: /\b(?:kill|murder)\s+(?:you|him|her|them)\b/.test(s),
-    credential: /\b(?:otp|one[- ]time password|password|cvv|card number)\b.{0,40}\d{4,}/.test(s),
+    credential: /\b(?:otp|one[- ]time password|password|cvv|card number|login credentials|verification code)\b/.test(s),
     support: /\b(?:suicide|self[- ]?harm|kill myself|end my life)\b/.test(s),
   };
 }
