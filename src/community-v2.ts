@@ -263,7 +263,7 @@ export async function listItems(db: D1Database, viewerId: number, params: URLSea
         AND NOT EXISTS (SELECT 1 FROM student_profile_blocks b WHERE b.blocker_telegram_user_id=? AND b.blocked_telegram_user_id=i.telegram_user_id)
       ORDER BY ${order} LIMIT ?`;
   metrics && (metrics.value += 1);
-  const result = await db.prepare(sql).bind(String(viewerId),String(viewerId),String(viewerId),String(viewerId),String(viewerId),String(viewerId),...args,String(viewerId),limit+1).all<Record<string, unknown>>();
+  const result = await db.prepare(sql).bind(String(viewerId),String(viewerId),String(viewerId),String(viewerId),String(viewerId),...args,String(viewerId),limit+1).all<Record<string, unknown>>();
   const rows = (result.results ?? []).slice(0,withExtra?limit+1:limit);
   return Promise.all(rows.map(async row => {
     const author = Number(row.anonymous) ? await anonymousAlias(anonSecret,Number(row.telegram_user_id),Number(row.id)) : ((row as any).display_name || "VGU student");
