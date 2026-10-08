@@ -226,7 +226,7 @@
       $("#cv2-current-community").textContent=community==="campus"?"VGU campus":community;
       try{
         const data=await api("/api/community-v2/communities");
-        const names=["campus",contextCommunity,...(data.communities||[]).map(x=>x.community_slug)].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).slice(0,16);
+        const names=["campus",contextCommunity,...(data.communities||[]).map(x=>x.slug)].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).slice(0,16);
         $("#cv2-communities").innerHTML=names.map(n=>`<button type="button" class="cv2-community-chip" data-community="${esc(n)}">${esc(n)}</button>`).join("");const list=$("#cv2-community-options");if(list)list.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join("");
       }catch{
         $("#cv2-communities").innerHTML='<span class="cv2-note">Communities will appear when student activity is available.</span>';
