@@ -266,12 +266,12 @@ export async function createStudentPost(
   const post = await db
     .prepare(
       `SELECT p.id, p.category, p.title, p.body,
-              COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
+              COALESCE(NULLIF(TRIM(sp.display_name), ''), 'VGU student') AS author_name,
               p.created_at, p.report_count,
               (SELECT COUNT(*) FROM student_post_replies r WHERE r.post_id = p.id AND r.status = 'published' AND r.report_count < 3) AS reply_count,
               CASE WHEN ? IS NOT NULL AND p.telegram_user_id = ? THEN 1 ELSE 0 END AS owned
        FROM student_posts p
-       JOIN users u ON u.telegram_user_id = p.telegram_user_id
+       LEFT JOIN student_profiles sp ON sp.telegram_user_id = p.telegram_user_id
        WHERE p.id = ?`,
     )
     .bind(String(userId), String(userId), result.meta.last_row_id)
@@ -395,14 +395,14 @@ export async function getStudentPostById(db:D1Database,postId:number,userId?:num
   const viewer=userId===undefined?null:String(userId);
   const row=await db.prepare(
     `SELECT p.id,p.category,p.title,p.body,
-      COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name,'')),''),'VGU student') AS author_name,
+      COALESCE(NULLIF(TRIM(sp.display_name),''),'VGU student') AS author_name,
       p.created_at,p.report_count,
       (SELECT COUNT(*) FROM student_post_replies r WHERE r.post_id=p.id AND r.status='published' AND r.report_count<3) AS reply_count,
       (SELECT COUNT(*) FROM student_post_votes v WHERE v.post_id=p.id AND v.vote=1) AS upvotes,
       (SELECT COUNT(*) FROM student_post_votes v WHERE v.post_id=p.id AND v.vote=-1) AS downvotes,
       (SELECT COALESCE(v.vote,0) FROM student_post_votes v WHERE v.post_id=p.id AND v.telegram_user_id=?) AS viewer_vote,
       CASE WHEN ? IS NOT NULL AND p.telegram_user_id=? THEN 1 ELSE 0 END AS owned
-     FROM student_posts p JOIN users u ON u.telegram_user_id=p.telegram_user_id
+     FROM student_posts p LEFT JOIN student_profiles sp ON sp.telegram_user_id=p.telegram_user_id
      WHERE p.id=? AND p.status='published' AND p.report_count<3`
   ).bind(viewer,viewer,viewer,postId).first<StudentPost>();
   if(!row)return null;
@@ -413,13 +413,13 @@ export async function getStudentReplyById(db:D1Database,replyId:number,userId?:n
   const viewer=userId===undefined?null:String(userId);
   const row=await db.prepare(
     `SELECT r.id,r.post_id,r.body,
-      COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name,'')),''),'VGU student') AS author_name,
+      COALESCE(NULLIF(TRIM(sp.display_name),''),'VGU student') AS author_name,
       r.created_at,r.report_count,
       (SELECT COUNT(*) FROM student_post_reply_votes v WHERE v.reply_id=r.id AND v.vote=1) AS upvotes,
       (SELECT COUNT(*) FROM student_post_reply_votes v WHERE v.reply_id=r.id AND v.vote=-1) AS downvotes,
       (SELECT COALESCE(v.vote,0) FROM student_post_reply_votes v WHERE v.reply_id=r.id AND v.telegram_user_id=?) AS viewer_vote,
       CASE WHEN ? IS NOT NULL AND r.telegram_user_id=? THEN 1 ELSE 0 END AS owned
-     FROM student_post_replies r LEFT JOIN users u ON u.telegram_user_id=r.telegram_user_id
+     FROM student_post_replies r LEFT JOIN student_profiles sp ON sp.telegram_user_id=r.telegram_user_id
      WHERE r.id=? AND r.status='published' AND r.report_count<3`
   ).bind(viewer,viewer,viewer,replyId).first<StudentReply>();
   if(!row)return null;
