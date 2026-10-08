@@ -243,7 +243,7 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
   const args: unknown[] = [];
   if (kind && KINDS.has(kind)) { where.push("i.kind=?"); args.push(kind); }
   if (community) { where.push("i.community_slug=?"); args.push(community); }
-  if (search) { where.push("(i.title LIKE ? OR i.body LIKE ?)"); args.push(`%${search}%`, `%${search}%`); }
+  if (search) { where.push("i.id IN (SELECT rowid FROM community_items_fts WHERE community_items_fts MATCH ?)"); args.push(search.replace(/[^a-zA-Z0-9 ]/g," ").trim()+"*"); }
   if (params.get("saved") === "1") {
     where.push("EXISTS (SELECT 1 FROM community_saves sx WHERE sx.item_id=i.id AND sx.telegram_user_id=?)");
     args.push(String(viewerId));
