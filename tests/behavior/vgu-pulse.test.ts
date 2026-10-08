@@ -151,6 +151,30 @@ describe("VGU-Pulse real D1 behavior",()=>{
     expect(response.status).toBe(400);
   });
 
+  it("returns viewer poll choice and rejects closed polls",async()=>{
+    const user={id:1001,first_name:"Viewer"};
+    await request("/api/community-v2/rules/ack",user,{method:"POST",body:"{}"});
+    const created=await request("/api/community-v2/polls",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"discussion",title:"Poll test",body:"Choose one",community_slug:"campus",options:["A","B"]})});
+    expect(created.status).toBe(201);
+    const createdData=await created.json() as {item:{id:number}};
+    const pollId=createdData.item.id;
+    const vote=await request("/api/community-v2/poll-vote",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({item_id:pollId,option_id:3})});
+    expect(vote.status).toBe(400);
+    const options=await worker.getEnv().then(async e=>e.DB.prepare("SELECT id FROM community_poll_options WHERE item_id=? ORDER BY id").bind(pollId).all<{id:number}>());
+    const optionId=options.results[0].id;
+    expect((await request("/api/community-v2/poll-vote",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({item_id:pollId,option_id:optionId})})).status).toBe(200);
+    const poll=await request("/api/community-v2/poll?item_id="+pollId,user);
+    expect(poll.status).toBe(200);
+    await expect(poll.json()).resolves.toMatchObject({selected_option_id:optionId});
+    const home=await request("/api/home",user);
+    expect(home.status).toBe(200);
+    const homeData=await home.json() as any;
+    expect(homeData.poll?.selected_option_id).toBe(optionId);
+    const env=await worker.getEnv() as {DB:D1Database};
+    await env.DB.prepare("UPDATE community_items SET poll_status='closed',poll_closes_at=CURRENT_TIMESTAMP WHERE id=?").bind(pollId).run();
+    expect((await request("/api/community-v2/poll-vote",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({item_id:pollId,option_id:optionId})})).status).toBe(400);
+  });
+
   it("strictly merges notification preferences",async()=>{
     const user={id:1001,first_name:"Viewer"};
     const set=async(body:Record<string,unknown>)=>request("/api/community-v2/preferences",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
