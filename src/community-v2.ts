@@ -127,7 +127,7 @@ async function refreshBadges(db: D1Database, userId: number, points: number): Pr
   }
 }
 
-async function createItem(db: D1Database, user: CommunityUser, input: Record<string, unknown>): Promise<Record<string, unknown>> {
+async function createItem(db: D1Database, user: CommunityUser, input: Record<string, unknown>, anonAliasSecret?:string): Promise<Record<string, unknown>> {
   const kind = clamp(input.kind, 30) as CommunityKind;
   const title = clamp(input.title, LIMITS.title);
   const text = clamp(input.body, LIMITS.body);
@@ -138,9 +138,9 @@ async function createItem(db: D1Database, user: CommunityUser, input: Record<str
   const p = await profile(db, user.id);
   const anonymous = kind === "confession" || Boolean(input.anonymous);
   const community = communitySlug(input.community_slug) || "campus";
-  const program = clamp(input.audience_program, 80) || p?.program || null;
-  const branch = clamp(input.audience_branch, 80) || p?.branch || null;
-  const yearValue = Number(input.audience_year ?? p?.year ?? 0);
+  const program = anonymous ? null : (clamp(input.audience_program, 80) || p?.program || null);
+  const branch = anonymous ? null : (clamp(input.audience_branch, 80) || p?.branch || null);
+  const yearValue = anonymous ? 0 : Number(input.audience_year ?? p?.year ?? 0);
   const year = Number.isInteger(yearValue) && yearValue >= 1 && yearValue <= 6 ? yearValue : null;
 
   const result = await db.prepare(
@@ -278,7 +278,7 @@ async function listItems(db: D1Database, viewerId: number, params: URLSearchPara
   });
 }
 
-async function reply(db: D1Database, user: CommunityUser, itemId: number, text: string, anonymous: boolean): Promise<Record<string, unknown>> {
+async function reply(db: D1Database, user: CommunityUser, itemId: number, text: string, anonymous: boolean, anonAliasSecret?:string): Promise<Record<string, unknown>> {
   const clean = clamp(text, LIMITS.body);
   if (clean.length < 2) throw new Error("invalid_reply");
   const support = requireSafeContent(clean);
@@ -340,7 +340,7 @@ async function poll(db:D1Database,user:CommunityUser,input:Record<string,unknown
   if(title.length<4||raw.length<2||raw.length>6) throw new Error("invalid_poll");
   requireSafeContent(title+" "+text);
   if(await rateLimited(db,user.id,"community_items",1,20)) throw new Error("rate_limited");
-  const item=await createItem(db,user,{...input,kind:"discussion",title,body:text});
+  const item=await createItem(db,user,{...input,kind:"discussion",title,body:text},anonAliasSecret);
   const statements=[db.prepare("DELETE FROM community_poll_options WHERE item_id=?").bind(item.id)];
   for(const label of raw) statements.push(db.prepare("INSERT INTO community_poll_options(item_id,label) VALUES(?,?)").bind(item.id,label));
   await db.batch(statements);
