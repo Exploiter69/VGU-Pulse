@@ -136,7 +136,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
     expect(second.status).toBe(428);
     await request("/api/community-v2/anonymous-notice",user,{method:"POST",body:"{}"});
     const third=await request("/api/community-v2/items",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"confession",title:"Anonymous post",body:"hello"})});
-    if(third.status===500) console.log("ANON_LOGS",JSON.stringify(server.getLogs()));
+    if(third.status!==201) console.log("ANON_FAILURE",third.status,await third.clone().text(),JSON.stringify(server.getLogs()));
     expect(third.status).toBe(201);
     const payload=await third.json() as any;
     expect(payload.item.author).toMatch(/^Anon-\d+$/);
@@ -189,6 +189,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
     expect(campus.status).toBe(201);
     const feed=await request("/api/community-v2/feed?limit=1",user);
     const payload=await feed.json() as any;
+    if(!payload.next_cursor) console.log("CURSOR_FAILURE",JSON.stringify(payload));
     expect(payload.next_cursor).toMatch(/.+/);
     const next=await request("/api/community-v2/feed?limit=1&cursor="+encodeURIComponent(payload.next_cursor),user);
     expect(next.status).toBe(200);
