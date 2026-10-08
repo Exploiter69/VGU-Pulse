@@ -207,7 +207,7 @@
               ${item.mine?'<button type="button" class="cv2-tool" data-action="edit">Edit</button><button type="button" class="cv2-tool" data-action="delete">Delete</button>':'<button type="button" class="cv2-tool" data-action="moderate">More</button>}
             </div>
             <div class="cv2-replies" hidden></div>
-          </article>`).join("");
+          </article>`}).join("");
         feed.insertAdjacentHTML("beforeend",html);
         feed.querySelector("#cv2-load-more-wrap")?.remove();
         feedCursor=data.next_cursor||null;
