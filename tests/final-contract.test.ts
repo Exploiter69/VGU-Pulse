@@ -92,7 +92,7 @@ describe("final Student OS production contract", () => {
   });
 
   it("keeps the Community runtime bundle cache-busted with its interaction contracts", () => {
-    expect(webSource).toMatch(/community-v2\.js\?v=20261008-6/);
+    expect(webSource).toMatch(/community-v2\.js\?v=20261008-7/);
     expect(communityWebSource).toContain("const originalPostBodies=new Map()");
     expect(communityWebSource).toContain("originalPostBodies.set(String(item.id),String(item.body??\"\")");
     expect(communityWebSource).toContain("const original=originalPostBodies.get(String(id))");
@@ -107,6 +107,8 @@ describe("final Student OS production contract", () => {
     expect(community).toContain('rows.length < Math.min(6, limit)');
     expect(community).toContain('if (forYou && !p)');
     expect(community).toContain('set("community","campus")');
+    expect(community).toContain('SELECT slug FROM communities WHERE slug=? AND approved=1');
+    expect(community).toContain('const community=approved?.slug || "campus"');
     expect(community).toContain("author_badge");
     expect(communityWebSource).toContain('data-sort="for_you"');
     expect(communityWebSource).toContain('data-sort="trending"');
