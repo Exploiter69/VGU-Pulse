@@ -283,7 +283,6 @@ export async function createStudentPost(
 export async function deleteAllStudentData(db:D1Database,userId:number):Promise<void>{
   const id=String(userId);
   const statements=[
-    "DELETE FROM community_poll_votes WHERE telegram_user_id=?",
     "DELETE FROM community_reply_votes WHERE telegram_user_id=?",
     "DELETE FROM community_item_reads WHERE telegram_user_id=?",
     "DELETE FROM resource_reports WHERE telegram_user_id=?",
@@ -295,7 +294,6 @@ export async function deleteAllStudentData(db:D1Database,userId:number):Promise<
     "DELETE FROM campus_events WHERE created_by=?",
     "DELETE FROM teacher_reviews WHERE telegram_user_id=?",
     "DELETE FROM campus_questions WHERE created_by=?",
-    "DELETE FROM moderation_report_history WHERE reporter_telegram_user_id=?",
     "DELETE FROM community_poll_votes WHERE telegram_user_id=?",
 
     "DELETE FROM community_votes WHERE telegram_user_id=?",
