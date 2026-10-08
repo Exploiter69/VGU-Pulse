@@ -653,7 +653,8 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     const message=error instanceof Error?error.message:"unknown";
     const requestId=crypto.randomUUID();
     console.error(JSON.stringify({event:"community_v2_error",request_id:requestId,error:message}));
-    const publicErrors=new Set(["rate_limited","unsafe_content","forbidden","item_not_found","reply_not_found","invalid_item","invalid_reply","invalid_vote","invalid_poll","invalid_option","cannot_report_own_item","cannot_report_own_reply","invalid_community","poll_closed","invalid_preferences","invalid_cursor"]);\n    const status=message==="rate_limited"?429:message==="unsafe_content"?422:message==="forbidden"?403:message==="item_not_found"||message==="reply_not_found"?404:publicErrors.has(message)?400:500;
-    return json({ok:false,error:publicError.has(message)?message:"internal_error",request_id:requestId},status);
+    const publicErrors=new Set(["rate_limited","unsafe_content","forbidden","item_not_found","reply_not_found","invalid_item","invalid_reply","invalid_vote","invalid_poll","invalid_option","cannot_report_own_item","cannot_report_own_reply","invalid_community","poll_closed","invalid_preferences","invalid_cursor"]);
+    const status=message==="rate_limited"?429:message==="unsafe_content"?422:message==="forbidden"?403:message==="item_not_found"||message==="reply_not_found"?404:publicErrors.has(message)?400:500;
+    return json({ok:false,error:publicErrors.has(message)?message:"internal_error",request_id:requestId},status);
   }
 }
