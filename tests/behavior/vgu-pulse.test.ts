@@ -21,15 +21,7 @@ const server = createTestHarness({
         compatibility_date: "2026-10-01",
       },
     },
-    {
-      config: {
-        name: "migration-compat",
-        main: "src/index.ts",
-        compatibility_date: "2026-10-01",
-        d1_databases: [{ binding: "DB", database_name: "gate-2-compat", database_id: "gate-2-compat" }],
-        vars: { APP_NAME: "VGU Pulse" },
-      },
-      secrets: { BOT_TOKEN, ANON_ALIAS_SECRET: "gate-2-anon-secret" },
+    { configPath: "./tests/behavior/wrangler-compat.jsonc", secrets: { BOT_TOKEN, ANON_ALIAS_SECRET: "gate-2-anon-secret" } },
     },
   ],
 });
