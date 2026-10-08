@@ -22,3 +22,6 @@ The behavior suite covers fresh migration application, an existing-0009 upgrade 
 - Verify the real Telegram Mini App presentation on Desktop/mobile.
 - Verify the V1→V2 migration against a representative legacy export before any production data operation.
 - Do not remove V1 tables/endpoints until that migration is reviewed and validated.
+
+## Telegram framing
+The Mini App CSP intentionally does not use `frame-ancestors 'none'`; Telegram Mini App embedding is an explicit requirement. Keep framing policy reviewed together with Telegram Desktop/mobile behavior when changing CSP.
