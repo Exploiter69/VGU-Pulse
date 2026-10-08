@@ -92,6 +92,12 @@ export async function handleFeaturesV4(request:Request,env:Env,user:User):Promis
    const row=await env.DB.prepare("SELECT telegram_user_id FROM expiring_listings WHERE id=?").bind(id).first<{telegram_user_id:string}>();if(!row)return json({ok:false,error:"not_found"},404);if(row.telegram_user_id!==String(user.id)&&!admin(env,user.id))return json({ok:false,error:"forbidden"},403);
    await env.DB.prepare("UPDATE expiring_listings SET status='resolved',resolved_at=CURRENT_TIMESTAMP WHERE id=?").bind(id).run();return json({ok:true,resolved:true});
   }
+  if(request.method==="GET"&&u.pathname==="/api/v4/share-card"){
+   const points=await env.DB.prepare("SELECT points FROM community_reputation WHERE telegram_user_id=?").bind(String(user.id)).first<{points:number}>();
+   const posts=await env.DB.prepare("SELECT COUNT(*) count FROM community_items WHERE telegram_user_id=? AND status='published'").bind(String(user.id)).first<{count:number}>();
+   const replies=await env.DB.prepare("SELECT COUNT(*) count FROM community_replies WHERE telegram_user_id=? AND status='published'").bind(String(user.id)).first<{count:number}>();
+   return json({ok:true,card:{title:"VGU Pulse student card",points:Number(points?.points??0),posts:Number(posts?.count??0),replies:Number(replies?.count??0),trust:"student-community"}});
+  }
   if(request.method==="GET"&&u.pathname==="/api/v4/growth/top"){
    const rows=await env.DB.prepare("SELECT id,title,upvotes,replies,created_at FROM community_items WHERE status='published' ORDER BY (upvotes+2*replies-downvotes) DESC,created_at DESC LIMIT 5").all();return json({ok:true,items:rows.results??[],share_prefix:"vgu-pulse"});
   }
