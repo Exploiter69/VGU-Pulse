@@ -282,6 +282,21 @@ describe("VGU-Pulse real D1 behavior",()=>{
     expect(on.status).toBe(200);
   });
 
+  it("notifies a V2 post author when another student replies",async()=>{
+    const author={id:2002,first_name:"Author"};
+    const viewer={id:1001,first_name:"Viewer"};
+    await request("/api/community-v2/rules/ack",author,{method:"POST",body:"{}"});
+    const env=await worker.getEnv() as {DB:D1Database};
+    await env.DB.prepare("INSERT OR IGNORE INTO notification_preferences(telegram_user_id,community_replies,community_activity,personalized_alerts,official_updates) VALUES('2002',1,1,1,1)").run();
+    const created=await request("/api/community-v2/items",author,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"question",title:"Author notification test",body:"Need an answer",community_slug:"campus"})});
+    expect(created.status).toBe(201);
+    const createdData=await created.json() as {item:{id:number}};
+    const reply=await request("/api/community-v2/replies",viewer,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({item_id:createdData.item.id,body:"Here is an answer",anonymous:true})});
+    expect(reply.status).toBe(201);
+    const notification=await env.DB.prepare("SELECT channel,reference_key FROM student_notifications WHERE telegram_user_id='2002' AND reference_key LIKE 'v2-reply:%' ORDER BY id DESC LIMIT 1").first<{channel:string;reference_key:string}>();
+    expect(notification).toEqual(expect.objectContaining({channel:"community_activity"}));
+  });
+
   it("supports Q&A reply votes and solved state",async()=>{
     const viewer={id:1001,first_name:"Viewer"};
     const vote=await request("/api/community-v2/reply-vote",viewer,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({reply_id:1,vote:1})});
