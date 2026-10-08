@@ -140,3 +140,8 @@ Gamification is optional reinforcement, never the reason the product exists.
 6. Private data must remain private.
 7. No fake activity, fake users, or manufactured engagement.
 8. Do not build a feature merely because another social network has it.
+
+
+## Telegram growth layer
+
+Telegram is a discovery and action layer, not a replacement for the Mini App. Users can share exact Pulse destinations with bounded `startapp` targets, while the Channel surfaces only high-signal poll, event, mess and helpful-student moments. Inline Telegram actions are intentionally lightweight: vote, RSVP, remind and share-card. Student content remains explicitly student-reported; official VGU information retains its existing trust boundary.
