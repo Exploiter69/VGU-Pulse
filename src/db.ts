@@ -494,7 +494,7 @@ export async function listStudentReplies(
   const rows = await db
     .prepare(
       `SELECT r.id, r.post_id, r.body,
-              COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
+              COALESCE(NULLIF(TRIM(sp.display_name), ''), 'VGU student') AS author_name,
               r.created_at, r.report_count,
               (SELECT COUNT(*) FROM student_post_reply_votes v WHERE v.reply_id = r.id AND v.vote = 1) AS upvotes,
               (SELECT COUNT(*) FROM student_post_reply_votes v WHERE v.reply_id = r.id AND v.vote = -1) AS downvotes,
@@ -580,7 +580,7 @@ export async function createStudentReply(
               COALESCE(NULLIF(TRIM(u.first_name || ' ' || COALESCE(u.last_name, '')), ''), 'VGU student') AS author_name,
               r.created_at, r.report_count
        FROM student_post_replies r
-       JOIN users u ON u.telegram_user_id = r.telegram_user_id
+       LEFT JOIN student_profiles sp ON sp.telegram_user_id = r.telegram_user_id
        WHERE r.id = ?`,
     )
     .bind(result.meta.last_row_id)
