@@ -59,6 +59,8 @@ interface Env {
 function getBotToken(env: Env): string {
   return env.BOT_TOKEN ?? env.TELEGRAM_BOT_TOKEN ?? "";
 }
+function adminIds(raw?:string):Set<string>{return new Set((raw??"").split(",").map(x=>x.trim()).filter(Boolean));}
+function isAdmin(env:Env,userId:number):boolean{return adminIds(env.ADMIN_IDS).has(String(userId));}
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -209,6 +211,26 @@ export default {
       }
     }
 
+
+    if (request.method === "GET" && url.pathname === "/api/moderation/review") {
+      const init=await validateInitData(request.headers.get("x-telegram-init-data")??"",getBotToken(env));
+      if(!init||!isAdmin(env,init.user.id))return json({ok:false,error:"forbidden"},403);
+      const items=await env.DB.prepare("SELECT id,kind,title,body,telegram_user_id,report_count,created_at FROM community_items WHERE status='review' ORDER BY created_at ASC LIMIT 50").all();
+      const replies=await env.DB.prepare("SELECT id,item_id,body,telegram_user_id,report_count,created_at FROM community_replies WHERE status='review' ORDER BY created_at ASC LIMIT 50").all();
+      return json({ok:true,items:items.results??[],replies:replies.results??[]});
+    }
+    if (request.method === "POST" && url.pathname === "/api/moderation/action") {
+      const init=await validateInitData(request.headers.get("x-telegram-init-data")??"",getBotToken(env));
+      if(!init||!isAdmin(env,init.user.id))return json({ok:false,error:"forbidden"},403);
+      const b=await readJson<Record<string,unknown>>(request); if(!b)return json({ok:false,error:"invalid_json"},400);
+      const type=String(b.target_type??""); const action=String(b.action??""); const id=Number(b.target_id);
+      if(!["item","reply","user"].includes(type)||!["restore","hide","ban"].includes(action)||!Number.isSafeInteger(id)||id<1)return json({ok:false,error:"invalid_action"},400);
+      if(type==="item"&&(action==="restore"||action==="hide"))await env.DB.prepare("UPDATE community_items SET status=? WHERE id=?").bind(action==="restore"?"published":"hidden",id).run();
+      if(type==="reply"&&(action==="restore"||action==="hide"))await env.DB.prepare("UPDATE community_replies SET status=? WHERE id=?").bind(action==="restore"?"published":"hidden",id).run();
+      if(type==="user"&&action==="ban")await env.DB.prepare("INSERT INTO user_bans(telegram_user_id,reason,banned_by) VALUES(?,?,?) ON CONFLICT(telegram_user_id) DO UPDATE SET reason=excluded.reason,banned_by=excluded.banned_by,created_at=CURRENT_TIMESTAMP").bind(String(id),String(b.reason??"moderation"),String(init.user.id)).run();
+      await env.DB.prepare("INSERT INTO moderation_actions(admin_telegram_user_id,action,target_type,target_id,reason) VALUES(?,?,?,?,?)").bind(String(init.user.id),action,type,String(id),String(b.reason??"")).run();
+      return json({ok:true});
+    }
 
     if (request.method === "GET" && url.pathname === "/api/students") {
       try {
