@@ -22,7 +22,6 @@ const server = createTestHarness({
       },
     },
     { configPath: "./tests/behavior/wrangler-compat.jsonc", secrets: { BOT_TOKEN, ANON_ALIAS_SECRET: "gate-2-anon-secret" } },
-    },
   ],
 });
 
