@@ -170,6 +170,9 @@ export async function runNotificationSweep(db:D1Database,signalService:Fetcher,b
         parse_mode:"HTML",reply_markup,
       });
       if(response.status===429){
+        const payload=await response.clone().json().catch(()=>({})) as {parameters?:{retry_after?:number}};
+        const retryAfter=Number(payload.parameters?.retry_after??0);
+        await db.prepare("UPDATE student_notifications SET last_error=? WHERE id=?").bind(`telegram_429_retry_after:${retryAfter}`,notification.id).run();
         break;
       }
       if(response.status===403){
