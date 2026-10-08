@@ -339,7 +339,7 @@ async function vote(db: D1Database,userId:number,itemId:number,value:number): Pr
   }
 }
 
-async function poll(db:D1Database,user:CommunityUser,input:Record<string,unknown>):Promise<Record<string,unknown>>{
+async function poll(db:D1Database,user:CommunityUser,input:Record<string,unknown>,anonAliasSecret?:string):Promise<Record<string,unknown>>{
   const title=clamp(input.title,180), text=clamp(input.body,800);
   const raw=Array.isArray(input.options)?input.options.map(x=>clamp(x,100)).filter(Boolean).slice(0,6):[];
   if(title.length<4||raw.length<2||raw.length>6) throw new Error("invalid_poll");
@@ -533,7 +533,7 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
     }
     if(request.method==="POST" && url.pathname==="/api/community-v2/polls"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
-      const item=await poll(env.DB,user,input);
+      const item=await poll(env.DB,user,input,env.ANON_ALIAS_SECRET);
       return json({ok:true,item},201);
     }
     if(request.method==="POST" && url.pathname==="/api/community-v2/replies"){
