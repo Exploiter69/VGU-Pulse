@@ -11,6 +11,7 @@ const server = createTestHarness({
       secrets: {
         BOT_TOKEN: BOT_TOKEN,
         ANON_ALIAS_SECRET: "gate-2-anon-secret",
+        TELEGRAM_WEBHOOK_SECRET: "gate-webhook-secret",
       },
       bindingOverrides: { SIGNAL_SERVICE: "signal-mock" },
     },
@@ -223,6 +224,18 @@ describe("VGU-Pulse real D1 behavior",()=>{
       expect(rows.results.filter(x=>x.sent_at).map(x=>x.channel)).toEqual(expect.arrayContaining(["official","community_replies","community_activity"]));
       expect(rows.results.some(x=>x.channel==="personalized")).toBe(false);
     }finally{fetchMock.mockRestore();}
+  });
+
+  it("parses Telegram resource captions into moderated metadata",async()=>{
+    const env=await worker.getEnv() as {DB:D1Database};
+    const response=await worker.fetch("https://example.test/telegram/webhook",{
+      method:"POST",
+      headers:{"content-type":"application/json","x-telegram-bot-api-secret-token":"gate-webhook-secret"},
+      body:JSON.stringify({message:{from:{id:1001},chat:{id:1001},caption:"/resource type=PYQ subject=DBMS semester=5",document:{file_id:"file-123",file_unique_id:"unique-123",file_name:"DBMS PYQ.pdf",mime_type:"application/pdf",file_size:12345}}}),
+    });
+    expect(response.status).toBe(200);
+    const row=await env.DB.prepare("SELECT file_id,subject,semester,resource_type,status FROM resources WHERE file_id='file-123'").first<{file_id:string;subject:string;semester:string;resource_type:string;status:string}>();
+    expect(row).toEqual({file_id:"file-123",subject:"DBMS",semester:"5",resource_type:"PYQ",status:"pending"});
   });
 
   it("requires Telegram initData for student discovery",async()=>{
