@@ -132,9 +132,9 @@ export async function runNotificationSweep(db:D1Database,signalService:Fetcher,b
   const queued=await queueOfficialNotifications(db,signalService);
 
   await db.prepare(
-    `DELETE FROM student_notifications n
-     WHERE n.sent_at IS NULL AND n.failed_at IS NULL
-       AND NOT EXISTS (SELECT 1 FROM notification_preferences p WHERE p.telegram_user_id=n.telegram_user_id AND (
+    `DELETE FROM student_notifications
+     WHERE sent_at IS NULL AND failed_at IS NULL
+       AND NOT EXISTS (SELECT 1 FROM notification_preferences p WHERE p.telegram_user_id=student_notifications.telegram_user_id AND (
          (n.channel='official' AND ${preferenceSql("official")}) OR
          (n.channel='community_replies' AND ${preferenceSql("community_replies")}) OR
          (n.channel='community_activity' AND ${preferenceSql("community_activity")}) OR
