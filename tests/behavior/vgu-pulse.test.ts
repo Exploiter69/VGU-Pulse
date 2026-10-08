@@ -76,7 +76,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
   it("applies every migration to a fresh D1 database",async()=>{
     const env=await worker.getEnv() as {DB:D1Database};
     const rows=await env.DB.prepare("SELECT name FROM d1_migrations ORDER BY id").all<{name:string}>();
-    expect(rows.results.map(x=>x.name)).toEqual(expect.arrayContaining(["0001_initial.sql","0009_community_network.sql","0010_gate1_hardening.sql","0011_gate2_safety.sql","0012_gate3_foundations.sql","0013_gate3_qa.sql","0014_gate3_reliability.sql","0015_gate4_features.sql","0016_gate4_completion.sql","0017_gate3_academic_mapping.sql"]));
+    expect(rows.results.map(x=>x.name)).toEqual(expect.arrayContaining(["0001_initial.sql","0009_community_network.sql","0010_gate1_hardening.sql","0011_gate2_safety.sql","0012_gate3_foundations.sql","0013_gate3_qa.sql","0014_gate3_reliability.sql","0015_gate4_features.sql","0016_gate4_completion.sql","0017_gate3_academic_mapping.sql","0018_gate3_fts_backfill.sql"]));
   });
 
   it("reproduces the replies contract and hides non-published parents",async()=>{
@@ -164,6 +164,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
     await env.DB.prepare("INSERT INTO users (telegram_user_id,first_name) VALUES ('2002','Legacy target'),('3003','Legacy')").run();
     await env.DB.prepare("INSERT INTO student_profile_blocks(blocker_telegram_user_id,blocked_telegram_user_id) VALUES('3003','2002')").run();
     await env.DB.prepare("INSERT INTO student_profiles(public_id,telegram_user_id,display_name,program,branch,year,bio,looking_for) VALUES('legacy-3003','3003','Legacy Student','BTECH','CSE AI',2,'','')").run();
+    await env.DB.prepare("INSERT INTO community_items(telegram_user_id,kind,title,body,status) VALUES('3003','discussion','LegacySearchPost','migration content','published')").run();
     await server.update({workers:[
       {configPath:"./wrangler.jsonc",secrets:{BOT_TOKEN,ANON_ALIAS_SECRET:"gate-2-anon-secret",ADMIN_IDS:"9009"},bindingOverrides:{SIGNAL_SERVICE:"signal-mock"}},
       {config:{name:"signal-mock",main:"tests/behavior/signal-mock.ts",compatibility_date:"2026-10-01"}},
@@ -176,6 +177,8 @@ describe("VGU-Pulse real D1 behavior",()=>{
     expect(row?.source_item_id).toBeNull();
     const profile=await upgraded.DB.prepare("SELECT program,branch FROM student_profiles WHERE telegram_user_id='3003'").first<{program:string;branch:string}>();
     expect(profile).toEqual({program:"B.Tech",branch:"CSE — Artificial Intelligence"});
+    const search=await upgraded.DB.prepare("SELECT rowid FROM community_items_fts WHERE community_items_fts MATCH ?").bind("LegacySearchPost*").all();
+    expect(search.results.length).toBe(1);
   });
   it("enforces approved communities and cursor pagination",async()=>{
     const user={id:1001,first_name:"Viewer"};
