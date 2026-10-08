@@ -529,8 +529,8 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       return json({ok:true});
     }
     if(request.method==="GET" && url.pathname==="/api/community-v2/preferences"){
-      const row=await env.DB.prepare("SELECT community_activity,personalized_alerts FROM notification_preferences WHERE telegram_user_id=?").bind(String(user.id)).first<{community_activity:number;personalized_alerts:number}>();
-      return json({ok:true,preferences:{community_activity:Boolean(row?.community_activity),personalized_alerts:Boolean(row?.personalized_alerts)}});
+      const row=await env.DB.prepare("SELECT official_updates,community_replies,community_activity,personalized_alerts FROM notification_preferences WHERE telegram_user_id=?").bind(String(user.id)).first<{official_updates:number;community_replies:number;community_activity:number;personalized_alerts:number}>();
+      return json({ok:true,preferences:{official_updates:Boolean(row?.official_updates),community_replies:Boolean(row?.community_replies),community_activity:Boolean(row?.community_activity),personalized_alerts:Boolean(row?.personalized_alerts)}});
     }
     if(request.method==="POST" && url.pathname==="/api/community-v2/preferences"){
       const input=await body<Record<string,unknown>>(request); if(!input)return json({ok:false,error:"invalid_json"},400);
