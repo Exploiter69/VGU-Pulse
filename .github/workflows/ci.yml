@@ -52,3 +52,11 @@ jobs:
           NODE
       - name: Tests
         run: npm test
+      - name: Behavior tests
+        run: npx vitest run tests/behavior
+      - name: Capture generated lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-0-npm-lock
+          path: package-lock.json
+          if-no-files-found: error
