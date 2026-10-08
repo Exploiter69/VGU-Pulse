@@ -845,6 +845,8 @@ export default {
       const initData = request.headers.get("x-telegram-init-data") ?? "";
       const validated = getBotToken(env) ? await validateInitData(initData, getBotToken(env)) : null;
       if (validated) {
+        const banned=await env.DB.prepare("SELECT 1 FROM user_bans WHERE telegram_user_id=? AND (expires_at IS NULL OR expires_at>CURRENT_TIMESTAMP)").bind(String(validated.user.id)).first();
+        if(banned)return json({ok:false,error:"user_banned"},403);
         const communityResponse = await handleCommunityV2(request, env, validated.user);
         if (communityResponse) return communityResponse;
       } else if (url.pathname.startsWith("/api/community-v2")) {
