@@ -10,6 +10,7 @@ const server = createTestHarness({
       configPath: "./tests/behavior/wrangler-vgu-pulse.jsonc",
       secrets: {
         BOT_TOKEN: BOT_TOKEN,
+        ANON_ALIAS_SECRET: "gate-2-anon-secret",
       },
       bindingOverrides: { SIGNAL_SERVICE: "signal-mock" },
     },
@@ -170,11 +171,18 @@ describe("VGU-Pulse real D1 behavior",()=>{
     const poll=await request("/api/community-v2/poll?item_id="+pollId,user);
     expect(poll.status).toBe(200);
     await expect(poll.json()).resolves.toMatchObject({selected_option_id:optionId});
+    const env=await worker.getEnv() as {DB:D1Database};
+    await env.DB.batch([
+      env.DB.prepare("INSERT INTO polls(question,status) VALUES('Home poll','open')"),
+    ]);
+    const legacyPoll=await env.DB.prepare("SELECT id FROM polls ORDER BY id DESC LIMIT 1").first<{id:number}>();
+    await env.DB.prepare("INSERT INTO poll_options(poll_id,label,sort_order) VALUES(?,?,1)").bind(legacyPoll!.id,"Yes").run();
+    const legacyOption=await env.DB.prepare("SELECT id FROM poll_options WHERE poll_id=? ORDER BY id").bind(legacyPoll!.id).first<{id:number}>();
+    await env.DB.prepare("INSERT INTO poll_votes(poll_id,option_id,telegram_user_id) VALUES(?,?,?)").bind(legacyPoll!.id,legacyOption!.id,"1001").run();
     const home=await request("/api/home",user);
     expect(home.status).toBe(200);
     const homeData=await home.json() as any;
-    expect(homeData.poll?.selected_option_id).toBe(optionId);
-    const env=await worker.getEnv() as {DB:D1Database};
+    expect(homeData.poll?.selected_option_id).toBe(legacyOption!.id);
     await env.DB.prepare("UPDATE community_items SET poll_status='closed',poll_closes_at=CURRENT_TIMESTAMP WHERE id=?").bind(pollId).run();
     expect((await request("/api/community-v2/poll-vote",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({item_id:pollId,option_id:optionId})})).status).toBe(400);
   });
@@ -324,7 +332,7 @@ describe("VGU-Pulse real D1 behavior",()=>{
     await request("/api/community-v2/rules/ack",author,{method:"POST",body:"{}"});
     const env=await worker.getEnv() as {DB:D1Database};
     await env.DB.prepare("INSERT OR IGNORE INTO notification_preferences(telegram_user_id,community_replies,community_activity,personalized_alerts,official_updates) VALUES('2002',1,1,1,1)").run();
-    const created=await request("/api/community-v2/items",author,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"question",title:"Author notification test",body:"Need an answer",community_slug:"campus"})});
+    const created=await request("/api/community-v2/items",author,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({kind:"discussion",title:"Author notification test",body:"Need an answer",community_slug:"campus"})});
     expect(created.status).toBe(201);
     const createdData=await created.json() as {item:{id:number}};
     const reply=await request("/api/community-v2/replies",viewer,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({item_id:createdData.item.id,body:"Here is an answer",anonymous:true})});
