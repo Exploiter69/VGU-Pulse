@@ -71,7 +71,7 @@ The following still require explicit CI/manual confirmation before merging this 
 - final green CI after the complete Gate 1 patch series;
 - migration compatibility on an existing 0009 database containing legacy block data;
 - Telegram 403/429 delivery branches against a mocked Telegram API;
-- 40-item feed query-count assertion;
+- 40-item feed query-count assertion is now covered by the real-D1 suite (two DB prepares for profile + feed, independent of row count).
 - legacy V1 vote endpoint regression for posts/replies outside the newest page;
 - frontend anonymous-reply toggle and full optimistic vote UI in a real Telegram device.
 
