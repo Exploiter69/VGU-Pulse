@@ -107,7 +107,7 @@ async function handleTelegramUpdate(request: Request, env: Env): Promise<Respons
   }
 
   const update = await readJson<{
-    message?: { chat?: { id?: number }; text?: string };
+    message?: { chat?: { id?: number }; text?: string; caption?: string; document?: { file_id?: string; file_unique_id?: string; file_name?: string; mime_type?: string; file_size?: number } };
   }>(request);
   if (!update) return json({ ok: false, error: "invalid_json" }, 400);
 
@@ -117,6 +117,13 @@ async function handleTelegramUpdate(request: Request, env: Env): Promise<Respons
 
   const text = (message.text ?? "").trim();
   const senderId=chatId;
+  if(message.document && (message.caption??"").trim().startsWith("/resource")){
+    const d=message.document;
+    if(!d.file_id||!d.file_name)return json({ok:true});
+    await env.DB.prepare("INSERT INTO resources(telegram_user_id,file_id,file_unique_id,name,mime_type,size_bytes,subject,semester,resource_type,status) VALUES(?,?,?,?,?,?,?,?,?,?)").bind(String(senderId),d.file_id,d.file_unique_id??null,d.file_name,d.mime_type??null,Number.isSafeInteger(d.file_size)?d.file_size:null,null,null,"other","pending").run();
+    await sendMessage(getBotToken(env),chatId,"Resource received. It is pending moderation before students can access it.",env.TELEGRAM_WEBAPP_URL);
+    return json({ok:true});
+  }
   if(isAdmin(env,senderId) && text==="/review"){
     const rows=await env.DB.prepare("SELECT id,kind,title,report_count FROM community_items WHERE status='review' ORDER BY created_at ASC LIMIT 20").all();
     await sendMessage(getBotToken(env),chatId,rows.results?.length?rows.results.map((x:any)=>`#${x.id} [${x.kind}] reports=${x.report_count} ${x.title}`).join("\n"):"No items awaiting review.",env.TELEGRAM_WEBAPP_URL);
