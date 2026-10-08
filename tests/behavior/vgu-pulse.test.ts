@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from "node:fs";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createTestHarness } from "wrangler";
 
 const BOT_TOKEN = "gate-2-test-token";
@@ -74,6 +74,7 @@ async function seed() {
 
 beforeAll(async()=>{ await server.listen(); });
 beforeEach(async()=>{ await server.reset(); await worker.applyD1Migrations("DB"); await seed(); });
+afterEach(({task})=>{ if(task.result?.state==="fail") server.debug(); });
 afterAll(async()=>{ await server.close(); });
 
 describe("VGU-Pulse real D1 behavior",()=>{
