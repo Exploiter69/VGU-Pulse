@@ -1114,7 +1114,7 @@ window.__pulseResolveStartApp=async target=>{
 };
 if(startAppTarget&&!/^(post|poll):\d+$/.test(startAppTarget))setTimeout(()=>window.__pulseResolveStartApp?.(startAppTarget),700);
 const communityScript=document.createElement("script");
-communityScript.src="/community-v2.js?v=20261008-5";
+communityScript.src="/community-v2.js?v=20261008-6";
 communityScript.onload=()=>window.__pulseBoot?.();
 communityScript.onerror=()=>window.__pulseBoot?.();
 document.body.append(communityScript);
