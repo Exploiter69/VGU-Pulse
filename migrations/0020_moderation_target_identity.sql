@@ -23,7 +23,7 @@ INSERT INTO moderation_report_history
   (reporter_telegram_user_id,target_type,target_id,reason,created_at,target_telegram_user_id)
 SELECT r.reporter_telegram_user_id,'profile',p.public_id,'other',r.created_at,p.telegram_user_id
 FROM student_profile_reports r
-JOIN student_profiles p ON p.telegram_user_id=r.profile_user_id;
+JOIN student_profiles p ON p.public_id=r.profile_public_id;
 
 CREATE INDEX IF NOT EXISTS idx_moderation_report_history_target_user
   ON moderation_report_history(target_telegram_user_id,created_at DESC);
