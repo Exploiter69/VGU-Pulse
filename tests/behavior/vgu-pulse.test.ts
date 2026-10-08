@@ -206,6 +206,44 @@ describe("VGU-Pulse real D1 behavior",()=>{
     expect(ban).toEqual({reason:"test ban",banned_by:"9009"});
   });
 
+  it("fully erases personal data while retaining moderation safety records",async()=>{
+    const user={id:1001,first_name:"Viewer"};
+    await request("/api/community-v2/rules/ack",user,{method:"POST",body:"{}"});
+    await request("/api/community-v2/anonymous-notice",user,{method:"POST",body:"{}"});
+    const env=await worker.getEnv() as {DB:D1Database};
+    await env.DB.batch([
+      env.DB.prepare("INSERT OR IGNORE INTO notification_preferences(telegram_user_id) VALUES('1001')"),
+      env.DB.prepare("INSERT INTO community_items(telegram_user_id,kind,title,body,community_slug,status) VALUES('1001','discussion','Delete me','body','campus','published')"),
+      env.DB.prepare("INSERT INTO community_reputation(telegram_user_id,points) VALUES('1001',9)"),
+      env.DB.prepare("INSERT INTO community_reputation_events(telegram_user_id,delta,reason,reference_key) VALUES('1001',3,'test','delete-test')"),
+      env.DB.prepare("INSERT INTO student_notifications(telegram_user_id,kind,channel,title,body,reference_key) VALUES('1001','community','community_activity','Delete me','body','delete-test')"),
+      env.DB.prepare("INSERT INTO mess_daily_ratings(day,telegram_user_id,rating,meal) VALUES('2026-10-08','1001',4,'lunch')"),
+      env.DB.prepare("INSERT INTO exam_countdowns(telegram_user_id,title,exam_at) VALUES('1001','Delete me','2026-12-01T10:00:00Z')"),
+      env.DB.prepare("INSERT INTO resources(telegram_user_id,file_id,name,resource_type) VALUES('1001','delete-file','Delete me','notes')"),
+    ]);
+    await env.DB.prepare("INSERT INTO user_bans(telegram_user_id,reason,banned_by) VALUES('1001','safety record','9009')").run();
+
+    const response=await request("/api/account/delete",user,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({confirm:true})});
+    expect(response.status).toBe(200);
+
+    const personalTables=[
+      "users","student_profiles","community_items","community_replies","community_votes",
+      "community_follows","community_saves","community_reports","community_reply_reports",
+      "student_notifications","notification_preferences","community_badges",
+      "community_reputation_events","community_reputation","community_anonymous_notices",
+      "community_rules_ack","mess_daily_ratings","exam_countdowns","resources","teacher_reviews",
+      "campus_events","campus_questions","event_rsvps","event_reminders","resource_reports",
+      "community_poll_votes","community_reply_votes","community_item_reads","student_posts",
+      "student_post_replies","student_post_votes","student_post_reply_votes","student_profile_reports"
+    ];
+    for(const table of personalTables){
+      const row=await env.DB.prepare(`SELECT COUNT(*) count FROM ${table} WHERE telegram_user_id=?`).bind("1001").first<{count:number}>().catch(()=>null);
+      if(row) expect(Number(row?.count)).toBe(0);
+    }
+    const ban=await env.DB.prepare("SELECT reason,banned_by FROM user_bans WHERE telegram_user_id='1001'").first<{reason:string;banned_by:string}>();
+    expect(ban).toEqual({reason:"safety record",banned_by:"9009"});
+  });
+
   it("sweeps notification channels independently after malformed Signal JSON",async()=>{
     const env=await worker.getEnv() as {DB:D1Database};
     await env.DB.prepare("INSERT OR IGNORE INTO notification_preferences(telegram_user_id,official_updates,community_replies,community_activity,personalized_alerts) VALUES('1001',1,1,1,0)").run();
