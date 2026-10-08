@@ -1112,8 +1112,8 @@ async function loadV4Extras(){
  if(!initData){if(box)box.textContent="Reopen Pulse from Telegram to use student features.";return}
  const h={"x-telegram-init-data":initData};
  try{
-  const [events,listings,growth,card,question,resources]=await Promise.all(["/api/v4/events","/api/v4/listings","/api/v4/growth/top","/api/v4/share-card","/api/v4/campus-question","/api/v4/resources"].map(p=>fetch(p,{headers:h}).then(r=>r.json())));
-  if(questionBox)questionBox.innerHTML="<strong>Campus question:</strong> "+escapeHtml(question.question||"");
+  const [events,listings,growth,card,question,resources,exams]=await Promise.all(["/api/v4/events","/api/v4/listings","/api/v4/growth/top","/api/v4/share-card","/api/v4/campus-question","/api/v4/resources","/api/v4/exam-countdowns"].map(p=>fetch(p,{headers:h}).then(r=>r.json())));
+  if(questionBox)questionBox.innerHTML="<strong>Campus question:</strong> "+escapeHtml(question.question||"")+(exams.exam_season&&exams.next?"<br><strong>Exam-season mode:</strong> "+escapeHtml(exams.next.title)+" in "+Math.max(0,Math.ceil((new Date(exams.next.exam_at)-Date.now())/86400000))+" day(s).":"");
   if(box)box.innerHTML="<strong>Your Pulse card</strong><br>"+Number(card.card?.points||0)+" reputation · "+Number(card.card?.posts||0)+" posts · "+Number(card.card?.replies||0)+" replies"+
     "<br><br><strong>Active listings</strong><br>"+(listings.items||[]).slice(0,3).map(x=>escapeHtml(x.title)+" · "+escapeHtml(x.kind)).join("<br>")+
     "<br><br><strong>Top threads</strong><br>"+(growth.items||[]).slice(0,3).map(x=>escapeHtml(x.title)).join("<br>");
