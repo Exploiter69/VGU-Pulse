@@ -2,6 +2,7 @@ import {
   createStudentPost,
   deleteStudentPost,
   deleteStudentProfile,
+  deleteAllStudentData,
   deleteStudentReply,
   getStudentProfile,
   getPersonalPulse,
@@ -51,6 +52,8 @@ interface Env {
   SIGNAL_API_URL?: string;
   SIGNAL_SERVICE: Fetcher;
   APP_NAME: string;
+  ADMIN_IDS?: string;
+  ANON_ALIAS_SECRET?: string;
 }
 
 function getBotToken(env: Env): string {
@@ -229,6 +232,15 @@ export default {
         });
         return json({ ok: true, trust: "student-reported", profiles });
       } catch { return json({ ok: false, error: "student_profiles_unavailable" }, 500); }
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/account/delete") {
+      const validated=await validateInitData(request.headers.get("x-telegram-init-data")??"",getBotToken(env));
+      if(!validated)return json({ok:false,error:"unauthorized"},401);
+      const body=await readJson<{confirm?:unknown}>(request);
+      if(body?.confirm!==true)return json({ok:false,error:"confirmation_required"},400);
+      await deleteAllStudentData(env.DB,validated.user.id);
+      return json({ok:true,deleted:true});
     }
 
     if (request.method === "POST" && url.pathname === "/api/student-profile/visibility") {
