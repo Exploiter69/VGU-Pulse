@@ -35,9 +35,13 @@ This follows the product rule that primary navigation should stay small and pred
 - related student discussions
 
 ### Community
-- For you
+- For You is the default feed and prioritizes published profile branch/year, recent student activity, and unanswered cohort questions; when there is not enough personalized signal, it falls back to campus Trending.
 - Latest
 - Trending
+- Confessions
+- Campus
+- Exam survival
+- Saved
 - topic feeds
 - community discovery
 - search
@@ -53,10 +57,11 @@ This follows the product rule that primary navigation should stay small and pred
 - anonymous posts
 - People entry point
 
-Creation is intent-first so students choose a goal before seeing a detailed form.
+Creation is intent-first so students choose a goal before seeing a detailed form. The first seven intents are Discussion, Question, Confession, Campus help, Exam survival, Senior advice, and Notes/resources. Less-common intents remain behind More… so publishing has one obvious primary action.
 
-Supported intents remain:
-discussion, question, confession, campus, exam, senior, notes, pyq, teacher, teammate, lost_found, ride, roommate, listing, opportunity.
+Anonymous posting keeps the notice and rules acknowledgement. Confessions and Exam survival use distinct visual treatment, and unanswered questions expose a direct Answer this action. Accepted answers and solved state are visible in both cards and reply threads.
+
+Community also exposes dismissible, student-facing Campus Pulse summaries for today's mess ratings, the next published event, and the campus question of the day.
 
 ### Campus
 - campus search
@@ -109,6 +114,8 @@ They are reachable from Me and retain the Telegram BackButton hierarchy.
 - cards are used for grouped modules, not every piece of content
 - lists/separators are preferred for dense information
 - contextual actions move into detail views or menus
+- Community primary actions and controls use at least 44px touch targets
+- Campus Pulse widgets are dismissible and do not become persistent clutter
 - touch targets stay comfortably usable
 - loading, empty, error, and success states are first-class
 
