@@ -400,6 +400,10 @@ export async function handleCommunityV2(request:Request,env:CommunityEnv,user:Co
       } else {
         await env.DB.prepare("INSERT INTO community_reply_votes(reply_id,telegram_user_id,vote) VALUES(?,?,?) ON CONFLICT(reply_id,telegram_user_id) DO UPDATE SET vote=excluded.vote,created_at=CURRENT_TIMESTAMP").bind(replyId,String(user.id),value).run();
         if(value===1) await award(env.DB,Number(replyRow.telegram_user_id),1,"helpful_answer",ref);
+        else if(existing?.vote===1){
+          const voided=await env.DB.prepare("UPDATE community_reputation_events SET delta=0,reason='helpful_answer_voided' WHERE telegram_user_id=? AND reference_key=? AND delta>0").bind(replyRow.telegram_user_id,ref).run();
+          if(Number(voided.meta.changes??0)) await env.DB.prepare("UPDATE community_reputation SET points=MAX(0,points-1),updated_at=CURRENT_TIMESTAMP WHERE telegram_user_id=?").bind(replyRow.telegram_user_id).run();
+        }
       }
       return json({ok:true});
     }
