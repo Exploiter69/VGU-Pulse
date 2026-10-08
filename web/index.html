@@ -389,7 +389,16 @@ input:focus,textarea:focus,select:focus,.quick:focus-visible,.nav-item:focus-vis
   <section class="card"><div class="eyebrow">SGPA</div><h2>SGPA calculator</h2><p class="muted">Enter each subject's credit and grade point.</p><div id="sgpa-rows"></div><div class="wrap-row"><button id="sgpa-add" class="quick auto-width" type="button">Add subject</button><button id="sgpa-calc" class="submit auto-width" type="button">Calculate SGPA</button></div><p id="sgpa-result" class="muted" aria-live="polite">Add subjects to calculate.</p></section>
   <section class="card"><div class="eyebrow">CGPA</div><h2>CGPA calculator</h2><p class="muted">Calculate a credit-weighted CGPA from semester SGPA values.</p><div id="cgpa-rows"></div><div class="wrap-row"><button id="cgpa-add" class="quick auto-width" type="button">Add semester</button><button id="cgpa-calc" class="submit auto-width" type="button">Calculate CGPA</button></div><p id="cgpa-result" class="muted" aria-live="polite">Add semesters to calculate.</p></section>
   <section class="card"><div class="eyebrow">Attendance</div><h2>Attendance calculator</h2><div class="two-col"><div><label for="att-present">Classes attended</label><input id="att-present" type="number" min="0" step="1" placeholder="32"></div><div><label for="att-total">Classes held</label><input id="att-total" type="number" min="0" step="1" placeholder="40"></div></div><label for="att-target">Target attendance %</label><input id="att-target" type="number" min="0" max="100" step="0.1" value="75"><label for="att-mode">What do you want to know?</label><select id="att-mode"><option value="reach">How many classes must I attend?</option><option value="miss">How many classes can I miss?</option></select><button id="att-calc" class="submit" type="button">Calculate attendance</button><p id="att-result" class="muted" aria-live="polite">Enter your attendance to see the result.</p></section>
-  <section class="card"><div class="eyebrow">Marks</div><h2>Marks calculator</h2><p class="muted">Combine obtained and maximum marks without assuming VGU's internal/external weighting.</p><div id="marks-rows"></div><div class="wrap-row"><button id="marks-add" class="quick auto-width" type="button">Add component</button><button id="marks-calc" class="submit auto-width" type="button">Calculate percentage</button></div><p id="marks-result" class="muted" aria-live="polite">Add components to calculate.</p></section>
+  <section class="card"><div class="eyebrow">Marks</div><h2>Marks calculator</h2><p class="muted">Combine obtained and maximum marks without assuming VGU's internal/external weighting.</p><div id="marks-rows"></div><div class="wrap-row"><button id="marks-add" class="quick auto-width" type="button">Add component</button><button id="marks-calc" class="submit auto-width" type="button">Calculate percentage</button></div><p id="marks-result" class="muted" aria-live="polite">Add components to calculate.</p></section><section class="card">
+<div class="eyebrow">Campus extras</div><h2>Student network</h2>
+<p class="muted">Daily campus utilities, events, expiring listings, reviews and weekly growth signals.</p>
+<div class="two-col">
+<div><label for="v4-mess">Today's mess rating</label><input id="v4-mess" type="number" min="1" max="5" step="1" placeholder="1–5"></div>
+<div><label for="v4-exam">Next exam</label><input id="v4-exam" type="datetime-local"></div>
+</div>
+<div class="wrap-row"><button id="v4-save" class="submit auto-width" type="button">Save campus updates</button><button id="v4-refresh" class="quick auto-width" type="button">Refresh extras</button></div>
+<div id="v4-extras" class="muted" aria-live="polite">Open from Telegram to use student features.</div>
+</section>
 </section>
 
 <dialog id="pulse-sheet" class="pulse-sheet"><h3 id="pulse-sheet-title">Pulse</h3><p id="pulse-sheet-body" class="muted"></p><button type="button" class="sheet-close" id="pulse-sheet-close">Close</button></dialog>
@@ -1086,4 +1095,25 @@ communityScript.onload=()=>window.__pulseBoot?.();
 communityScript.onerror=()=>window.__pulseBoot?.();
 document.body.append(communityScript);
 </script>
-</body></html>
+</body></htmlasync function loadV4Extras(){
+ const box=document.getElementById("v4-extras");if(!box||!initData)return;
+ const h={"x-telegram-init-data":initData};
+ try{
+  const [events,listings,growth,card]=await Promise.all(["/api/v4/events","/api/v4/listings","/api/v4/growth/top","/api/v4/share-card"].map(p=>fetch(p,{headers:h}).then(r=>r.json())));
+  box.innerHTML="<strong>Upcoming events</strong><br>"+(events.items||[]).slice(0,3).map(x=>escapeHtml(x.title)+" · "+escapeHtml(x.starts_at)).join("<br>")+
+    "<br><br><strong>Active student listings</strong><br>"+(listings.items||[]).slice(0,3).map(x=>escapeHtml(x.title)+" · "+escapeHtml(x.kind)).join("<br>")+
+    "<br><br><strong>Your Pulse card</strong><br>"+Number(card.card?.points||0)+" reputation · "+Number(card.card?.posts||0)+" posts · "+Number(card.card?.replies||0)+" replies"+
+    "<br><br><strong>Top threads</strong><br>"+(growth.items||[]).slice(0,3).map(x=>escapeHtml(x.title)).join("<br>");
+ }catch{box.textContent="Campus extras are temporarily unavailable."}
+}
+document.getElementById("v4-refresh")?.addEventListener("click",loadV4Extras);
+document.getElementById("v4-save")?.addEventListener("click",async()=>{
+ if(!initData){openPulseSheet("Telegram required","Reopen Pulse from Telegram to save student updates.");return}
+ const mess=Number(document.getElementById("v4-mess")?.value);
+ const exam=document.getElementById("v4-exam")?.value;
+ const h={"content-type":"application/json","x-telegram-init-data":initData};
+ if(Number.isInteger(mess)&&mess>=1&&mess<=5)await fetch("/api/v4/mess-rating",{method:"POST",headers:h,body:JSON.stringify({rating:mess,meal:"overall"})});
+ if(exam)await fetch("/api/v4/exam-countdown",{method:"POST",headers:h,body:JSON.stringify({title:"Next exam",exam_at:new Date(exam).toISOString()})});
+ await loadV4Extras();
+});
+>
