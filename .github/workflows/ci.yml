@@ -2,7 +2,7 @@ name: Pulse CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, hardening/gate-0]
   pull_request:
 
 permissions:
