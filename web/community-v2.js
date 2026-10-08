@@ -287,6 +287,7 @@
       const chip=e.target.closest("[data-community]");
       if(chip){community=chip.dataset.community;$("#cv2-current-community").textContent=community==="campus"?"VGU campus":community;$("#cv2-community").value=community;$("#cv2-communities").closest("details")?.removeAttribute("open");await loadFeed();return}
       const button=e.target.closest("button[data-action]"),item=e.target.closest(".cv2-item");
+      const id=Number(item?.dataset.id||0);
       const replyDelete=e.target.closest("[data-reply-delete]");
       if(replyDelete){try{
         if(replyDelete.dataset.confirming!=="1"){replyDelete.dataset.confirming="1";replyDelete.textContent="Confirm delete";return}
@@ -298,7 +299,7 @@
       const replyReport=e.target.closest("[data-reply-report]");
       if(replyReport){try{await api("/api/community-v2/report-reply",{method:"POST",body:JSON.stringify({reply_id:Number(replyReport.dataset.replyReport)})});replyReport.textContent="Reported"}catch{replyReport.textContent="Try again"}return}
       if(!button||!item)return;
-      const id=Number(item.dataset.id),action=button.dataset.action;
+      const action=button.dataset.action;
       try{
         if(action==="share"){await window.__pulseShare?.("post-"+id,"VGU Pulse discussion: "+String(item.querySelector("h3")?.textContent||""));return}
         if(action==="expand"){const body=item.querySelector(".cv2-body");if(body){body.classList.remove("cv2-collapsed");button.remove()}return}
