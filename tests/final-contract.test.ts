@@ -91,6 +91,35 @@ describe("final Student OS production contract", () => {
     expect(webSource).toContain('/api/share-link?target=');
   });
 
+  it("keeps Community Phase 1 For You and action-first UX wired", () => {
+    const community = readFileSync("src/community-v2.ts", "utf8");
+    expect(community).toContain('sort === "for_you"');
+    expect(community).toContain('rows.length < Math.min(6, limit)');
+    expect(community).toContain('set("community","campus")');
+    expect(community).toContain("author_badge");
+    expect(communityWebSource).toContain('data-sort="for_you"');
+    expect(communityWebSource).toContain('data-sort="trending"');
+    expect(communityWebSource).toContain('data-kind="confession"');
+    expect(communityWebSource).toContain('data-kind="exam"');
+    expect(communityWebSource).toContain('id="cv2-intent-more"');
+    expect(communityWebSource).toContain('data-intent="discussion"');
+    expect(communityWebSource).toContain('data-intent="question"');
+    expect(communityWebSource).toContain('data-intent="confession"');
+    expect(communityWebSource).toContain('data-intent="campus"');
+    expect(communityWebSource).toContain('data-intent="exam"');
+    expect(communityWebSource).toContain('data-intent="senior"');
+    expect(communityWebSource).toContain('data-intent="notes"');
+    expect(communityWebSource).toContain('data-action="answer"');
+    expect(communityWebSource).toContain('Accepted answer');
+    expect(communityWebSource).toContain('cv2-solved');
+    expect(communityWebSource).toContain('/api/v4/mess-rating');
+    expect(communityWebSource).toContain('/api/v4/events');
+    expect(communityWebSource).toContain('/api/v4/campus-question');
+    expect(communityWebSource).toContain('HapticFeedback');
+    expect(communityWebSource).toContain('min-height:44px');
+    expect(communityWebSource).toContain('localStorage.getItem("cv2:pulse:"');
+  });
+
   it("keeps Telegram sharing, deep links, theme and security headers wired", () => {
     expect(indexSource).toContain('/api/share-link');
     expect(indexSource).toContain('https://api.telegram.org/bot');
