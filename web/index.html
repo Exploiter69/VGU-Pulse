@@ -1101,24 +1101,46 @@ document.body.append(communityScript);
 </script>
 </body></htmlfunction escapeHtml(value){return String(value??"").replace(/[&<>"\']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","\'":"&#39;"}[ch]));}
 async function loadV4Extras(){
- const box=document.getElementById("v4-extras");if(!box||!initData)return;
+ const box=document.getElementById("v4-extras"),eventsBox=document.getElementById("v4-events"),resourcesBox=document.getElementById("v4-resources"),questionBox=document.getElementById("v4-question");
+ if(!initData){if(box)box.textContent="Reopen Pulse from Telegram to use student features.";return}
  const h={"x-telegram-init-data":initData};
  try{
-  const [events,listings,growth,card]=await Promise.all(["/api/v4/events","/api/v4/listings","/api/v4/growth/top","/api/v4/share-card"].map(p=>fetch(p,{headers:h}).then(r=>r.json())));
-  box.innerHTML="<strong>Upcoming events</strong><br>"+(events.items||[]).slice(0,3).map(x=>escapeHtml(x.title)+" · "+escapeHtml(x.starts_at)).join("<br>")+
-    "<br><br><strong>Active student listings</strong><br>"+(listings.items||[]).slice(0,3).map(x=>escapeHtml(x.title)+" · "+escapeHtml(x.kind)).join("<br>")+
-    "<br><br><strong>Your Pulse card</strong><br>"+Number(card.card?.points||0)+" reputation · "+Number(card.card?.posts||0)+" posts · "+Number(card.card?.replies||0)+" replies"+
+  const [events,listings,growth,card,question]=await Promise.all(["/api/v4/events","/api/v4/listings","/api/v4/growth/top","/api/v4/share-card","/api/v4/campus-question"].map(p=>fetch(p,{headers:h}).then(r=>r.json())));
+  if(questionBox)questionBox.innerHTML="<strong>Campus question:</strong> "+escapeHtml(question.question||"");
+  if(box)box.innerHTML="<strong>Your Pulse card</strong><br>"+Number(card.card?.points||0)+" reputation · "+Number(card.card?.posts||0)+" posts · "+Number(card.card?.replies||0)+" replies"+
+    "<br><br><strong>Active listings</strong><br>"+(listings.items||[]).slice(0,3).map(x=>escapeHtml(x.title)+" · "+escapeHtml(x.kind)).join("<br>")+
     "<br><br><strong>Top threads</strong><br>"+(growth.items||[]).slice(0,3).map(x=>escapeHtml(x.title)).join("<br>");
- }catch{box.textContent="Campus extras are temporarily unavailable."}
+  if(eventsBox)eventsBox.innerHTML="<div class='section-heading'><strong>Upcoming events</strong></div>"+(events.items||[]).slice(0,5).map(x=>"<div class='pulse-activity-item'><span class='pulse-activity-main'><span class='pulse-activity-text'>"+escapeHtml(x.title)+"</span><span class='pulse-activity-label'>"+escapeHtml(x.starts_at)+" · "+escapeHtml(x.location||"Campus")+"</span></span><button class='report v4-rsvp' data-id='"+Number(x.id)+"' type='button'>I'm interested</button></div>").join("");
+  if(resourcesBox)resourcesBox.innerHTML="<div class='section-heading'><strong>Resource library</strong></div><p class='settings-note'>Send a document to the VGU Pulse bot with caption <b>/resource</b>. Moderated files appear here automatically.</p>";
+ }catch{if(box)box.textContent="Campus extras are temporarily unavailable."}
 }
 document.getElementById("v4-refresh")?.addEventListener("click",loadV4Extras);
 document.getElementById("v4-save")?.addEventListener("click",async()=>{
  if(!initData){openPulseSheet("Telegram required","Reopen Pulse from Telegram to save student updates.");return}
- const mess=Number(document.getElementById("v4-mess")?.value);
- const exam=document.getElementById("v4-exam")?.value;
+ const mess=Number(document.getElementById("v4-mess")?.value),exam=document.getElementById("v4-exam")?.value;
  const h={"content-type":"application/json","x-telegram-init-data":initData};
  if(Number.isInteger(mess)&&mess>=1&&mess<=5)await fetch("/api/v4/mess-rating",{method:"POST",headers:h,body:JSON.stringify({rating:mess,meal:"overall"})});
  if(exam)await fetch("/api/v4/exam-countdown",{method:"POST",headers:h,body:JSON.stringify({title:"Next exam",exam_at:new Date(exam).toISOString()})});
  await loadV4Extras();
 });
->
+document.getElementById("v4-events")?.addEventListener("click",async event=>{
+ const button=event.target.closest(".v4-rsvp");if(!button)return;
+ const h={"content-type":"application/json","x-telegram-init-data":initData};
+ const id=Number(button.dataset.id);if(!Number.isSafeInteger(id)||id<1)return;
+ button.disabled=true;try{const r=await fetch("/api/v4/event/rsvp",{method:"POST",headers:h,body:JSON.stringify({event_id:id,interested:true})});if(r.ok){button.textContent="Interested ✓";await fetch("/api/v4/event/reminder",{method:"POST",headers:h,body:JSON.stringify({event_id:id,enabled:true})});}else button.disabled=false}catch{button.disabled=false}
+});
+document.getElementById("v4-share")?.addEventListener("click",async()=>{
+ if(!initData){openPulseSheet("Telegram required","Reopen Pulse from Telegram to share your Pulse card.");return}
+ try{const r=await fetch("/api/v4/share-card",{headers:{"x-telegram-init-data":initData}});const d=await r.json();const text="My VGU Pulse card — "+Number(d.card?.points||0)+" reputation, "+Number(d.card?.posts||0)+" posts, "+Number(d.card?.replies||0)+" helpful replies.";
+ if(navigator.share)await navigator.share({title:"VGU Pulse",text});else await navigator.clipboard.writeText(text);openPulseSheet("Pulse card ready",text);
+ }catch{openPulseSheet("Share unavailable","Your Pulse card could not be shared right now.")}
+});
+document.getElementById("v4-review-submit")?.addEventListener("click",async()=>{
+ const h={"content-type":"application/json","x-telegram-init-data":initData},q=id=>document.getElementById(id)?.value;
+ const body={teacher:q("v4-teacher"),elective:q("v4-elective"),teaching:Number(q("v4-teaching")),workload:Number(q("v4-workload")),support:Number(q("v4-support")),comment:q("v4-review-comment")};
+ const status=document.getElementById("v4-review-status");if(!initData){if(status)status.textContent="Reopen Pulse from Telegram.";return}
+ const r=await fetch("/api/v4/teacher-review",{method:"POST",headers:h,body:JSON.stringify(body)});if(status)status.textContent=r.ok?"Review submitted for moderation.":"Could not submit review.";
+});
+</script>
+</body>
+</html>
