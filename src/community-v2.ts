@@ -115,6 +115,7 @@ async function createItem(db: D1Database, user: CommunityUser, input: Record<str
   if(!rulesAck)throw new Error("rules_required");
   const anonymous = kind === "confession" || Boolean(input.anonymous);
   if(anonymous){
+    if(!anonAliasSecret)throw new Error("anonymous_unavailable");
     const notice=await db.prepare("SELECT 1 FROM community_anonymous_notices WHERE telegram_user_id=?").bind(String(user.id)).first();
     if(!notice)throw new Error("anonymous_notice_required");
   }
@@ -175,7 +176,8 @@ async function updateItem(db: D1Database, user: CommunityUser, id: number, input
 
 
 async function anonymousAlias(secret:string|undefined,userId:number,itemId:number):Promise<string>{
-  const key=secret||"vgu-pulse-anonymous-alias-fallback";
+  if(!secret) throw new Error("anonymous_unavailable");
+  const key=secret;
   const cryptoKey=await crypto.subtle.importKey("raw",new TextEncoder().encode(key),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
   const digest=await crypto.subtle.sign("HMAC",cryptoKey,new TextEncoder().encode(userId+":"+itemId));
   const bytes=new Uint8Array(digest); let n=0; for(let i=0;i<4;i++) n=(n*256)+bytes[i];
