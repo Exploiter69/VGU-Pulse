@@ -1,10 +1,25 @@
 -- Gate 1 hardening: community privacy, notification routing, report dedupe, retry state.
-ALTER TABLE student_profile_blocks ADD COLUMN via_anonymous INTEGER NOT NULL DEFAULT 0 CHECK (via_anonymous IN (0, 1));
-ALTER TABLE student_profile_blocks ADD COLUMN source_item_id INTEGER REFERENCES community_items(id) ON DELETE SET NULL;
+CREATE TABLE student_profile_blocks_new (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  blocker_telegram_user_id TEXT NOT NULL REFERENCES users(telegram_user_id) ON DELETE CASCADE,
+  blocked_telegram_user_id TEXT NOT NULL REFERENCES users(telegram_user_id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  via_anonymous INTEGER NOT NULL DEFAULT 0 CHECK (via_anonymous IN (0, 1)),
+  source_item_id INTEGER REFERENCES community_items(id) ON DELETE SET NULL,
+  UNIQUE (blocker_telegram_user_id, blocked_telegram_user_id),
+  CHECK (blocker_telegram_user_id <> blocked_telegram_user_id)
+);
+INSERT INTO student_profile_blocks_new
+  (blocker_telegram_user_id,blocked_telegram_user_id,created_at)
+SELECT blocker_telegram_user_id,blocked_telegram_user_id,created_at
+FROM student_profile_blocks;
+DROP TABLE student_profile_blocks;
+ALTER TABLE student_profile_blocks_new RENAME TO student_profile_blocks;
+CREATE INDEX IF NOT EXISTS idx_student_profile_blocks_blocked
+  ON student_profile_blocks(blocked_telegram_user_id);
 
 ALTER TABLE student_notifications ADD COLUMN channel TEXT NOT NULL DEFAULT 'official'
   CHECK (channel IN ('official','community_replies','community_activity','personalized'));
-
 ALTER TABLE student_notifications ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE student_notifications ADD COLUMN last_error TEXT;
 ALTER TABLE student_notifications ADD COLUMN failed_at TEXT;
